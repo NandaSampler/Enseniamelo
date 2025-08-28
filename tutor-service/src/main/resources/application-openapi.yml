@@ -1,23 +1,23 @@
 springdoc:
   swagger-ui.path: /openapi/swagger-ui.html
   api-docs.path: /openapi/v3/api-docs
-  packagesToScan: bo.edu.ucb.microservices.core.product.controller
+  packagesToScan: com.enseniamelo.tutorservice.controller
   pathsToMatch: /**
 
 api:
   common:
     version: 1.0.0
     title: API tutor
-    description: Servicio de información de productos
-    termsOfService: https://www.miempresa.com/terminos
+    description: Servicio de información de tutores de "enseñamelo"
+    termsOfService: https://www.enseñamelo.com/tutores
     license: Licencia MIT
     licenseUrl: https://opensource.org/licenses/MIT
     externalDocDesc: Documentación en Wiki
-    externalDocUrl: https://www.miempresa.com/wiki
+    externalDocUrl: https://www.enseñamelo.com/wiki
     contact:
-      name: Soporte Mi Empresa
-      url: https://www.miempresa.com/contacto
-      email: soporte@miempresa.com
+      name: Soporte Enseñamelo
+      url: https://www.enseñamelo.com/contacto
+      email: soporte@enseñamelo.com
 
   responseCodes:
     ok.description: OK
@@ -27,12 +27,20 @@ api:
 
   tutor:
     get-tutor:
-      description: Retorna la información del producto en base al id de producto proporcionado.
+      description: Retorna la información del tutor en base al id de tutor proporcionado.
       notes: |
         # Respuesta exitosa
-        Si el id del producto solicitado es encontrado el método retornará la información del producto
+        Si el id del tutor solicitado es encontrado el método retornará la información del tutor
 
         # Respuestas con error
-        1. Si ningún producto se encontró se devuelve un error **404 - Not Found**
+        1. Si ningún tutor se encontró se devuelve un error **404 - Not Found**
       parameters:
-        productId: ID del producto a buscar
+        tutorId: ID del tutor a buscar
+    get-tutors:
+      description: Retorna la lista de todos los tutores.
+      notes: |
+        # Respuesta exitosa
+        Si se encuentran tutores, el método retornará la lista de tutores.
+
+        # Respuestas con error
+        1. Si no se encontraron tutores se devuelve un error **404 - Not Found**

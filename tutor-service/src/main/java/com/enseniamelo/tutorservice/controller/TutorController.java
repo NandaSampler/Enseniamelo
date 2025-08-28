@@ -1,5 +1,6 @@
 package com.enseniamelo.tutorservice.controller;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,15 +26,25 @@ public class TutorController {
         this.service = service;
     }
 
-    @Operation(summary = "${api.tutor.get-tutor.description}", description = "${api.tutor.get-tutor.notes}")
-	@ApiResponses(value = { @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
-			@ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
-			@ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
+    @Operation(
+        summary = "${api.tutor.get-tutors.description}",
+        description = "${api.tutor.get-tutors.notes}"
+    )
+    @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
+            @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
+            @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @GetMapping
     public Flux<TutorDTO> getTutors() {
         return service.findAll();
     }
 
+    @Operation(
+        summary = "${api.tutor.get-tutor.description}",
+        description = "${api.tutor.get-tutor.notes}"
+    )
+    @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
+            @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
+            @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @GetMapping("/{id}")
     public Mono<TutorDTO> getTutorById(@PathVariable @Min(1) Long id) {
         return service.findById(id);
