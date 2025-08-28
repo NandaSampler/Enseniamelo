@@ -1,0 +1,38 @@
+springdoc:
+  swagger-ui.path: /openapi/swagger-ui.html
+  api-docs.path: /openapi/v3/api-docs
+  packagesToScan: bo.edu.ucb.microservices.core.product.controller
+  pathsToMatch: /**
+
+api:
+  common:
+    version: 1.0.0
+    title: API tutor
+    description: Servicio de información de productos
+    termsOfService: https://www.miempresa.com/terminos
+    license: Licencia MIT
+    licenseUrl: https://opensource.org/licenses/MIT
+    externalDocDesc: Documentación en Wiki
+    externalDocUrl: https://www.miempresa.com/wiki
+    contact:
+      name: Soporte Mi Empresa
+      url: https://www.miempresa.com/contacto
+      email: soporte@miempresa.com
+
+  responseCodes:
+    ok.description: OK
+    badRequest.description: Bad Request, Formato inválido de la solicitud. Ver mensaje de respuesta para más información.
+    notFound.description: Not found, el id especificado no existe.
+    unprocessableEntity.description: Unprocessable entity, no se puede procesar los parametros de entrada. Ver mensaje de respuesta para más información.
+
+  tutor:
+    get-tutor:
+      description: Retorna la información del producto en base al id de producto proporcionado.
+      notes: |
+        # Respuesta exitosa
+        Si el id del producto solicitado es encontrado el método retornará la información del producto
+
+        # Respuestas con error
+        1. Si ningún producto se encontró se devuelve un error **404 - Not Found**
+      parameters:
+        productId: ID del producto a buscar

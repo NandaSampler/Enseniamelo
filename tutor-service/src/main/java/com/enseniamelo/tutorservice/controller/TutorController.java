@@ -8,6 +8,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.enseniamelo.tutorservice.dto.TutorDTO;
 import com.enseniamelo.tutorservice.service.TutorService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.constraints.Min;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -22,6 +25,10 @@ public class TutorController {
         this.service = service;
     }
 
+    @Operation(summary = "${api.tutor.get-tutor.description}", description = "${api.tutor.get-tutor.notes}")
+	@ApiResponses(value = { @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
+			@ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
+			@ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @GetMapping
     public Flux<TutorDTO> getTutors() {
         return service.findAll();
