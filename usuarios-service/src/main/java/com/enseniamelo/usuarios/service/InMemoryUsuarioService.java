@@ -2,6 +2,7 @@ package com.enseniamelo.usuarios.service;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.springframework.stereotype.Service;
 
@@ -15,6 +16,7 @@ import reactor.core.publisher.Mono;
 public class InMemoryUsuarioService implements UsuarioService {
 
     private final Map<Long, UsuarioDTO> data = new ConcurrentHashMap<>();
+    private final AtomicLong idGenerator = new AtomicLong(3); // ya tienes 3 usuarios
 
     public InMemoryUsuarioService() {
         data.put(1L, new UsuarioDTO(1L, "Juan Pérez", "juan.perez@email.com"));
@@ -33,5 +35,32 @@ public class InMemoryUsuarioService implements UsuarioService {
         return (u != null)
                 ? Mono.just(u)
                 : Mono.error(new ResourceNotFoundException("Usuario", id));
+    }
+
+    @Override
+    public Mono<UsuarioDTO> save(UsuarioDTO usuario) {
+        long id = idGenerator.incrementAndGet();
+        usuario.setId(id);
+        data.put(id, usuario);
+        return Mono.just(usuario);
+    }
+
+    @Override
+    public Mono<UsuarioDTO> update(Long id, UsuarioDTO usuario) {
+        if (!data.containsKey(id)) {
+            return Mono.error(new ResourceNotFoundException("Usuario", id));
+        }
+        usuario.setId(id);
+        data.put(id, usuario);
+        return Mono.just(usuario);
+    }
+
+    @Override
+    public Mono<Void> delete(Long id) {
+        if (!data.containsKey(id)) {
+            return Mono.error(new ResourceNotFoundException("Usuario", id));
+        }
+        data.remove(id);
+        return Mono.empty();
     }
 }

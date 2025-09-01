@@ -3,12 +3,13 @@ springdoc:
   api-docs.path: /openapi/v3/api-docs
   packagesToScan: com.enseniamelo.usuarios.controller
   pathsToMatch: /**
+  override-with-generic-response: false
 
 api:
   common:
     version: 1.0.0
     title: API de Usuarios - Enseñamelo
-    description: Servicio de información de usuarios de "enseñamelo"
+    description: Servicio de información de usuarios de "Enseñamelo"
     termsOfService: https://www.enseñamelo.com/usuarios
     license: Licencia MIT
     licenseUrl: https://opensource.org/licenses/MIT
@@ -23,7 +24,7 @@ api:
     ok.description: OK
     badRequest.description: Bad Request, Formato inválido de la solicitud. Ver mensaje de respuesta para más información.
     notFound.description: Not found, el id especificado no existe.
-    unprocessableEntity.description: Unprocessable entity, no se puede procesar los parametros de entrada. Ver mensaje de respuesta para más información.
+    unprocessableEntity.description: Unprocessable entity, no se puede procesar los parámetros de entrada. Ver mensaje de respuesta para más información.
 
   usuario:
     get-usuario:
@@ -44,3 +45,33 @@ api:
 
         # Respuestas con error
         1. Si no se encontraron usuarios se devuelve un error **404 - Not Found**
+    create-usuario:
+      description: Crea un nuevo usuario.
+      notes: |
+        # Respuesta exitosa
+        Retorna el usuario creado.
+
+        # Respuestas con error
+        1. Si los datos enviados son inválidos se devuelve un error **400 - Bad Request**
+    update-usuario:
+      description: Actualiza un usuario existente en base al id proporcionado.
+      notes: |
+        # Respuesta exitosa
+        Retorna el usuario actualizado.
+
+        # Respuestas con error
+        1. Si ningún usuario se encontró se devuelve un error **404 - Not Found**
+        2. Si los datos enviados son inválidos se devuelve un error **400 - Bad Request**
+      parameters:
+        id: ID del usuario a actualizar
+    delete-usuario:
+      description: Elimina un usuario en base al id proporcionado.
+      notes: |
+        # Respuesta exitosa
+        El usuario es eliminado correctamente.
+
+        # Respuestas con error
+        1. Si ningún usuario se encontró se devuelve un error **404 - Not Found**
+        2. Si el id enviado es inválido se devuelve un error **400 - Bad Request**
+      parameters:
+        id: ID del usuario a eliminar
