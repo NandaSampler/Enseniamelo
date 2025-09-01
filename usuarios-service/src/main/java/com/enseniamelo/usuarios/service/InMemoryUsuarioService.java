@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono;
 public class InMemoryUsuarioService implements UsuarioService {
 
     private final Map<Long, UsuarioDTO> data = new ConcurrentHashMap<>();
-    private final AtomicLong idGenerator = new AtomicLong(3); // ya tienes 3 usuarios
+    private final AtomicLong idGenerator = new AtomicLong(3); 
 
     public InMemoryUsuarioService() {
         data.put(1L, new UsuarioDTO(1L, "Juan Pérez", "juan.perez@email.com"));
