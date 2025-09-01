@@ -1,10 +1,10 @@
-package com.enseniamelo.tutor_service;
+package com.enseniamelo.usuarios;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class TutorServiceApplicationTests {
+class UsuarioServiceApplicationTests {
 
 	@Test
 	void contextLoads() {

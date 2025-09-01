@@ -1,4 +1,4 @@
-package com.enseniamelo.tutorservice.exception;
+package com.enseniamelo.usuarios.exception;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;

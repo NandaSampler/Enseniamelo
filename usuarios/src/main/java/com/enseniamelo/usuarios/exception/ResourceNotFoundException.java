@@ -1,4 +1,4 @@
-package com.enseniamelo.tutorservice.exception;
+package com.enseniamelo.usuarios.exception;
 
 public class ResourceNotFoundException extends RuntimeException {
     private final String resource;

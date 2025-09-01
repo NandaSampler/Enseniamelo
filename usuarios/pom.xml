@@ -14,10 +14,10 @@
 	<!-- OJO: usa el mismo groupId que tu paquete base -->
 	<!-- si tu paquete es com.ensenamelo.tutorservice, cambia aquí a com.ensenamelo -->
 	<groupId>com.enseniamelo</groupId>
-	<artifactId>tutor-service</artifactId>
+	<artifactId>usuarios</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>tutor-service</name>
-	<description>Enseñamelo - Tutor Service (WebFlux)</description>
+	<name>usuarios</name>
+	<description>Enseñamelo - Usuarios (WebFlux)</description>
 
 	<properties>
 		<java.version>17</java.version>
