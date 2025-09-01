@@ -1,0 +1,5 @@
+api:
+  common:
+    title: "Comments API"
+    version: "1.0.0"
+    description: "API para gestionar Comentarios (comentarios-curso y comentarios-tutor) para el proyecto Enseñamelo"
