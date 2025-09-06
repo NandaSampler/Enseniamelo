@@ -3,10 +3,9 @@ package com.enseniamelo.usuarios.controller;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import com.enseniamelo.usuarios.dto.UsuarioDTO;
 import com.enseniamelo.usuarios.service.UsuarioService;
-
+import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -15,6 +14,7 @@ import jakarta.validation.constraints.Min;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+@Tag(name = "Uusario-Controller", description = "Controlador para la gestión de roles")
 @RestController
 @RequestMapping("/api/usuarios")
 public class UsuarioController {
