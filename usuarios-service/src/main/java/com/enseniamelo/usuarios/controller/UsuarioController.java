@@ -14,7 +14,7 @@ import jakarta.validation.constraints.Min;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-@Tag(name = "Uusario-Controller", description = "Controlador para la gestión de roles")
+@Tag(name = "Usuario-Controller", description = "Controlador para la gestión de usuarios")
 @RestController
 @RequestMapping("/api/usuarios")
 public class UsuarioController {
