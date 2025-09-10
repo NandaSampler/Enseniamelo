@@ -3,7 +3,6 @@ springdoc:
   api-docs.path: /openapi/v3/api-docs
   packagesToScan: com.ensenamelo.pagos_service.controller
   pathsToMatch: /**
-  # cache.disabled: true   # opcional
 
 api:
   common:

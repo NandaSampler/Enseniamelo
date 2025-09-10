@@ -25,7 +25,6 @@ public class OpenApiConfig {
     @Value("${api.common.contact.url}")      String apiContactUrl;
     @Value("${api.common.contact.email}")    String apiContactEmail;
 
-    /** Swagger UI en $HOST:$PORT/openapi/swagger-ui.html */
     @Bean
     public OpenAPI getOpenApiDocumentation() {
         return new OpenAPI()
