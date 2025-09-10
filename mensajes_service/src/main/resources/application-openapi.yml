@@ -1,0 +1,80 @@
+springdoc:
+  swagger-ui.path: /openapi/swagger-ui.html
+  api-docs.path: /openapi/v3/api-docs
+  packagesToScan: com.enseniamelo.mensajeservice.mensajes_service.controllers
+  pathsToMatch: /**
+
+api:
+  common:
+    version: 1.0.0
+    title: API tutor
+    description: Servicio de información de chats de "enseñamelo"
+    termsOfService: https://www.enseñamelo.com/chats
+    license: Licencia MIT
+    licenseUrl: https://opensource.org/licenses/MIT
+    externalDocDesc: Documentación en Wiki
+    externalDocUrl: https://www.enseñamelo.com/wiki
+    contact:
+      name: Soporte Enseñamelo
+      url: https://www.enseñamelo.com/contacto
+      email: soporte@enseñamelo.com
+
+  responseCodes:
+    ok.description: OK
+    badRequest.description: Bad Request, Formato inválido de la solicitud. Ver mensaje de respuesta para más información.
+    notFound.description: Not found, el id especificado no existe.
+    unprocessableEntity.description: Unprocessable entity, no se puede procesar los parametros de entrada. Ver mensaje de respuesta para más información.
+
+  chat:
+    get-chat-by-id:
+      description: Retorna la información del chat en base al id de chat proporcionado.
+      notes: |
+        # Respuesta exitosa
+        Si el id del chat solicitado es encontrado el método retornará la información del chat
+
+        # Respuestas con error
+        1. Si ningún chat se encontró se devuelve un error **404 - Not Found**
+      parameters:
+        chatId: ID del chat a buscar
+    get-chats:
+      description: Retorna la lista de todos los chats.
+      notes: |
+        # Respuesta exitosa
+        Si se encuentran chats, el método retornará la lista de chats.
+
+        # Respuestas con error
+        1. Si no se encontraron chats se devuelve un error **404 - Not Found**
+    create-chat:
+      description: Crea un nuevo chat.
+      notes: |
+        # Respuesta exitosa
+        Si la información del chat es válida, el método creará un nuevo chat y retornará la información del chat creado.
+
+        # Respuestas con error
+        1. Si la información del chat proporcionada es inválida se devuelve un error **400 - Bad Request**
+        2. Si no se pueden procesar los parámetros de entrada se devuelve un error **422 - Unprocessable Entity**
+      parameters:
+        chatBody: Objeto JSON que representa el chat a crear
+    update-chat:
+      description: Actualiza la información de un chat existente.
+      notes: |
+        # Respuesta exitosa
+        Si el id del chat a actualizar es encontrado y la información proporcionada es válida, el método actualizará el chat y retornará la información del chat actualizado.
+
+        # Respuestas con error
+        1. Si ningún chat se encontró con el id proporcionado se devuelve un error **404 - Not Found**
+        2. Si la información del chat proporcionada es inválida se devuelve un error **400 - Bad Request**
+        3. Si no se pueden procesar los parámetros de entrada se devuelve un error **422 - Unprocessable Entity**
+      parameters:
+        chatId: ID del chat a actualizar
+        chatBody: Objeto JSON que representa el chat a actualizar
+    delete-chat:
+      description: Elimina un chat existente.
+      notes: |
+        # Respuesta exitosa
+        Si el id del chat a eliminar es encontrado, el método eliminará el chat.
+
+        # Respuestas con error
+        1. Si ningún chat se encontró con el id proporcionado se devuelve un error **404 - Not Found**
+      parameters:
+        chatId: ID del chat a eliminar

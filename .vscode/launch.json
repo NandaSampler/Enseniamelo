@@ -16,6 +16,16 @@
             "projectName": "tutor-service",
             "args": "",
             "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-MensajesServiceApplication<mensajes_service>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.enseniamelo.mensajeservice.mensajes_service.MensajesServiceApplication",
+            "projectName": "mensajes_service",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
         }
     ]
 }
