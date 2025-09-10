@@ -1,25 +1,26 @@
 package com.enseniamelo.mensajeservice.mensajes_service.dto;
 
-import java.sql.Time;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import lombok.Builder;
 
+@Builder
 public class ChatDTO {
     @Schema(description = "Identificador del chat", example = "1")
     private Long id;
 
     @NotBlank(message = "La hora es obligatoria")
     @Schema(description = "Hora de creación del chat", example = "12:30:00")
-    private Time creado;
+    private Long creado;
 
     @NotBlank(message = "La hora es obligatoria")
     @Schema(description = "Hora de cierre del chat", example = "12:30:00")
-    private Time cerrado;
+    private Long cerrado;
 
     public ChatDTO() {}
 
-    public ChatDTO(Long id, Time creado, Time cerrado) {
+    public ChatDTO(Long id, Long creado, Long cerrado) {
         this.id = id;
         this.creado = creado;
         this.cerrado = cerrado;
@@ -33,19 +34,19 @@ public class ChatDTO {
         this.id = id;
     }
 
-    public Time getCreado() {
+    public Long getCreado() {
         return creado;
     }
 
-    public void setCreado(Time creado) {
+    public void setCreado(Long creado) {
         this.creado = creado;
     }
 
-    public Time getCerrado() {
+    public Long getCerrado() {
         return cerrado;
     }
 
-    public void setCerrado(Time cerrado) {
+    public void setCerrado(Long cerrado) {
         this.cerrado = cerrado;
     }
 

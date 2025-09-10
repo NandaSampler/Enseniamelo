@@ -25,7 +25,8 @@ public class MensajeDTO {
     @Schema(description = "Estado del mensaje", example = "ENVIADO")
     private String estado;
 
-    public MensajeDTO() {}
+    public MensajeDTO() {
+    }
 
     public MensajeDTO(Long id, String texto, Time hora, String estado) {
         this.id = id;
