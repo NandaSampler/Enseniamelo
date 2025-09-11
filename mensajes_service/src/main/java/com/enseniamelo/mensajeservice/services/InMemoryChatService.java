@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Service;
 
 import com.enseniamelo.mensajeservice.dto.ChatDTO;
+import com.enseniamelo.mensajeservice.exceptions.InvalidInputException;
 import com.enseniamelo.mensajeservice.exceptions.ResourceNotFoundException;
 
 import reactor.core.publisher.Flux;
@@ -35,7 +36,13 @@ public class InMemoryChatService implements ChatService {
     //Obtener un chat por ID
     @Override
     public Mono<ChatDTO> findById(Long id) {
+
+        if(id < 1){
+            return Mono.error(new InvalidInputException("ID no puede ser negativo"));
+        }
+
         ChatDTO c = data.get(id);
+
         return (c != null)
                 ? Mono.just(c)
                 : Mono.error(new ResourceNotFoundException("Chat", id));

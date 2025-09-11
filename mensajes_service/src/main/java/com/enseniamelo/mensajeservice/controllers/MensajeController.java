@@ -2,6 +2,7 @@ package com.enseniamelo.mensajeservice.controllers;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -58,7 +59,7 @@ public class MensajeController {
             @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @GetMapping("/{id}")
-    public Mono<MensajeDTO> getMensajeById(@Min(1)  Long id) {
+    public Mono<MensajeDTO> getMensajeById(@PathVariable @Min(1)  Long id) {
         return service.findById(id);
     }
 
@@ -90,7 +91,7 @@ public class MensajeController {
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @PutMapping("/{id}")
     @ResponseStatus(code = org.springframework.http.HttpStatus.NO_CONTENT)
-    public Mono<MensajeDTO> updateMensaje(@Valid @RequestBody MensajeDTO mensajeDTO, @Min(1)  Long id) {
+    public Mono<MensajeDTO> updateMensaje(@Valid @RequestBody MensajeDTO mensajeDTO, @PathVariable @Min(1)  Long id) {
         return service.updateMensaje(id, mensajeDTO);
     }
 
@@ -106,7 +107,7 @@ public class MensajeController {
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @DeleteMapping("/{id}")
     @ResponseStatus(code = org.springframework.http.HttpStatus.NO_CONTENT)
-    public Mono<Void> deleteMensaje(@Min(1) Long id) {
+    public Mono<Void> deleteMensaje(@PathVariable @Min(1) Long id) {
         return service.deleteMensaje(id);
     }
 }

@@ -42,4 +42,37 @@ public class ChatControllerTest {
         .jsonPath("$.error").isEqualTo("Bad Request")
         .jsonPath("$.message").isEqualTo("Type mismatch.");
     }
+
+    @Test
+    void getChatNotFound() {
+        int chatIdNotFound = 999;
+
+        client.get()
+            .uri("/api/chats/" + chatIdNotFound)
+            .accept(APPLICATION_JSON)
+            .exchange()
+            .expectStatus().isNotFound()
+            .expectHeader().contentType(APPLICATION_JSON)
+            .expectBody()
+            .jsonPath("$.status").isEqualTo(404)
+            .jsonPath("$.error").isEqualTo("Not Found")
+            .jsonPath("$.message").isEqualTo("Chat no encontrado con id=" + chatIdNotFound);
+    }
+
+    @Test
+    void getChatInvalidParameterNegative() {
+        int chatIdNegative = -1;
+
+        client.get()
+            .uri("/api/chats/" + chatIdNegative)
+            .accept(APPLICATION_JSON)
+            .exchange()
+            .expectStatus().isBadRequest()
+            .expectHeader().contentType(APPLICATION_JSON)
+            .expectBody()
+            .jsonPath("$.path").isEqualTo("/api/chats/" + chatIdNegative)
+            .jsonPath("$.status").isEqualTo(400)
+            .jsonPath("$.error").isEqualTo("Bad Request")
+            .jsonPath("$.message").isEqualTo("must be greater than or equal to 1");
+    }
 }

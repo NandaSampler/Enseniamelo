@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Service;
 
 import com.enseniamelo.mensajeservice.dto.MensajeDTO;
+import com.enseniamelo.mensajeservice.exceptions.ResourceNotFoundException;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -40,7 +41,7 @@ public class InMemoryMensajeService implements MensajeService {
         MensajeDTO m = data.get(id);
         return (m != null)
                 ? Mono.just(m)
-                : Mono.error(new RuntimeException("Mensaje no encontrado con id: " + id));
+                : Mono.error(new ResourceNotFoundException("Mensaje", id));
     }
 
     //Crear un nuevo mensaje
@@ -61,7 +62,7 @@ public class InMemoryMensajeService implements MensajeService {
     @Override
     public Mono<MensajeDTO> updateMensaje(Long id, MensajeDTO mensajeDTO) {
         if (!data.containsKey(id)) {
-            return Mono.error(new RuntimeException("Mensaje no encontrado con id: " + id));
+            return Mono.error(new ResourceNotFoundException("Mensaje no encontrado con id: ", id));
         }
         MensajeDTO updated = MensajeDTO.builder()
                 .id(id)
@@ -77,7 +78,7 @@ public class InMemoryMensajeService implements MensajeService {
     @Override
     public Mono<Void> deleteMensaje(Long id) {
         if (!data.containsKey(id)) {
-            return Mono.error(new RuntimeException("Mensaje no encontrado con id: " + id));
+            return Mono.error(new ResourceNotFoundException("Mensaje no encontrado con id: ", id));
         }
         data.remove(id);
         return Mono.empty();

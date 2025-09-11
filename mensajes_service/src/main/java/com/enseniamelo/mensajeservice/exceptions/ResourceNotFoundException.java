@@ -5,7 +5,7 @@ public class ResourceNotFoundException extends RuntimeException {
     private final Object key;
 
     public ResourceNotFoundException(String resource, Object key) {
-        super(resource + " no encontrado(a) con id=" + key);
+        super(resource + " no encontrado con id=" + key);
         this.resource = resource;
         this.key = key;
     }

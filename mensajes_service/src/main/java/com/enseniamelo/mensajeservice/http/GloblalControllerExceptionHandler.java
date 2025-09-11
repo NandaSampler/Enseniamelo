@@ -4,20 +4,16 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.MessageSourceResolvable;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.bind.support.WebExchangeBindException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.server.ServerWebInputException;
 
 import com.enseniamelo.mensajeservice.exceptions.BadRequestException;
@@ -59,18 +55,28 @@ class GlobalControllerExceptionHandler {
 		return createHttpErrorInfo(UNPROCESSABLE_ENTITY, request, ex);
 	}
 
-	@ExceptionHandler(WebExchangeBindException.class)
-	public ResponseEntity<Map<String, String>> handleValidationErrors(ServerHttpRequest request,
-			WebExchangeBindException ex) {
-		LOGGER.error("Manejando WebExchangeBindException");
-		Map<String, String> errors = new HashMap<>();
-
-		for (FieldError error : ex.getBindingResult().getFieldErrors()) {
-			errors.put(error.getField(), error.getDefaultMessage());
-		}
-		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
+	@ExceptionHandler({org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+                   jakarta.validation.ConstraintViolationException.class})
+	@ResponseStatus(HttpStatus.BAD_REQUEST)
+	public @ResponseBody HttpErrorInfo handleInvalidPathVariable(ServerHttpRequest request, Exception ex) {
+		return createHttpErrorInfo(HttpStatus.BAD_REQUEST, request, ex);
 	}
 
+	@ExceptionHandler(org.springframework.web.method.annotation.HandlerMethodValidationException.class)
+	@ResponseStatus(HttpStatus.BAD_REQUEST)
+	public @ResponseBody HttpErrorInfo handlePathVariableValidation(ServerHttpRequest request,
+																HandlerMethodValidationException ex) {
+		// Concatenamos todos los mensajes
+		String message = ex.getAllErrors().stream()
+						.map(MessageSourceResolvable::getDefaultMessage)
+						.reduce((m1, m2) -> m1 + "; " + m2)
+						.orElse(ex.getMessage());
+
+		return new HttpErrorInfo(HttpStatus.BAD_REQUEST,
+								request.getPath().pathWithinApplication().value(),
+								message);
+	}
+		
 	private HttpErrorInfo createHttpErrorInfo(HttpStatus httpStatus, ServerHttpRequest request, Exception ex) {
 
 		final String path = request.getPath().pathWithinApplication().value();
