@@ -2,7 +2,7 @@ package com.enseniamelo.mensajeservice.dto;
 
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 
 @Schema(description = "DTO para los chats")
@@ -11,11 +11,11 @@ public class ChatDTO {
     @Schema(description = "Identificador del chat", example = "1")
     private Long id;
 
-    @NotBlank(message = "La hora es obligatoria")
+    @NotNull(message = "El campo 'creado' no puede ser nulo")
     @Schema(description = "Hora de creación del chat", example = "12:30:00")
     private Long creado;
 
-    @NotBlank(message = "La hora es obligatoria")
+    @NotNull(message = "El campo 'cerrado' no puede ser nulo")
     @Schema(description = "Hora de cierre del chat", example = "12:30:00")
     private Long cerrado;
 

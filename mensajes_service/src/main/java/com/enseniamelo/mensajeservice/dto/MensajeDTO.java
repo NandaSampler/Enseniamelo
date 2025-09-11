@@ -4,6 +4,7 @@ import java.util.Date;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
 
@@ -19,7 +20,7 @@ public class MensajeDTO {
     @Schema(description = "Texto del mensaje", example = "Hola, este es un mensaje.")
     private String texto;
 
-    @NotBlank(message = "La hora es obligatoria")
+    @NotNull(message = "La hora es obligatoria")
     @Schema(description = "Hora del mensaje", example = "12:30:00")
     private Date hora;
 

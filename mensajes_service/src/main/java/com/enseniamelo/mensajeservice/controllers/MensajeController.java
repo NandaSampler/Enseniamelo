@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -57,7 +58,7 @@ public class MensajeController {
             @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @GetMapping("/{id}")
-    public Mono<MensajeDTO> getMensajeById(Long id) {
+    public Mono<MensajeDTO> getMensajeById(@Min(1)  Long id) {
         return service.findById(id);
     }
 
@@ -89,7 +90,7 @@ public class MensajeController {
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @PutMapping("/{id}")
     @ResponseStatus(code = org.springframework.http.HttpStatus.NO_CONTENT)
-    public Mono<MensajeDTO> updateMensaje(@Valid @RequestBody MensajeDTO mensajeDTO, Long id) {
+    public Mono<MensajeDTO> updateMensaje(@Valid @RequestBody MensajeDTO mensajeDTO, @Min(1)  Long id) {
         return service.updateMensaje(id, mensajeDTO);
     }
 
@@ -105,7 +106,7 @@ public class MensajeController {
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @DeleteMapping("/{id}")
     @ResponseStatus(code = org.springframework.http.HttpStatus.NO_CONTENT)
-    public Mono<Void> deleteMensaje(Long id) {
+    public Mono<Void> deleteMensaje(@Min(1) Long id) {
         return service.deleteMensaje(id);
     }
 }

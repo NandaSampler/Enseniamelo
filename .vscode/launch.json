@@ -4,6 +4,13 @@
             "type": "java",
             "name": "MensajesServiceApplication",
             "request": "launch",
+            "mainClass": "com.enseniamelo.mensajeservice.MensajesServiceApplication",
+            "projectName": "mensajes_service"
+        },
+        {
+            "type": "java",
+            "name": "MensajesServiceApplication",
+            "request": "launch",
             "mainClass": "com.enseniamelo.mensajeservice.mensajes_service.MensajesServiceApplication",
             "projectName": ""
         },
@@ -15,7 +22,8 @@
             "mainClass": "com.enseniamelo.tutorservice.TutorServiceApplication",
             "projectName": "tutor-service",
             "args": "",
-            "envFile": "${workspaceFolder}/.env"
+            "envFile": "${workspaceFolder}/.env",
+            "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=49963 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=tutor-service"
         },
         {
             "type": "java",

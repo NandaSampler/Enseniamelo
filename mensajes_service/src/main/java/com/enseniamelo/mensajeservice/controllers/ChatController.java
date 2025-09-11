@@ -90,7 +90,7 @@ public class ChatController {
     @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
             @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
-    @PutMapping
+    @PutMapping("/{id}")
     @ResponseStatus(code = org.springframework.http.HttpStatus.NO_CONTENT)
     public Mono<ChatDTO> updateChat(@PathVariable @Min(1) Long id, @Valid @RequestBody ChatDTO chatDTO) {
         return service.updateChat(id, chatDTO);

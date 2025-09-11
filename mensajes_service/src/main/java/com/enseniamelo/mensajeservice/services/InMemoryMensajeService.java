@@ -28,11 +28,13 @@ public class InMemoryMensajeService implements MensajeService {
                 .build());
     }
 
+    //Obtener todos los mensajes
     @Override
     public Flux<MensajeDTO> findAll() {
         return Flux.fromIterable(data.values());
     }
 
+    //Obtener un mensaje por ID
     @Override
     public Mono<MensajeDTO> findById(Long id) {
         MensajeDTO m = data.get(id);
@@ -41,6 +43,7 @@ public class InMemoryMensajeService implements MensajeService {
                 : Mono.error(new RuntimeException("Mensaje no encontrado con id: " + id));
     }
 
+    //Crear un nuevo mensaje
     @Override
     public Mono<MensajeDTO> createMensaje(MensajeDTO mensajeDTO) {
         long id = data.size() + 1L;
@@ -54,6 +57,7 @@ public class InMemoryMensajeService implements MensajeService {
         return Mono.just(mensajeDTO);
     }
 
+    //Actualizar un mensaje existente
     @Override
     public Mono<MensajeDTO> updateMensaje(Long id, MensajeDTO mensajeDTO) {
         if (!data.containsKey(id)) {
@@ -69,6 +73,7 @@ public class InMemoryMensajeService implements MensajeService {
         return Mono.just(updated);
     }
 
+    //Eliminar un mensaje por ID
     @Override
     public Mono<Void> deleteMensaje(Long id) {
         if (!data.containsKey(id)) {

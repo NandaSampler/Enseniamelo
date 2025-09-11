@@ -26,11 +26,13 @@ public class InMemoryChatService implements ChatService {
                 .build());
     }
 
+    //Obtener todos los chats
     @Override
     public Flux<ChatDTO> findAll() {
         return Flux.fromIterable(data.values());
     }
 
+    //Obtener un chat por ID
     @Override
     public Mono<ChatDTO> findById(Long id) {
         ChatDTO c = data.get(id);
@@ -39,6 +41,7 @@ public class InMemoryChatService implements ChatService {
                 : Mono.error(new ResourceNotFoundException("Chat", id));
     }
 
+    //Crear un nuevo chat
     @Override
     public Mono<ChatDTO> createChat(ChatDTO chatDTO) {
         long id = data.size() + 1L;
@@ -51,6 +54,7 @@ public class InMemoryChatService implements ChatService {
         return Mono.just(chatDTO);
     }
 
+    //Actualizar un chat existente
     @Override
     public Mono<ChatDTO> updateChat(Long id, ChatDTO chatDTO) {
         if (!data.containsKey(id)) {
@@ -65,6 +69,7 @@ public class InMemoryChatService implements ChatService {
         return Mono.just(updated);
     }
 
+    //Eliminar un chat por ID
     @Override
     public Mono<Void> deleteChat(Long id) {
         if (!data.containsKey(id)) {
