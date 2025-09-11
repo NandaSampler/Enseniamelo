@@ -78,3 +78,60 @@ api:
         1. Si ningún chat se encontró con el id proporcionado se devuelve un error **404 - Not Found**
       parameters:
         chatId: ID del chat a eliminar
+    mensaje:
+      get-mensajes:
+        description: Retorna la lista de mensajes.
+        notes: |
+          # Respuesta exitosa
+          Si el id del chat solicitado es encontrado y contiene mensajes, el método retornará la lista de mensajes del chat.
+
+          # Respuestas con error
+          1. Si ningún chat se encontró con el id proporcionado se devuelve un error **404 - Not Found**
+          2. Si el chat no contiene mensajes se devuelve un error **404 - Not Found**
+        parameters:
+          chatId: ID del chat cuyos mensajes se desean obtener
+      get-mensaje-by-id:
+        description: Retorna la información del mensaje en base al id de mensaje proporcionado.
+        notes: |
+          # Respuesta exitosa
+          Si el id del mensaje solicitado es encontrado el método retornará la información del mensaje
+
+          # Respuestas con error
+          1. Si ningún mensaje se encontró se devuelve un error **404 - Not Found**
+        parameters:
+          mensajeId: ID del mensaje a buscar
+      create-mensaje:
+        description: Crea un nuevo mensaje en un chat existente.
+        notes: |
+          # Respuesta exitosa
+          Si el id del chat donde se desea crear el mensaje es encontrado y la información del mensaje es válida, el método creará un nuevo mensaje y retornará la información del mensaje creado.
+
+          # Respuestas con error
+          1. Si ningún chat se encontró con el id proporcionado se devuelve un error **404 - Not Found**
+          2. Si la información del mensaje proporcionada es inválida se devuelve un error **400 - Bad Request**
+          3. Si no se pueden procesar los parámetros de entrada se devuelve un error **422 - Unprocessable Entity**
+        parameters:
+          chatId: ID del chat donde se desea crear el mensaje
+      update-mensaje:
+        description: Actualiza la información de un mensaje existente.
+        notes: |
+          # Respuesta exitosa
+          Si el id del mensaje a actualizar es encontrado y la información proporcionada es válida, el método actualizará el mensaje y retornará la información del mensaje actualizado.
+
+          # Respuestas con error
+          1. Si ningún mensaje se encontró con el id proporcionado se devuelve un error **404 - Not Found**
+          2. Si la información del mensaje proporcionada es inválida se devuelve un error **400 - Bad Request**
+          3. Si no se pueden procesar los parámetros de entrada se devuelve un error **422 - Unprocessable Entity**
+        parameters:
+          mensajeId: ID del mensaje a actualizar
+          mensajeBody: Objeto JSON que representa el mensaje a actualizar
+      delete-mensaje:
+        description: Elimina un mensaje existente.
+        notes: |
+          # Respuesta exitosa
+          Si el id del mensaje a eliminar es encontrado, el método eliminará el mensaje.
+
+          # Respuestas con error
+          1. Si ningún mensaje se encontró con el id proporcionado se devuelve un error **404 - Not Found**
+        parameters:
+          mensajeId: ID del mensaje a eliminar

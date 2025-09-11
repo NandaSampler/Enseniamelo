@@ -1,4 +1,4 @@
-package com.enseniamelo.mensajeservice.mensajes_service.exceptions;
+package com.enseniamelo.mensajeservice.exceptions;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;

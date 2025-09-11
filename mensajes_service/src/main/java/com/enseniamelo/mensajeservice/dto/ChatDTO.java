@@ -1,10 +1,11 @@
-package com.enseniamelo.mensajeservice.mensajes_service.dto;
+package com.enseniamelo.mensajeservice.dto;
 
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
 
+@Schema(description = "DTO para los chats")
 @Builder
 public class ChatDTO {
     @Schema(description = "Identificador del chat", example = "1")

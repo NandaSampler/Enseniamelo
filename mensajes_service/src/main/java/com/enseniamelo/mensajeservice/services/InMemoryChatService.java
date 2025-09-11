@@ -1,12 +1,12 @@
-package com.enseniamelo.mensajeservice.mensajes_service.services;
+package com.enseniamelo.mensajeservice.services;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.stereotype.Service;
 
-import com.enseniamelo.mensajeservice.mensajes_service.dto.ChatDTO;
-import com.enseniamelo.mensajeservice.mensajes_service.exceptions.ResourceNotFoundException;
+import com.enseniamelo.mensajeservice.dto.ChatDTO;
+import com.enseniamelo.mensajeservice.exceptions.ResourceNotFoundException;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;

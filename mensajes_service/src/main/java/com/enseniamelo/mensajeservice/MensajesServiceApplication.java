@@ -1,4 +1,4 @@
-package com.enseniamelo.mensajeservice.mensajes_service;
+package com.enseniamelo.mensajeservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

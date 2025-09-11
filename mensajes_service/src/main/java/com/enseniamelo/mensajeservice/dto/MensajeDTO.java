@@ -1,12 +1,14 @@
-package com.enseniamelo.mensajeservice.mensajes_service.dto;
+package com.enseniamelo.mensajeservice.dto;
 
-import java.sql.Time;
+import java.util.Date;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.Builder;
 
 @Schema(description = "DTO para los mensajes")
+@Builder
 public class MensajeDTO {
 
     @Schema(description = "Identificador del mensaje", example = "1")
@@ -19,7 +21,7 @@ public class MensajeDTO {
 
     @NotBlank(message = "La hora es obligatoria")
     @Schema(description = "Hora del mensaje", example = "12:30:00")
-    private Time hora;
+    private Date hora;
 
     @NotBlank(message = "El estado es obligatorio")
     @Schema(description = "Estado del mensaje", example = "ENVIADO")
@@ -28,7 +30,7 @@ public class MensajeDTO {
     public MensajeDTO() {
     }
 
-    public MensajeDTO(Long id, String texto, Time hora, String estado) {
+    public MensajeDTO(Long id, String texto, Date hora, String estado) {
         this.id = id;
         this.texto = texto;
         this.hora = hora;
@@ -51,11 +53,11 @@ public class MensajeDTO {
         this.texto = texto;
     }
 
-    public Time getHora() {
+    public Date getHora() {
         return hora;
     }
 
-    public void setHora(Time hora) {
+    public void setHora(Date hora) {
         this.hora = hora;
     }
 

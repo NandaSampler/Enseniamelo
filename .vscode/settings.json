@@ -1,4 +1,5 @@
 {
     "xml.downloadExternalResources.enabled": true,
-    "java.compile.nullAnalysis.mode": "automatic"
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.debug.settings.onBuildFailureProceed": true
 }

@@ -1,4 +1,4 @@
-package com.enseniamelo.mensajeservice.mensajes_service.exceptions;
+package com.enseniamelo.mensajeservice.exceptions;
 
 public class ResourceNotFoundException extends RuntimeException {
     private final String resource;
