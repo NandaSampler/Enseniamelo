@@ -15,31 +15,48 @@ import java.util.concurrent.atomic.AtomicLong;
 public class InMemoryCommentService implements CommentService {
 
     private final Map<Long, CommentDTO> store = new ConcurrentHashMap<>();
-    private final AtomicLong idGen = new AtomicLong(0L);
+    private final AtomicLong idGenerator = new AtomicLong(1);
 
     @Override
     public Flux<CommentDTO> findAll(Long courseId, Long tutorId) {
         return Flux.fromIterable(store.values())
-                .filter(dto -> {
-                    if (courseId != null) return courseId.equals(dto.getCourseId());
-                    if (tutorId != null) return tutorId.equals(dto.getTutorId());
-                    return true;
-                });
+                .filter(c -> (courseId == null || courseId.equals(c.getCourseId())) &&
+                             (tutorId == null || tutorId.equals(c.getTutorId())));
     }
 
     @Override
     public Mono<CommentDTO> findById(Long id) {
-        CommentDTO dto = store.get(id);
-        return dto != null ? Mono.just(dto) : Mono.empty();
+        CommentDTO comment = store.get(id);
+        if (comment == null) {
+            return Mono.error(new ResourceNotFoundException("Comment", id));
+        }
+        return Mono.just(comment);
     }
 
     @Override
     public Mono<CommentDTO> create(CommentDTO dto) {
-        long id = idGen.incrementAndGet();
-        dto.setId(id);
-        dto.setCreadoEn(LocalDateTime.now());
-        store.put(id, dto);
-        return Mono.just(dto);
+        // 🔹 Validación: userId obligatorio
+        if (dto.getUserId() == null) {
+            return Mono.error(new IllegalArgumentException("El userId es obligatorio"));
+        }
+        // 🔹 Validación: debe existir al menos courseId o tutorId
+        if (dto.getCourseId() == null && dto.getTutorId() == null) {
+            return Mono.error(new IllegalArgumentException("Debe especificar courseId o tutorId"));
+        }
+
+        Long id = idGenerator.getAndIncrement();
+        CommentDTO newComment = CommentDTO.builder()
+                .id(id)
+                .userId(dto.getUserId())
+                .courseId(dto.getCourseId())
+                .tutorId(dto.getTutorId())
+                .comentario(dto.getComentario())
+                .calificacion(dto.getCalificacion())
+                .creadoEn(LocalDateTime.now())
+                .build();
+
+        store.put(id, newComment);
+        return Mono.just(newComment);
     }
 
     @Override
@@ -48,19 +65,32 @@ public class InMemoryCommentService implements CommentService {
         if (existing == null) {
             return Mono.error(new ResourceNotFoundException("Comment", id));
         }
-        // Simple full replace while preserving id and creadoEn if absent
-        dto.setId(id);
-        if (dto.getCreadoEn() == null) dto.setCreadoEn(existing.getCreadoEn());
-        store.put(id, dto);
-        return Mono.just(dto);
+
+        // Validación igual que en create
+        if (dto.getUserId() == null) {
+            return Mono.error(new IllegalArgumentException("El userId es obligatorio"));
+        }
+        if (dto.getCourseId() == null && dto.getTutorId() == null) {
+            return Mono.error(new IllegalArgumentException("Debe especificar courseId o tutorId"));
+        }
+
+        existing.setUserId(dto.getUserId());
+        existing.setCourseId(dto.getCourseId());
+        existing.setTutorId(dto.getTutorId());
+        existing.setComentario(dto.getComentario());
+        existing.setCalificacion(dto.getCalificacion());
+        // creadoEn no se actualiza, mantiene la fecha original
+
+        store.put(id, existing);
+        return Mono.just(existing);
     }
 
     @Override
     public Mono<Void> delete(Long id) {
-        CommentDTO removed = store.remove(id);
-        if (removed == null) {
+        if (!store.containsKey(id)) {
             return Mono.error(new ResourceNotFoundException("Comment", id));
         }
+        store.remove(id);
         return Mono.empty();
     }
 }

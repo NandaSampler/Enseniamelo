@@ -1,7 +1,6 @@
 package com.enseniamelo.commentsservice.controller;
 
 import com.enseniamelo.commentsservice.dto.CommentDTO;
-import com.enseniamelo.commentsservice.exception.ResourceNotFoundException;
 import com.enseniamelo.commentsservice.service.CommentService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -21,7 +20,9 @@ public class CommentController {
         this.service = service;
     }
 
-    // List all comments (optionally filter by courseId or tutorId as query params)
+    /**
+     * Listar todos los comentarios, opcionalmente filtrando por courseId o tutorId.
+     */
     @GetMapping
     public Flux<CommentDTO> findAll(
             @RequestParam(required = false) Long courseId,
@@ -29,30 +30,37 @@ public class CommentController {
         return service.findAll(courseId, tutorId);
     }
 
-    // Get by id
+    /**
+     * Obtener un comentario por ID.
+     */
     @GetMapping("/{id}")
     public Mono<CommentDTO> findById(@PathVariable("id") Long id) {
-        return service.findById(id)
-                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Comment", id)));
+        return service.findById(id);
     }
 
-    // Create
+    /**
+     * Crear un nuevo comentario.
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Mono<CommentDTO> create(@Valid @RequestBody Mono<CommentDTO> commentDtoMono) {
-        return commentDtoMono.flatMap(service::create);
+    public Mono<CommentDTO> create(@Valid @RequestBody CommentDTO commentDto) {
+        return service.create(commentDto);
     }
 
-    // Delete
+    /**
+     * Actualizar un comentario por ID (total o parcial).
+     */
+    @PutMapping("/{id}")
+    public Mono<CommentDTO> update(@PathVariable("id") Long id, @Valid @RequestBody CommentDTO dto) {
+        return service.update(id, dto);
+    }
+
+    /**
+     * Eliminar un comentario por ID.
+     */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> delete(@PathVariable("id") Long id) {
         return service.delete(id);
-    }
-
-    // Update (partial/full)
-    @PutMapping("/{id}")
-    public Mono<CommentDTO> update(@PathVariable("id") Long id, @Valid @RequestBody Mono<CommentDTO> dtoMono) {
-        return dtoMono.flatMap(dto -> service.update(id, dto));
     }
 }
