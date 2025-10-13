@@ -13,7 +13,7 @@ public class UsuarioDTO {
     private String id;
 
     @Schema(description = "Identificador del usuario en la base de datos relacional", example = "1")
-    private Integer id_usuario;
+    private Integer idUsuario;
 
     @NotBlank(message = "El nombre es obligatorio")
     @Size(min = 3, max = 50, message = "El nombre debe tener entre 3 y 50 caracteres")
@@ -47,11 +47,18 @@ public class UsuarioDTO {
     @Size(max = 100, message = "La URL de la foto no puede superar los 100 caracteres")
     @Schema(description = "URL o nombre del archivo de la foto del usuario", example = "juanperez.jpg")
     private String foto;
+
+    @Schema(description = "Dirección del servicio que responde la petición", example = "http://localhost:8081")
+    private String serviceAddress;
+
+    // ------------------- Constructores -------------------
+
     public UsuarioDTO() {}
-    public UsuarioDTO(String id, Integer id_usuario, String nombre, String apellido, Integer telefono,
-                      String email, String contrasenia, String rol, String foto) {
+
+    public UsuarioDTO(String id, Integer idUsuario, String nombre, String apellido, Integer telefono,
+                      String email, String contrasenia, String rol, String foto, String serviceAddress) {
         this.id = id;
-        this.id_usuario = id_usuario;
+        this.idUsuario = idUsuario;
         this.nombre = nombre;
         this.apellido = apellido;
         this.telefono = telefono;
@@ -59,81 +66,54 @@ public class UsuarioDTO {
         this.contrasenia = contrasenia;
         this.rol = rol;
         this.foto = foto;
+        this.serviceAddress = serviceAddress;
     }
 
-    // Getters y Setters
-    public String getId() {
-        return id;
-    }
-    public void setId(String id) {
-        this.id = id;
-    }
+    // ------------------- Getters & Setters -------------------
 
-    public Integer getid_usuario() {
-        return id_usuario;
-    }
-    public void setid_usuario(Integer id_usuario) {
-        this.id_usuario = id_usuario;
-    }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
 
-    public String getNombre() {
-        return nombre;
-    }
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
+    public Integer getIdUsuario() { return idUsuario; }
+    public void setIdUsuario(Integer idUsuario) { this.idUsuario = idUsuario; }
 
-    public String getApellido() {
-        return apellido;
-    }
-    public void setApellido(String apellido) {
-        this.apellido = apellido;
-    }
+    public String getNombre() { return nombre; }
+    public void setNombre(String nombre) { this.nombre = nombre; }
 
-    public Integer getTelefono() {
-        return telefono;
-    }
-    public void setTelefono(Integer telefono) {
-        this.telefono = telefono;
-    }
+    public String getApellido() { return apellido; }
+    public void setApellido(String apellido) { this.apellido = apellido; }
 
-    public String getEmail() {
-        return email;
-    }
-    public void setEmail(String email) {
-        this.email = email;
-    }
+    public Integer getTelefono() { return telefono; }
+    public void setTelefono(Integer telefono) { this.telefono = telefono; }
 
-    public String getContrasenia() {
-        return contrasenia;
-    }
-    public void setContrasenia(String contrasenia) {
-        this.contrasenia = contrasenia;
-    }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    public String getRol() {
-        return rol;
-    }
-    public void setRol(String rol) {
-        this.rol = rol;
-    }
+    public String getContrasenia() { return contrasenia; }
+    public void setContrasenia(String contrasenia) { this.contrasenia = contrasenia; }
 
-    public String getFoto() {
-        return foto;
-    }
-    public void setFoto(String foto) {
-        this.foto = foto;
-    }
+    public String getRol() { return rol; }
+    public void setRol(String rol) { this.rol = rol; }
+
+    public String getFoto() { return foto; }
+    public void setFoto(String foto) { this.foto = foto; }
+
+    public String getServiceAddress() { return serviceAddress; }
+    public void setServiceAddress(String serviceAddress) { this.serviceAddress = serviceAddress; }
+
+    // ------------------- toString -------------------
 
     @Override
     public String toString() {
         return "UsuarioDTO [id=" + id +
-                ", id_usuario=" + id_usuario +
+                ", idUsuario=" + idUsuario +
                 ", nombre=" + nombre +
                 ", apellido=" + apellido +
                 ", telefono=" + telefono +
                 ", email=" + email +
+                ", contrasenia=" + contrasenia +
                 ", rol=" + rol +
-                ", foto=" + foto + "]";
+                ", foto=" + foto +
+                ", serviceAddress=" + serviceAddress + "]";
     }
 }
