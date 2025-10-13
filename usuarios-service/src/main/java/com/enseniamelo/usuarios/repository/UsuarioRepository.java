@@ -9,11 +9,11 @@ import org.springframework.data.mongodb.repository.Query;
 import com.enseniamelo.usuarios.model.Usuario;
 
 public interface UsuarioRepository extends MongoRepository<Usuario, String> {
-
+    Optional<Usuario> findByIdUsuario(Integer idUsuario);
     Optional<Usuario> findByEmail(String email);
     List<Usuario> findByRol(String rol);
-    @Query("{ 'nombre': { $regex: ?0, $options: 'i' } }")
-    List<Usuario> findByNombreLike(String nombreParcial); 
-    @Query("{ 'rol': { $in: ?0 } }")
-    List<Usuario> findByRoles(List<String> roles);
+    List<Usuario> findByNombreStartingWith(String prefix);
+    List<Usuario> findByTelefonoGreaterThanEqual(Integer telefono);
+    @Query("{ 'telefono': { $gte: ?0, $lte: ?1 } }")
+    List<Usuario> findUsuariosByTelefonoRange(Integer minTelefono, Integer maxTelefono);
 }
