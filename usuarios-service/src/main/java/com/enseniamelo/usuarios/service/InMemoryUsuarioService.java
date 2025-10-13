@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.stereotype.Service;
 
 import com.enseniamelo.usuarios.dto.UsuarioDTO;
-import com.enseniamelo.usuarios.exception.ResourceNotFoundException;
+import com.enseniamelo.usuarios.util.exception.ResourceNotFoundException;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;

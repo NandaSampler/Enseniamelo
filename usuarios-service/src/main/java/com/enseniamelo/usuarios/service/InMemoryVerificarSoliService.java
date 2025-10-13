@@ -1,7 +1,8 @@
 package com.enseniamelo.usuarios.service;
 
 import com.enseniamelo.usuarios.dto.VerificarSoliDTO;
-import com.enseniamelo.usuarios.exception.ResourceNotFoundException;
+import com.enseniamelo.usuarios.util.exception.ResourceNotFoundException;
+
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;

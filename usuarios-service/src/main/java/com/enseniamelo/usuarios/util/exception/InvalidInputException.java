@@ -1,4 +1,4 @@
-package com.enseniamelo.usuarios.exception;
+package com.enseniamelo.usuarios.util.exception;
 
 public class InvalidInputException extends RuntimeException {
   public InvalidInputException() {}

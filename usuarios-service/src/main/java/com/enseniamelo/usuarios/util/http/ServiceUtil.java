@@ -1,4 +1,4 @@
-package com.enseniamelo.usuarios.http;
+package com.enseniamelo.usuarios.util.http;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;

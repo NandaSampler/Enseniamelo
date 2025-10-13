@@ -1,4 +1,4 @@
-package com.enseniamelo.usuarios.http;
+package com.enseniamelo.usuarios.util.http;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY;
@@ -15,9 +15,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.server.ServerWebInputException;
 
-import com.enseniamelo.usuarios.exception.BadRequestException;
-import com.enseniamelo.usuarios.exception.InvalidInputException;
-import com.enseniamelo.usuarios.exception.NotFoundException;
+import com.enseniamelo.usuarios.util.exception.BadRequestException;
+import com.enseniamelo.usuarios.util.exception.InvalidInputException;
+import com.enseniamelo.usuarios.util.exception.NotFoundException;
 
 @RestControllerAdvice
 class GlobalControllerExceptionHandler {

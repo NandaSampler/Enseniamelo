@@ -1,4 +1,4 @@
-package com.enseniamelo.usuarios.http;
+package com.enseniamelo.usuarios.util.http;
 
 import java.time.ZonedDateTime;
 import org.springframework.http.HttpStatus;

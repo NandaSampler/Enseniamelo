@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ServerWebInputException;
 
-import com.enseniamelo.usuarios.exception.ResourceNotFoundException;
+import com.enseniamelo.usuarios.util.exception.ResourceNotFoundException;
 
 import reactor.core.publisher.Mono;
 
