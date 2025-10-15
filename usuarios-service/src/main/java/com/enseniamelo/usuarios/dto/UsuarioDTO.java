@@ -48,15 +48,13 @@ public class UsuarioDTO {
     @Schema(description = "URL o nombre del archivo de la foto del usuario", example = "juanperez.jpg")
     private String foto;
 
-    @Schema(description = "Dirección del servicio que responde la petición", example = "http://localhost:8081")
-    private String serviceAddress;
 
     // ------------------- Constructores -------------------
 
     public UsuarioDTO() {}
 
     public UsuarioDTO(String id, Integer idUsuario, String nombre, String apellido, Integer telefono,
-                      String email, String contrasenia, String rol, String foto, String serviceAddress) {
+                      String email, String contrasenia, String rol, String foto) {
         this.id = id;
         this.idUsuario = idUsuario;
         this.nombre = nombre;
@@ -66,7 +64,6 @@ public class UsuarioDTO {
         this.contrasenia = contrasenia;
         this.rol = rol;
         this.foto = foto;
-        this.serviceAddress = serviceAddress;
     }
 
     // ------------------- Getters & Setters -------------------
@@ -98,8 +95,6 @@ public class UsuarioDTO {
     public String getFoto() { return foto; }
     public void setFoto(String foto) { this.foto = foto; }
 
-    public String getServiceAddress() { return serviceAddress; }
-    public void setServiceAddress(String serviceAddress) { this.serviceAddress = serviceAddress; }
 
     // ------------------- toString -------------------
 
@@ -113,7 +108,6 @@ public class UsuarioDTO {
                 ", email=" + email +
                 ", contrasenia=" + contrasenia +
                 ", rol=" + rol +
-                ", foto=" + foto +
-                ", serviceAddress=" + serviceAddress + "]";
+                ", foto=" + foto +"]";
     }
 }

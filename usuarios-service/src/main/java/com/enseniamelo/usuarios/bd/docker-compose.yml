@@ -1,0 +1,14 @@
+version: '2.1'
+
+services:
+  mongodb:
+    image: mongo:8
+    mem_limit: 512m
+    ports:
+      - "27017:27017"
+    command: mongod
+    healthcheck:
+      test: "mongostat -n 1"
+      interval: 5s
+      timeout: 2s
+      retries: 60
