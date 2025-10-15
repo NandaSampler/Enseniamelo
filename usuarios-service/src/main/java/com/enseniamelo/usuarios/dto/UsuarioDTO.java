@@ -9,10 +9,7 @@ import jakarta.validation.constraints.Size;
 @Schema(description = "DTO para el usuario")
 public class UsuarioDTO {
 
-    @Schema(description = "Identificador generado por MongoDB", example = "652a1cde4f8b5f1234abcd56")
-    private String id;
-
-    @Schema(description = "Identificador del usuario en la base de datos relacional", example = "1")
+    @Schema(description = "Identificador del usuario en la base de datos", example = "1")
     private Integer idUsuario;
 
     @NotBlank(message = "El nombre es obligatorio")
@@ -48,14 +45,12 @@ public class UsuarioDTO {
     @Schema(description = "URL o nombre del archivo de la foto del usuario", example = "juanperez.jpg")
     private String foto;
 
-
     // ------------------- Constructores -------------------
 
     public UsuarioDTO() {}
 
-    public UsuarioDTO(String id, Integer idUsuario, String nombre, String apellido, Integer telefono,
+    public UsuarioDTO(Integer idUsuario, String nombre, String apellido, Integer telefono,
                       String email, String contrasenia, String rol, String foto) {
-        this.id = id;
         this.idUsuario = idUsuario;
         this.nombre = nombre;
         this.apellido = apellido;
@@ -67,9 +62,6 @@ public class UsuarioDTO {
     }
 
     // ------------------- Getters & Setters -------------------
-
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
 
     public Integer getIdUsuario() { return idUsuario; }
     public void setIdUsuario(Integer idUsuario) { this.idUsuario = idUsuario; }
@@ -95,13 +87,11 @@ public class UsuarioDTO {
     public String getFoto() { return foto; }
     public void setFoto(String foto) { this.foto = foto; }
 
-
     // ------------------- toString -------------------
 
     @Override
     public String toString() {
-        return "UsuarioDTO [id=" + id +
-                ", idUsuario=" + idUsuario +
+        return "UsuarioDTO [idUsuario=" + idUsuario +
                 ", nombre=" + nombre +
                 ", apellido=" + apellido +
                 ", telefono=" + telefono +

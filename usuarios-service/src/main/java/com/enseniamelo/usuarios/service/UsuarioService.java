@@ -23,6 +23,11 @@ public class UsuarioService {
     }
 
     public UsuarioDTO crearUsuario(UsuarioDTO usuarioDTO) {
+        usuarioRepository.findByIdUsuario(usuarioDTO.getIdUsuario())
+            .ifPresent(u -> {
+                throw new RuntimeException("Usuario ya existe con idUsuario: " + usuarioDTO.getIdUsuario());
+            });
+
         Usuario usuario = usuarioMapper.dtoToEntity(usuarioDTO);
         Usuario usuarioGuardado = usuarioRepository.save(usuario);
         return usuarioMapper.entityToDto(usuarioGuardado);
@@ -35,31 +40,27 @@ public class UsuarioService {
                 .collect(Collectors.toList());
     }
 
-    public Optional<UsuarioDTO> buscarPorId(String id) {
-        return usuarioRepository.findById(id)
-                .map(usuarioMapper::entityToDto);
-    }
 
-    public Optional<UsuarioDTO> buscarPorIdUsuario(Integer idUsuario) {
+    public UsuarioDTO buscarPorIdUsuario(Integer idUsuario) {
         return usuarioRepository.findByIdUsuario(idUsuario)
-                .map(usuarioMapper::entityToDto);
+                .map(usuarioMapper::entityToDto)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con idUsuario: " + idUsuario));
     }
 
-    public Optional<UsuarioDTO> buscarPorEmail(String email) {
-        return usuarioRepository.findByEmail(email)
-                .map(usuarioMapper::entityToDto);
+    public void eliminarPorIdUsuario(Integer idUsuario) {
+        Usuario usuario = usuarioRepository.findByIdUsuario(idUsuario)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con idUsuario: " + idUsuario));
+        usuarioRepository.delete(usuario);
     }
 
-    public Optional<UsuarioDTO> actualizarUsuario(String id, UsuarioDTO usuarioDTO) {
-        return usuarioRepository.findById(id).map(usuarioExistente -> {
-            Usuario usuarioActualizado = usuarioMapper.dtoToEntity(usuarioDTO);
-            usuarioActualizado.setId(id); // mantenemos el mismo ID de Mongo
-            Usuario guardado = usuarioRepository.save(usuarioActualizado);
-            return usuarioMapper.entityToDto(guardado);
-        });
-    }
-
-    public void eliminarUsuario(String id) {
-        usuarioRepository.deleteById(id);
+    public UsuarioDTO actualizarUsuario(Integer idUsuario, UsuarioDTO usuarioDTO) {
+        return usuarioRepository.findByIdUsuario(idUsuario)
+                .map(usuarioExistente -> {
+                    Usuario usuarioActualizado = usuarioMapper.dtoToEntity(usuarioDTO);
+                    usuarioActualizado.setIdUsuario(idUsuario); // aseguramos que se use el mismo idUsuario
+                    Usuario guardado = usuarioRepository.save(usuarioActualizado);
+                    return usuarioMapper.entityToDto(guardado);
+                })
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con idUsuario: " + idUsuario));
     }
 }

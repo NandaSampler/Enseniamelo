@@ -7,9 +7,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class Usuario {
 
     @Id
-    private String id; // ID autogenerado por MongoDB
-
-    private Integer idUsuario; // ID propio del sistema relacional
+    private Integer idUsuario; 
     private String nombre;
     private String apellido;
     private Integer telefono;
@@ -18,11 +16,8 @@ public class Usuario {
     private String rol;
     private String foto;
 
-    // Constructor vacío
     public Usuario() {
     }
-
-    // Constructor con parámetros
     public Usuario(Integer idUsuario, String nombre, String apellido, Integer telefono,
                    String email, String contrasenia, String rol, String foto) {
         this.idUsuario = idUsuario;
@@ -33,15 +28,6 @@ public class Usuario {
         this.contrasenia = contrasenia;
         this.rol = rol;
         this.foto = foto;
-    }
-
-    // Getters y Setters
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
     }
 
     public Integer getIdUsuario() {
