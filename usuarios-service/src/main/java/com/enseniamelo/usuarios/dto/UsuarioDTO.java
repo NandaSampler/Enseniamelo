@@ -1,103 +1,94 @@
 package com.enseniamelo.usuarios.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "DTO para el usuario")
 public class UsuarioDTO {
 
-    @Schema(description = "Identificador del usuario en la base de datos", example = "1")
+    @Schema(description = "Identificador del usuario", example = "1", accessMode = Schema.AccessMode.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Integer idUsuario;
 
     @NotBlank(message = "El nombre es obligatorio")
-    @Size(min = 3, max = 50, message = "El nombre debe tener entre 3 y 50 caracteres")
-    @Schema(description = "Nombre del usuario", example = "Juan")
+    @Size(min = 2, max = 50, message = "El nombre debe tener entre 2 y 50 caracteres")
+    @Schema(description = "Nombre del usuario", example = "Juan", requiredMode = Schema.RequiredMode.REQUIRED)
     private String nombre;
 
     @NotBlank(message = "El apellido es obligatorio")
-    @Size(min = 3, max = 50, message = "El apellido debe tener entre 3 y 50 caracteres")
-    @Schema(description = "Apellido del usuario", example = "Pérez")
+    @Size(min = 2, max = 50, message = "El apellido debe tener entre 2 y 50 caracteres")
+    @Schema(description = "Apellido del usuario", example = "Pérez", requiredMode = Schema.RequiredMode.REQUIRED)
     private String apellido;
 
-    @NotNull(message = "El teléfono es obligatorio")
-    @Schema(description = "Teléfono del usuario", example = "123456789")
-    private Integer telefono;
+    @NotBlank(message = "El teléfono es obligatorio")
+    @Pattern(regexp = "^[+]?[0-9]{8,15}$", message = "El teléfono debe contener entre 8 y 15 dígitos")
+    @Schema(description = "Teléfono del usuario", example = "+59112345678", requiredMode = Schema.RequiredMode.REQUIRED)
+    private String telefono;
 
     @NotBlank(message = "El email es obligatorio")
     @Email(message = "El email debe ser válido")
-    @Schema(description = "Correo electrónico del usuario", example = "juan.perez@mail.com")
+    @Schema(description = "Correo electrónico del usuario", example = "juan.perez@mail.com", requiredMode = Schema.RequiredMode.REQUIRED)
     private String email;
 
-    @NotBlank(message = "La contraseña es obligatoria")
-    @Size(min = 6, max = 50, message = "La contraseña debe tener entre 6 y 50 caracteres")
-    @Schema(description = "Contraseña del usuario", example = "claveSegura123")
+    @NotBlank(message = "La contraseña es obligatoria", groups = OnCreate.class)
+    @Size(min = 6, max = 100, message = "La contraseña debe tener entre 6 y 100 caracteres")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Schema(description = "Contraseña del usuario", example = "claveSegura123", requiredMode = Schema.RequiredMode.REQUIRED, accessMode = Schema.AccessMode.WRITE_ONLY)
     private String contrasenia;
 
     @NotBlank(message = "El rol es obligatorio")
-    @Size(max = 20, message = "El rol no puede superar los 20 caracteres")
-    @Schema(description = "Rol del usuario", example = "ADMIN")
+    @Pattern(regexp = "^(ADMIN|DOCENTE|ESTUDIANTE)$", message = "El rol debe ser ADMIN, DOCENTE o ESTUDIANTE")
+    @Schema(description = "Rol del usuario", example = "ESTUDIANTE", allowableValues = {"ADMIN", "DOCENTE", "ESTUDIANTE"}, requiredMode = Schema.RequiredMode.REQUIRED)
     private String rol;
 
-    @Size(max = 100, message = "La URL de la foto no puede superar los 100 caracteres")
-    @Schema(description = "URL o nombre del archivo de la foto del usuario", example = "juanperez.jpg")
+    @Size(max = 255, message = "La URL de la foto no puede superar los 255 caracteres")
+    @Schema(description = "URL o nombre del archivo de la foto del usuario", example = "https://example.com/foto.jpg")
     private String foto;
 
-    // ------------------- Constructores -------------------
+    // ============ CAMPOS DE RELACIONES (OPCIONALES) ============
+    
+    @Schema(description = "ID de la solicitud de verificación (si existe)", accessMode = Schema.AccessMode.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private Integer idVerificarSolicitud;
 
-    public UsuarioDTO() {}
+    @Schema(description = "Estado de la solicitud de verificación", accessMode = Schema.AccessMode.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String estadoVerificacion;
 
-    public UsuarioDTO(Integer idUsuario, String nombre, String apellido, Integer telefono,
-                      String email, String contrasenia, String rol, String foto) {
-        this.idUsuario = idUsuario;
-        this.nombre = nombre;
-        this.apellido = apellido;
-        this.telefono = telefono;
-        this.email = email;
-        this.contrasenia = contrasenia;
-        this.rol = rol;
-        this.foto = foto;
-    }
+    @Schema(description = "ID del perfil de tutor (si es DOCENTE)", accessMode = Schema.AccessMode.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private Integer idPerfilTutor;
 
-    // ------------------- Getters & Setters -------------------
+    @Schema(description = "Indica si el usuario está verificado como tutor", accessMode = Schema.AccessMode.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private Boolean tutorVerificado;
 
-    public Integer getIdUsuario() { return idUsuario; }
-    public void setIdUsuario(Integer idUsuario) { this.idUsuario = idUsuario; }
+    // ============ TIMESTAMPS ============
+    
+    @Schema(description = "Fecha de creación", accessMode = Schema.AccessMode.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private LocalDateTime creado;
 
-    public String getNombre() { return nombre; }
-    public void setNombre(String nombre) { this.nombre = nombre; }
+    @Schema(description = "Fecha de última actualización", accessMode = Schema.AccessMode.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private LocalDateTime actualizado;
 
-    public String getApellido() { return apellido; }
-    public void setApellido(String apellido) { this.apellido = apellido; }
-
-    public Integer getTelefono() { return telefono; }
-    public void setTelefono(Integer telefono) { this.telefono = telefono; }
-
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public String getContrasenia() { return contrasenia; }
-    public void setContrasenia(String contrasenia) { this.contrasenia = contrasenia; }
-
-    public String getRol() { return rol; }
-    public void setRol(String rol) { this.rol = rol; }
-
-    public String getFoto() { return foto; }
-    public void setFoto(String foto) { this.foto = foto; }
-
-    // ------------------- toString -------------------
-
-    @Override
-    public String toString() {
-        return "UsuarioDTO [idUsuario=" + idUsuario +
-                ", nombre=" + nombre +
-                ", apellido=" + apellido +
-                ", telefono=" + telefono +
-                ", email=" + email +
-                ", contrasenia=" + contrasenia +
-                ", rol=" + rol +
-                ", foto=" + foto +"]";
-    }
+    // Interfaces para validación
+    public interface OnCreate {}
+    public interface OnUpdate {}
 }

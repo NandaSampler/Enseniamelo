@@ -13,29 +13,28 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-@Document(collection = "verificar_solicitud")
+@Document(collection = "perfil_tutor")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class VerificarSolicitud {
+public class PerfilTutor {
     
     @Id
     @JsonIgnore
     private String id;
     @Indexed(unique = true)
-    private Integer idVerificar;
-    private String estado; 
-    private String comentario;
-    private String fotoCi; 
+    private Integer idTutor;
+    private String ci; 
+    private Boolean verificado;
+    private Float clasificacion; 
+    private String biografia;
     
     @DBRef
     @JsonIgnore
     private Usuario usuario;
     @DBRef
     @JsonIgnore
-    private PerfilTutor perfilTutor;
-    
-    private LocalDateTime creado;
-    private LocalDateTime decidido; 
+    private VerificarSolicitud verificarSolicitud;
+    private LocalDateTime creacion;
     private LocalDateTime actualizado;
 }
