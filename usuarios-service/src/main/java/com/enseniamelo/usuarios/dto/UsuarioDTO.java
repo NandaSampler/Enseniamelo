@@ -60,7 +60,6 @@ public class UsuarioDTO {
     @Schema(description = "URL o nombre del archivo de la foto del usuario", example = "https://example.com/foto.jpg")
     private String foto;
 
-    // ============ CAMPOS DE RELACIONES (OPCIONALES) ============
     
     @Schema(description = "ID de la solicitud de verificación (si existe)", accessMode = Schema.AccessMode.READ_ONLY)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
@@ -77,8 +76,6 @@ public class UsuarioDTO {
     @Schema(description = "Indica si el usuario está verificado como tutor", accessMode = Schema.AccessMode.READ_ONLY)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Boolean tutorVerificado;
-
-    // ============ TIMESTAMPS ============
     
     @Schema(description = "Fecha de creación", accessMode = Schema.AccessMode.READ_ONLY)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
