@@ -1,6 +1,7 @@
 from typing import Literal, Optional, Any
 from pydantic import BaseModel, Field, ConfigDict, constr
 
+
 from uuid import UUID
 
 # Documentar respuestas de error
@@ -19,98 +20,71 @@ PagoEstado = Literal["creado", "procesando", "exitoso", "fallido", "reembolsado"
 MetodoPago = Literal["tarjeta", "transferencia", "stripe_simulado"]
 
 
-# Planes
+# ---------- Planes ----------
 class PlanCreate(BaseModel):
-    nombre: constr(strip_whitespace=True, min_length=1, max_length=50) = Field(
-        ..., description="Nombre del plan."
-    )
-    precio: float = Field(..., gt=0, description="Precio en decimales.")
-    duracion: int = Field(..., gt=0, description="Duración del plan en días.")
-    estado: PlanEstado = Field("activo", description="Estado operativo del plan.")
-
+    nombre: str = Field(..., min_length=1, description="Nombre del plan")
+    precio: float = Field(..., gt=0, description="Precio del plan")
+    duracion: int = Field(..., gt=0, description="Duración en días")
+    estado: Literal["activo", "inactivo"] = Field(..., description="Estado del plan")
     model_config = ConfigDict(json_schema_extra={
-        "examples": [{
-            "nombre": "Basic", "precio": 9.99, "duracion": 30, "estado": "activo"
-        }]
+        "example": {"nombre":"Basic","precio":9.99,"duracion":30,"estado":"activo"}
     })
 
-class PlanOut(PlanCreate):
-    id: str = Field(..., description="Identificador del plan.")
+class PlanUpdate(BaseModel):
+    nombre: Optional[str] = Field(None, min_length=1)
+    precio: Optional[float] = Field(None, gt=0)
+    duracion: Optional[int] = Field(None, gt=0)
+    estado: Optional[Literal["activo","inactivo"]] = None
+    model_config = ConfigDict(json_schema_extra={"example":{"precio":12.99,"estado":"activo"}})
 
-# Suscripciones
+class PlanOut(BaseModel):
+    id: str
+    nombre: str
+    precio: float
+    duracion: int
+    estado: Literal["activo","inactivo"]
+
+# ---------- Suscripciones ----------
 class SubsCreate(BaseModel):
-    user_id: str = Field(..., min_length=1, description="Identificador externo del usuario.")
-    plan_id: str = Field(..., description="ID de plan existente.")
-    inicio_iso: str = Field(..., description="Fecha/hora de inicio en formato ISO 8601.")
-
+    user_id: str = Field(..., description="ID del usuario")
+    plan_id: str = Field(..., description="ID del plan (ObjectId en string)")
+    inicio_iso: str = Field(..., description="Fecha inicio ISO 8601 (YYYY-MM-DDTHH:MM:SS)")
     model_config = ConfigDict(json_schema_extra={
-        "examples": [{
-            "user_id": "user-123",
-            "plan_id": "plan_basic",
-            "inicio_iso": "2025-09-11T09:00:00"
-        }]
+        "example":{"user_id":"user-1","plan_id":"64f1c24dbd3a1a33e6e9a111","inicio_iso":"2025-01-01T00:00:00"}
     })
+
+class SubsUpdate(BaseModel):
+    plan_id: Optional[str] = None
+    inicio_iso: Optional[str] = None
+    estado: Optional[Literal["cancelada"]] = None
+    model_config = ConfigDict(json_schema_extra={"example":{"estado":"cancelada"}})
 
 class SubsOut(BaseModel):
     id: str
     user_id: str
     plan_id: str
     inicio_iso: str
-    fin_iso: str #se calcula en services.py
-    estado: SubsEstado
+    fin_iso: str
+    estado: Literal["pendiente","activa","cancelada"]
 
-# Pagos
+# ---------- Pagos ----------
 class PagoCreate(BaseModel):
-    suscripcion_id: str = Field(..., description="ID de la suscripción destino.")
-    monto: float = Field(..., gt=0, description="Monto a cobrar.")
-    metodo: MetodoPago = Field(..., description="Medio de pago simulado.")
-
+    suscripcion_id: str = Field(..., description="ID de la suscripción (ObjectId en string)")
+    monto: float = Field(..., gt=0)
+    metodo: Literal["tarjeta","transferencia","stripe_simulado"]
     model_config = ConfigDict(json_schema_extra={
-        "examples": [{
-            "suscripcion_id": "1",
-            "monto": 9.99,
-            "metodo": "stripe_simulado"
-        }]
+        "example":{"suscripcion_id":"64f1c24dbd3a1a33e6e9a222","monto":9.99,"metodo":"stripe_simulado"}
     })
+
+class PagoUpdate(BaseModel):
+    estado: Optional[Literal["creado","exitoso","fallido","cancelado"]] = None
+    provider_ref: Optional[str] = None
+    model_config = ConfigDict(json_schema_extra={"example":{"estado":"exitoso","provider_ref":"sim_123"}})
 
 class PagoOut(BaseModel):
     id: str
     suscripcion_id: str
     monto: float
-    metodo: MetodoPago
-    estado: PagoEstado
-    provider_ref: Optional[str] = Field(None, description="Referencia del proveedor.")
-
-# Actualizaciones
-
-class PlanUpdate(BaseModel):
-    nombre: constr(strip_whitespace=True, min_length=1, max_length=50) | None = Field(
-        None, description="Nuevo nombre del plan."
-    )
-    precio: float | None = Field(None, gt=0, description="Nuevo precio.")
-    duracion: int | None = Field(None, gt=0, description="Nueva duración en días.")
-    estado: PlanEstado | None = Field(None, description="Nuevo estado.")
-    model_config = ConfigDict(json_schema_extra={"examples": [{
-        "nombre": "Basic Plus", "precio": 12.99, "duracion": 30, "estado": "activo"
-    }]})
-
-class SubsUpdate(BaseModel):
-    plan_id: str | None = Field(None, description="Nuevo plan para la suscripción.")
-    inicio_iso: str | None = Field(None, description="Nuevo inicio ISO 8601.")
-    estado: SubsEstado | None = Field(
-        None,
-        description="Estado a aplicar",
-    )
-    model_config = ConfigDict(json_schema_extra={"examples": [{
-        "plan_id": "plan_basic", "estado": "cancelada"
-    }]})
-
-class PagoUpdate(BaseModel):
-    estado: PagoEstado | None = Field(
-        None,
-        description="Nuevo estado. Si pasa a `exitoso`, la suscripción se vuelve `activa`.",
-    )
-    provider_ref: str | None = Field(None, description="Referencia del proveedor")
-    model_config = ConfigDict(json_schema_extra={"examples": [{
-        "estado": "exitoso", "provider_ref": "stripe_sim_123"
-    }]})
+    metodo: Literal["tarjeta","transferencia","stripe_simulado"]
+    estado: Literal["creado","exitoso","fallido","cancelado"]
+    provider_ref: str | None = None

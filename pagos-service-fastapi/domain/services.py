@@ -1,200 +1,292 @@
-import uuid
+# domain/services.py
+from __future__ import annotations
 from datetime import datetime, timedelta
+from typing import Any, Iterable
+
+from bson import ObjectId
+from fastapi import HTTPException
+
+from infra.mongo import db
 from payments_errors.errors import NotFoundError, ConflictError
-from infra.repo_mock import PLANS, SUBS, PAGOS, next_plan_id, next_sub_id, next_pago_id
 
-
+# Idempotencia simple en memoria (puedes moverlo a Redis luego)
 IDEMP_CACHE: dict[str, dict] = {}
 
+# ---------- helpers ----------
+
+def _to_str_id(doc: dict | None) -> dict | None:
+    """Convierte _id -> id (str) para respuesta API."""
+    if not doc:
+        return None
+    d = dict(doc)
+    _id = d.pop("_id", None)
+    if isinstance(_id, ObjectId):
+        d["id"] = str(_id)
+    elif _id is not None:
+        d["id"] = str(_id)
+    return d
+
+def _many_to_str_id(cursor_docs: Iterable[dict]) -> list[dict]:
+    return [_to_str_id(d) for d in cursor_docs]
+
+def _oid(s: str) -> ObjectId:
+    """Convierte un string a ObjectId o lanza NotFound/400 si es inválido."""
+    try:
+        return ObjectId(s)
+    except Exception:
+        # id mal formado -> lo tratamos como no encontrado / inválido
+        raise NotFoundError("ID inválido o no encontrado", extra={"id": s})
+
+# ---------- servicio ----------
 
 class PaymentsService:
-    # PLANES
-    def list_plans(self):
-        return list(PLANS.values())
+    # ------------- PLANES -------------
+    async def list_plans(self) -> list[dict]:
+        cur = db().plan.find({})
+        return [_to_str_id(d) async for d in cur]
 
-    def create_plan(self, data: dict):
-        pid = str(len(PLANS) + 1)
-        if pid in PLANS:
-            raise ConflictError("Plan ya existe")
-        data = {**data, "id": pid}
-        PLANS[pid] = data
-        return data
+    async def create_plan(self, data: dict) -> dict:
+        # Espera: nombre, precio, duracion, estado
+        doc = {
+            "nombre": data["nombre"],
+            "precio": data["precio"],
+            "duracion": data["duracion"],
+            "estado": data["estado"],
+        }
+        res = await db().plan.insert_one(doc)
+        created = await db().plan.find_one({"_id": res.inserted_id})
+        return _to_str_id(created)
 
-    # SUSCRIPCIONES
-    def create_sub(self, user_id: str, plan_id: str, inicio_iso: str):
-        if plan_id not in PLANS:
-            raise NotFoundError("Plan no encontrado")
-        sid = next_sub_id() 
+    async def get_plan(self, pid: str) -> dict:
+        plan = await db().plan.find_one({"_id": _oid(pid)})
+        if not plan:
+            raise NotFoundError("Plan no encontrado", extra={"id": pid})
+        return _to_str_id(plan)
+
+    async def update_plan(self, pid: str, data: dict) -> dict:
+        patch = {}
+        for k in ("nombre", "precio", "duracion", "estado"):
+            if k in data and data[k] is not None:
+                patch[k] = data[k]
+        res = await db().plan.update_one({"_id": _oid(pid)}, {"$set": patch})
+        if res.matched_count == 0:
+            raise NotFoundError("Plan no encontrado", extra={"id": pid})
+        updated = await db().plan.find_one({"_id": _oid(pid)})
+        return _to_str_id(updated)
+
+    async def delete_plan(self, pid: str) -> bool:
+        # proteger referencial: no borrar si hay suscripciones que lo usan
+        in_use = await db().suscripcion.count_documents({"plan_id": _oid(pid)})
+        if in_use > 0:
+            raise ConflictError("Plan en uso por suscripciones", extra={"id": pid})
+        res = await db().plan.delete_one({"_id": _oid(pid)})
+        if res.deleted_count == 0:
+            raise NotFoundError("Plan no encontrado", extra={"id": pid})
+        return True
+
+    # ------------- SUSCRIPCIONES -------------
+    async def create_sub(self, user_id: str, plan_id: str, inicio_iso: str) -> dict:
+        # validar plan
+        plan = await db().plan.find_one({"_id": _oid(plan_id)})
+        if not plan:
+            raise NotFoundError("Plan no encontrado", extra={"id": plan_id})
+
         inicio = datetime.fromisoformat(inicio_iso)
-        fin = inicio + timedelta(days=int(PLANS[plan_id]["duracion"]))
-        SUBS[sid] = {
-            "id": sid, "user_id": user_id, "plan_id": plan_id,
-            "inicio_iso": inicio.isoformat(), "fin_iso": fin.isoformat(),
+        fin = inicio + timedelta(days=int(plan["duracion"]))
+
+        doc = {
+            "user_id": user_id,
+            "plan_id": _oid(plan_id),
+            "inicio_iso": inicio.isoformat(),
+            "fin_iso": fin.isoformat(),
             "estado": "pendiente",
         }
-        return SUBS[sid]
+        res = await db().suscripcion.insert_one(doc)
+        created = await db().suscripcion.find_one({"_id": res.inserted_id})
+        # para consistencia externa, exponer plan_id como string
+        out = _to_str_id(created)
+        out["plan_id"] = str(created["plan_id"])
+        return out
 
-    def get_sub(self, sid: str):
-        if sid not in SUBS:
-            raise NotFoundError("Suscripción no encontrada")
-        return SUBS[sid]
+    async def get_sub(self, sid: str) -> dict:
+        sub = await db().suscripcion.find_one({"_id": _oid(sid)})
+        if not sub:
+            raise NotFoundError("Suscripción no encontrada", extra={"id": sid})
+        out = _to_str_id(sub)
+        out["plan_id"] = str(sub["plan_id"])
+        return out
 
-    # PAGOS
+    async def list_subs(
+        self,
+        user_id: str | None = None,
+        plan_id: str | None = None,
+        estado: str | None = None,
+    ) -> list[dict]:
+        q: dict[str, Any] = {}
+        if user_id:
+            q["user_id"] = user_id
+        if plan_id:
+            q["plan_id"] = _oid(plan_id)
+        if estado:
+            q["estado"] = estado
+        cur = db().suscripcion.find(q)
+        result = []
+        async for d in cur:
+            item = _to_str_id(d)
+            item["plan_id"] = str(d["plan_id"])
+            result.append(item)
+        return result
+
+    async def update_sub(self, sid: str, data: dict) -> dict:
+        sub = await db().suscripcion.find_one({"_id": _oid(sid)})
+        if not sub:
+            raise NotFoundError("Suscripción no encontrada", extra={"id": sid})
+
+        patch: dict[str, Any] = {}
+
+        # cambio de plan (validar que exista)
+        if "plan_id" in data and data["plan_id"]:
+            new_pid = data["plan_id"]
+            plan = await db().plan.find_one({"_id": _oid(new_pid)})
+            if not plan:
+                raise NotFoundError("Plan no encontrado", extra={"id": new_pid})
+            patch["plan_id"] = _oid(new_pid)
+
+        # cambio de inicio
+        if "inicio_iso" in data and data["inicio_iso"]:
+            inicio = datetime.fromisoformat(data["inicio_iso"])
+            patch["inicio_iso"] = inicio.isoformat()
+
+        # recalcular fin si cambió inicio o plan
+        if "inicio_iso" in patch or "plan_id" in patch:
+            plan_for_calc = await db().plan.find_one(
+                {"_id": patch.get("plan_id", sub["plan_id"])}
+            )
+            inicio_for_calc = datetime.fromisoformat(
+                patch.get("inicio_iso", sub["inicio_iso"])
+            )
+            fin = inicio_for_calc + timedelta(days=int(plan_for_calc["duracion"]))
+            patch["fin_iso"] = fin.isoformat()
+
+        # cambio de estado (solo permitir 'cancelada' aquí como en tu mock)
+        if "estado" in data and data["estado"]:
+            if data["estado"] != "cancelada":
+                raise ConflictError("Solo se permite cambiar estado a 'cancelada'")
+            patch["estado"] = "cancelada"
+
+        await db().suscripcion.update_one({"_id": _oid(sid)}, {"$set": patch})
+        # ojo: typo intencional? corregimos a "_id":
+        await db().suscripcion.update_one({"_id": _oid(sid)}, {"$set": patch})
+
+        updated = await db().suscripcion.find_one({"_id": _oid(sid)})
+        out = _to_str_id(updated)
+        out["plan_id"] = str(updated["plan_id"])
+        return out
+
+    async def delete_sub(self, sid: str) -> bool:
+        # no permitir borrar si tiene pagos
+        has_payments = await db().pago.count_documents({"suscripcion_id": _oid(sid)})
+        if has_payments > 0:
+            raise ConflictError("No se puede borrar: la suscripción tiene pagos", extra={"id": sid})
+        res = await db().suscripcion.delete_one({"_id": _oid(sid)})
+        if res.deleted_count == 0:
+            raise NotFoundError("Suscripción no encontrada", extra={"id": sid})
+        return True
+
+    # ------------- IDEMPOTENCIA (privado) -------------
     def _idem_get(self, key: str | None):
-        if key and key in IDEMP_CACHE:
-            return IDEMP_CACHE[key]
-        return None
+        return IDEMP_CACHE.get(key) if key else None
 
     def _idem_set(self, key: str | None, value: dict):
         if key:
             IDEMP_CACHE[key] = value
 
-    def create_pago(self, suscripcion_id: str, monto: float, metodo: str, idem_key: str | None = None):
+    # ------------- PAGOS -------------
+    async def create_pago(self, suscripcion_id: str, monto: float, metodo: str, idem_key: str | None = None) -> dict:
         cached = self._idem_get(idem_key)
         if cached:
             return cached
 
-        if suscripcion_id not in SUBS:
-            raise NotFoundError("Suscripción no encontrada")
+        sub = await db().suscripcion.find_one({"_id": _oid(suscripcion_id)})
+        if not sub:
+            raise NotFoundError("Suscripción no encontrada", extra={"id": suscripcion_id})
 
-        pid = next_pago_id()
-        pago = {
-            "id": pid, "suscripcion_id": suscripcion_id, "monto": monto,
-            "metodo": metodo, "estado": "creado", "provider_ref": None,
+        doc = {
+            "suscripcion_id": _oid(suscripcion_id),
+            "monto": float(monto),
+            "metodo": metodo,
+            "estado": "creado",
+            "provider_ref": None,
         }
-        PAGOS[pid] = pago
-        self._idem_set(idem_key, pago)
-        return pago
+        res = await db().pago.insert_one(doc)
+        created = await db().pago.find_one({"_id": res.inserted_id})
 
-    def get_pago(self, pid: str):
-        if pid not in PAGOS:
-            raise NotFoundError("Pago no encontrado")
-        return PAGOS[pid]
+        out = _to_str_id(created)
+        out["suscripcion_id"] = str(created["suscripcion_id"])
 
-# PLANES 
-    def update_plan(self, pid: str, data: dict):
-        if pid not in PLANS:
-            raise NotFoundError("Plan no encontrado")
-        plan = PLANS[pid]
-        for k in ("nombre", "precio", "duracion", "estado"):
-            if k in data and data[k] is not None:
-                plan[k] = data[k]
-        PLANS[pid] = plan
-        return plan
+        self._idem_set(idem_key, out)
+        return out
 
-    def delete_plan(self, pid: str):
-        if pid not in PLANS:
-            raise NotFoundError("Plan no encontrado")
-        # no permitir borrar si hay suscripciones que referencian el plan
-        for s in SUBS.values():
-            if s["plan_id"] == pid:
-                raise ConflictError("Plan en uso por suscripciones")
-        del PLANS[pid]
-        return True
+    async def get_pago(self, pid: str) -> dict:
+        pago = await db().pago.find_one({"_id": _oid(pid)})
+        if not pago:
+            raise NotFoundError("Pago no encontrado", extra={"id": pid})
+        out = _to_str_id(pago)
+        out["suscripcion_id"] = str(pago["suscripcion_id"])
+        return out
 
-#SUSCRIPCIONES
-    def update_sub(self, sid: str, data: dict):
-        if sid not in SUBS:
-            raise NotFoundError("Suscripción no encontrada")
-        sub = SUBS[sid]
+    async def list_pagos(
+        self,
+        suscripcion_id: str | None = None,
+        estado: str | None = None,
+        metodo: str | None = None,
+    ) -> list[dict]:
+        q: dict[str, Any] = {}
+        if suscripcion_id:
+            q["suscripcion_id"] = _oid(suscripcion_id)
+        if estado:
+            q["estado"] = estado
+        if metodo:
+            q["metodo"] = metodo
 
-        # cambio de plan (debe existir)
-        if "plan_id" in data and data["plan_id"]:
-            new_plan = data["plan_id"]
-            if new_plan not in PLANS:
-                raise NotFoundError("Plan no encontrado")
-            sub["plan_id"] = new_plan
+        cur = db().pago.find(q)
+        result = []
+        async for d in cur:
+            item = _to_str_id(d)
+            item["suscripcion_id"] = str(d["suscripcion_id"])
+            result.append(item)
+        return result
 
-        # cambio de inicio 
-        if "inicio_iso" in data and data["inicio_iso"]:
-            inicio = datetime.fromisoformat(data["inicio_iso"])
-            sub["inicio_iso"] = inicio.isoformat()
+    async def update_pago(self, pid: str, data: dict) -> dict:
+        pago = await db().pago.find_one({"_id": _oid(pid)})
+        if not pago:
+            raise NotFoundError("Pago no encontrado", extra={"id": pid})
 
-        if ("inicio_iso" in data and data["inicio_iso"]) or ("plan_id" in data and data["plan_id"]):
-            dur = int(PLANS[sub["plan_id"]]["duracion"])
-            fin = datetime.fromisoformat(sub["inicio_iso"]) + timedelta(days=dur)
-            sub["fin_iso"] = fin.isoformat()
-
-        # cambio de estado: solo permitimos 'cancelada' en este mock
-        if "estado" in data and data["estado"]:
-            if data["estado"] != "cancelada":
-                raise ConflictError("Solo se permite cambiar estado a 'cancelada'")
-            sub["estado"] = "cancelada"
-
-        SUBS[sid] = sub
-        return sub
-
-    def delete_sub(self, sid: str):
-        if sid not in SUBS:
-            raise NotFoundError("Suscripción no encontrada")
-        # no permitir borrar si tiene pagos
-        for p in PAGOS.values():
-            if p["suscripcion_id"] == sid:
-                raise ConflictError("No se puede borrar: la suscripción tiene pagos")
-        del SUBS[sid]
-        return True
-
-    # PAGOS -
-    def update_pago(self, pid: str, data: dict):
-        if pid not in PAGOS:
-            raise NotFoundError("Pago no encontrado")
-        pago = PAGOS[pid]
-
+        patch: dict[str, Any] = {}
         if "provider_ref" in data and data["provider_ref"] is not None:
-            pago["provider_ref"] = data["provider_ref"]
+            patch["provider_ref"] = data["provider_ref"]
         if "estado" in data and data["estado"]:
             new_state = data["estado"]
-            pago["estado"] = new_state
-            # si exitoso => activar suscripción
-            if new_state == "exitoso":
-                sid = pago["suscripcion_id"]
-                if sid in SUBS:
-                    SUBS[sid]["estado"] = "activa"
+            patch["estado"] = new_state
 
-        PAGOS[pid] = pago
-        return pago
+        if patch:
+            await db().pago.update_one({"_id": _oid(pid)}, {"$set": patch})
+            pago = await db().pago.find_one({"_id": _oid(pid)})
 
-    def delete_pago(self, pid: str):
-        if pid not in PAGOS:
-            raise NotFoundError("Pago no encontrado")
-        if PAGOS[pid]["estado"] == "exitoso":
-            raise ConflictError("No se puede eliminar un pago exitoso")
-        del PAGOS[pid]
-        return True
-    
+        # si exitoso => activar suscripción
+        if pago["estado"] == "exitoso":
+            sid = pago["suscripcion_id"]
+            await db().suscripcion.update_one({"_id": sid}, {"$set": {"estado": "activa"}})
 
-    def list_subs(self, user_id: str | None = None, plan_id: str | None = None, estado: str | None = None):
-        """Lista suscripciones con filtros opcionales por user_id, plan_id y estado."""
-        records = list(SUBS.values())
-        if user_id:
-            records = [s for s in records if s["user_id"] == user_id]
-        if plan_id:
-            records = [s for s in records if s["plan_id"] == plan_id]
-        if estado:
-            records = [s for s in records if s["estado"] == estado]
-        return records
+        out = _to_str_id(pago)
+        out["suscripcion_id"] = str(pago["suscripcion_id"])
+        return out
 
-    def list_pagos(self, suscripcion_id: str | None = None, estado: str | None = None, metodo: str | None = None):
-        """Lista pagos con filtros opcionales por suscripcion_id, estado y metodo."""
-        records = list(PAGOS.values())
-        if suscripcion_id:
-            records = [p for p in records if p["suscripcion_id"] == suscripcion_id]
-        if estado:
-            records = [p for p in records if p["estado"] == estado]
-        if metodo:
-            records = [p for p in records if p["metodo"] == metodo]
-        return records
-    
-    def list_subs(self, user_id: str | None = None, plan_id: str | None = None, estado: str | None = None):
-        """Lista suscripciones con filtros opcionales por user_id, plan_id y estado."""
-        records = list(SUBS.values())
-        if user_id:
-            records = [s for s in records if s["user_id"] == user_id]
-        if plan_id:
-            records = [s for s in records if s["plan_id"] == plan_id]
-        if estado:
-            records = [s for s in records if s["estado"] == estado]
-        return records
-
-
-
+    async def delete_pago(self, pid: str) -> bool:
+        pago = await db().pago.find_one({"_id": _oid(pid)})
+        if not pago:
+            raise NotFoundError("Pago no encontrado", extra={"id": pid})
+        if pago["estado"] == "exitoso":
+            raise ConflictError("No se puede eliminar un pago exitoso", extra={"id": pid})
+        res = await db().pago.delete_one({"_id": _oid(pid)})
+        return res.deleted_count == 1

@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  eureka:
+    image: steeltoeoss/eureka-server:latest
+    container_name: eureka
+    restart: unless-stopped
+    ports: ["8761:8761"]
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+    container_name: keycloak
+    command: ["start-dev", "--http-port=8080", "--hostname-strict=false"]
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports: ["8080:8080"]
+
+  gateway:
+    build:
+      context: ./gateway         # <-- tu proyecto Spring Cloud Gateway
+      dockerfile: Dockerfile     # FROM eclipse-temurin:21-jre + copia gateway.jar
+    container_name: gateway
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+      - SERVER_PORT=8088
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${KEYCLOAK_ISSUER}
+    depends_on: [eureka, keycloak]
+    ports: ["8088:8088"]
+
+  payments-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: payments-service
+    env_file: .env
+    depends_on: [eureka, keycloak]
+    ports: ["8002:8002"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8002/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 10

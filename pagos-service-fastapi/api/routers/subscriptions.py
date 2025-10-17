@@ -9,15 +9,14 @@ svc = PaymentsService()
     "/",
     response_model=list[SubsOut],
     summary="Listar suscripciones",
-    description="Devuelve suscripciones. Permite filtrar por `user_id`, `plan_id` y `estado`.",
+    description="Devuelve suscripciones desde MongoDB. Permite filtrar por `user_id`, `plan_id` y `estado`.",
 )
-def list_subscriptions(
+async def list_subscriptions(
     user_id: str | None = Query(default=None, description="Filtrar por usuario externo."),
     plan_id: str | None = Query(default=None, description="Filtrar por ID de plan."),
     estado: SubsEstado | None = Query(default=None, description="Filtrar por estado."),
 ):
-    return svc.list_subs(user_id=user_id, plan_id=plan_id, estado=estado)
-
+    return await svc.list_subs(user_id=user_id, plan_id=plan_id, estado=estado)
 
 @router.post(
     "/",
@@ -31,8 +30,8 @@ def list_subscriptions(
         422: {"model": ErrorResponse, "description": "Error de validación."},
     },
 )
-def create_subscription(payload: SubsCreate):
-    return svc.create_sub(payload.user_id, payload.plan_id, payload.inicio_iso)
+async def create_subscription(payload: SubsCreate):
+    return await svc.create_sub(payload.user_id, payload.plan_id, payload.inicio_iso)
 
 @router.get(
     "/{sid}",
@@ -40,8 +39,8 @@ def create_subscription(payload: SubsCreate):
     summary="Obtener suscripción por ID",
     responses={404: {"model": ErrorResponse, "description": "Suscripción no encontrada."}},
 )
-def get_subscription(sid: str):
-    return svc.get_sub(sid)
+async def get_subscription(sid: str):
+    return await svc.get_sub(sid)
 
 @router.put(
     "/{sid}",
@@ -55,8 +54,8 @@ def get_subscription(sid: str):
         422: {"model": ErrorResponse, "description": "Error de validación."},
     },
 )
-def update_subscription(sid: str, payload: SubsUpdate):
-    return svc.update_sub(sid, payload.model_dump(exclude_none=True))
+async def update_subscription(sid: str, payload: SubsUpdate):
+    return await svc.update_sub(sid, payload.model_dump(exclude_unset=True))
 
 @router.delete(
     "/{sid}",
@@ -69,6 +68,6 @@ def update_subscription(sid: str, payload: SubsUpdate):
         409: {"model": ErrorResponse, "description": "Tiene pagos asociados."},
     },
 )
-def delete_subscription(sid: str):
-    svc.delete_sub(sid)
+async def delete_subscription(sid: str):
+    await svc.delete_sub(sid)
     return Response(status_code=204)
