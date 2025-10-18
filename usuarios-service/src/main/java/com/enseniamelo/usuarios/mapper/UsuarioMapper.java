@@ -12,12 +12,11 @@ import java.util.List;
     componentModel = "spring"
 )
 public interface UsuarioMapper {
-    
     @Mapping(target = "contrasenia", ignore = true)
-    @Mapping(target = "idVerificarSolicitud", source = "verificarSolicitud.idVerificar")
-    @Mapping(target = "estadoVerificacion", source = "verificarSolicitud.estado")
-    @Mapping(target = "idPerfilTutor", source = "perfilTutor.idTutor")
-    @Mapping(target = "tutorVerificado", source = "perfilTutor.verificado")
+    @Mapping(target = "idVerificarSolicitud", source = "idVerificarSolicitud")  
+    @Mapping(target = "estadoVerificacion", ignore = true)  
+    @Mapping(target = "idPerfilTutor", source = "idPerfilTutor")  
+    @Mapping(target = "tutorVerificado", ignore = true) 
     UsuarioDTO entityToDto(Usuario entity);
     Usuario dtoToEntity(UsuarioDTO dto);
     List<UsuarioDTO> entitiesToDtos(List<Usuario> entities);

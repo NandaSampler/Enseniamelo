@@ -15,13 +15,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/v1/verificacion")
-@Tag(name = "Verificación", description = "API para gestión de solicitudes de verificación de tutores")
+@Tag(name = "Verificación Solicitud", description = "API para gestión de solicitudes de verificación de tutores")
 @RequiredArgsConstructor
 @Slf4j
 public class VerificarSolicitudController {
@@ -30,121 +31,116 @@ public class VerificarSolicitudController {
 
     @Operation(summary = "Crear solicitud de verificación", description = "Un usuario solicita verificación como tutor")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Solicitud creada exitosamente"),
-        @ApiResponse(responseCode = "400", description = "Datos inválidos o usuario ya tiene solicitud")
+            @ApiResponse(responseCode = "201", description = "Solicitud creada exitosamente"),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos o usuario ya tiene solicitud")
     })
     @PostMapping("/usuario/{idUsuario}")
-    public ResponseEntity<VerificarSolicitudDTO> crearSolicitud(
-            @Parameter(description = "ID del usuario", required = true)
-            @PathVariable Integer idUsuario,
+    public Mono<ResponseEntity<VerificarSolicitudDTO>> crearSolicitud(
+            @Parameter(description = "ID del usuario", required = true) @PathVariable Integer idUsuario,
             @Valid @RequestBody VerificarSolicitudDTO solicitudDTO) {
-        
+
         log.info("POST /v1/verificacion/usuario/{} - Creando solicitud", idUsuario);
-        VerificarSolicitudDTO creada = solicitudService.crearSolicitud(idUsuario, solicitudDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(creada);
+        return solicitudService.crearSolicitud(idUsuario, solicitudDTO)
+                .map(creada -> ResponseEntity.status(HttpStatus.CREATED).body(creada));
     }
 
     @Operation(summary = "Obtener todas las solicitudes")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Lista de solicitudes obtenida")
+            @ApiResponse(responseCode = "200", description = "Lista de solicitudes obtenida")
     })
     @GetMapping
-    public ResponseEntity<List<VerificarSolicitudDTO>> obtenerTodas() {
+    public Flux<VerificarSolicitudDTO> obtenerTodas() {
         log.info("GET /v1/verificacion - Obteniendo todas las solicitudes");
-        List<VerificarSolicitudDTO> solicitudes = solicitudService.obtenerTodas();
-        return ResponseEntity.ok(solicitudes);
+        return solicitudService.obtenerTodas();
     }
 
     @Operation(summary = "Buscar solicitud por ID")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Solicitud encontrada"),
-        @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
+            @ApiResponse(responseCode = "200", description = "Solicitud encontrada"),
+            @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
     })
     @GetMapping("/{idVerificar}")
-    public ResponseEntity<VerificarSolicitudDTO> buscarPorId(
-            @Parameter(description = "ID de la solicitud", required = true)
-            @PathVariable Integer idVerificar) {
-        
+    public Mono<ResponseEntity<VerificarSolicitudDTO>> buscarPorId(
+            @Parameter(description = "ID de la solicitud", required = true) @PathVariable Integer idVerificar) {
+
         log.info("GET /v1/verificacion/{} - Buscando solicitud", idVerificar);
-        VerificarSolicitudDTO solicitud = solicitudService.buscarPorId(idVerificar);
-        return ResponseEntity.ok(solicitud);
+        return solicitudService.buscarPorId(idVerificar)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
     @Operation(summary = "Buscar solicitud de un usuario")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Solicitud encontrada"),
-        @ApiResponse(responseCode = "404", description = "Usuario no tiene solicitud")
+            @ApiResponse(responseCode = "200", description = "Solicitud encontrada"),
+            @ApiResponse(responseCode = "404", description = "Usuario no tiene solicitud")
     })
     @GetMapping("/usuario/{idUsuario}")
-    public ResponseEntity<VerificarSolicitudDTO> buscarPorUsuario(
-            @Parameter(description = "ID del usuario", required = true)
-            @PathVariable Integer idUsuario) {
-        
+    public Mono<ResponseEntity<VerificarSolicitudDTO>> buscarPorUsuario(
+            @Parameter(description = "ID del usuario", required = true) @PathVariable Integer idUsuario) {
+
         log.info("GET /v1/verificacion/usuario/{} - Buscando solicitud del usuario", idUsuario);
-        VerificarSolicitudDTO solicitud = solicitudService.buscarPorUsuario(idUsuario);
-        return ResponseEntity.ok(solicitud);
+        return solicitudService.buscarPorUsuario(idUsuario)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
     @Operation(summary = "Obtener solicitudes por estado")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Lista de solicitudes obtenida")
+            @ApiResponse(responseCode = "200", description = "Lista de solicitudes obtenida")
     })
     @GetMapping("/estado/{estado}")
-    public ResponseEntity<List<VerificarSolicitudDTO>> obtenerPorEstado(
-            @Parameter(description = "Estado: PENDIENTE, APROBADO, RECHAZADO", required = true)
-            @PathVariable String estado) {
-        
+    public Flux<VerificarSolicitudDTO> obtenerPorEstado(
+            @Parameter(description = "Estado: PENDIENTE, APROBADO, RECHAZADO", required = true) @PathVariable String estado) {
+
         log.info("GET /v1/verificacion/estado/{} - Obteniendo solicitudes por estado", estado);
-        List<VerificarSolicitudDTO> solicitudes = solicitudService.obtenerPorEstado(estado);
-        return ResponseEntity.ok(solicitudes);
+        return solicitudService.obtenerPorEstado(estado);
     }
 
     @Operation(summary = "Aprobar solicitud", description = "Aprueba la solicitud y crea el perfil de tutor")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Solicitud aprobada exitosamente"),
-        @ApiResponse(responseCode = "400", description = "La solicitud ya fue procesada")
+            @ApiResponse(responseCode = "200", description = "Solicitud aprobada exitosamente"),
+            @ApiResponse(responseCode = "400", description = "La solicitud ya fue procesada"),
+            @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
     })
     @PutMapping("/{idVerificar}/aprobar")
-    public ResponseEntity<VerificarSolicitudDTO> aprobarSolicitud(
-            @Parameter(description = "ID de la solicitud", required = true)
-            @PathVariable Integer idVerificar,
+    public Mono<ResponseEntity<VerificarSolicitudDTO>> aprobarSolicitud(
+            @Parameter(description = "ID de la solicitud", required = true) @PathVariable Integer idVerificar,
             @RequestBody(required = false) Map<String, String> body) {
-        
+
         String comentario = body != null ? body.get("comentario") : null;
         log.info("PUT /v1/verificacion/{}/aprobar - Aprobando solicitud", idVerificar);
-        VerificarSolicitudDTO aprobada = solicitudService.aprobarSolicitud(idVerificar, comentario);
-        return ResponseEntity.ok(aprobada);
+        return solicitudService.aprobarSolicitud(idVerificar, comentario)
+                .map(ResponseEntity::ok);
     }
 
     @Operation(summary = "Rechazar solicitud")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Solicitud rechazada"),
-        @ApiResponse(responseCode = "400", description = "La solicitud ya fue procesada")
+            @ApiResponse(responseCode = "200", description = "Solicitud rechazada"),
+            @ApiResponse(responseCode = "400", description = "La solicitud ya fue procesada"),
+            @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
     })
     @PutMapping("/{idVerificar}/rechazar")
-    public ResponseEntity<VerificarSolicitudDTO> rechazarSolicitud(
-            @Parameter(description = "ID de la solicitud", required = true)
-            @PathVariable Integer idVerificar,
+    public Mono<ResponseEntity<VerificarSolicitudDTO>> rechazarSolicitud(
+            @Parameter(description = "ID de la solicitud", required = true) @PathVariable Integer idVerificar,
             @RequestBody(required = false) Map<String, String> body) {
-        
+
         String comentario = body != null ? body.get("comentario") : "Solicitud rechazada";
         log.info("PUT /v1/verificacion/{}/rechazar - Rechazando solicitud", idVerificar);
-        VerificarSolicitudDTO rechazada = solicitudService.rechazarSolicitud(idVerificar, comentario);
-        return ResponseEntity.ok(rechazada);
+        return solicitudService.rechazarSolicitud(idVerificar, comentario)
+                .map(ResponseEntity::ok);
     }
 
     @Operation(summary = "Eliminar solicitud")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "204", description = "Solicitud eliminada"),
-        @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
+            @ApiResponse(responseCode = "204", description = "Solicitud eliminada"),
+            @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
     })
     @DeleteMapping("/{idVerificar}")
-    public ResponseEntity<Void> eliminarSolicitud(
-            @Parameter(description = "ID de la solicitud", required = true)
-            @PathVariable Integer idVerificar) {
-        
+    public Mono<ResponseEntity<Void>> eliminarSolicitud(
+            @Parameter(description = "ID de la solicitud", required = true) @PathVariable Integer idVerificar) {
+
         log.info("DELETE /v1/verificacion/{} - Eliminando solicitud", idVerificar);
-        solicitudService.eliminarSolicitud(idVerificar);
-        return ResponseEntity.noContent().build();
+        return solicitudService.eliminarSolicitud(idVerificar)
+                .then(Mono.just(ResponseEntity.noContent().<Void>build()));
     }
 }

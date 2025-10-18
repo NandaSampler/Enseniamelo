@@ -2,7 +2,6 @@ package com.enseniamelo.usuarios.model;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
-import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -22,20 +21,16 @@ public class VerificarSolicitud {
     @Id
     @JsonIgnore
     private String id;
+    
     @Indexed(unique = true)
     private Integer idVerificar;
-    private String estado; 
+    
+    private String estado;
     private String comentario;
-    private String fotoCi; 
-    
-    @DBRef
-    @JsonIgnore
-    private Usuario usuario;
-    @DBRef
-    @JsonIgnore
-    private PerfilTutor perfilTutor;
-    
+    private String fotoCi;
+    private Integer idUsuario;  
+    private Integer idPerfilTutor;  
     private LocalDateTime creado;
-    private LocalDateTime decidido; 
+    private LocalDateTime decidido;
     private LocalDateTime actualizado;
 }

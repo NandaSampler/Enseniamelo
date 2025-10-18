@@ -1,14 +1,13 @@
 package com.enseniamelo.usuarios.service;
 
-import org.springframework.data.mongodb.core.MongoOperations;
+import org.springframework.data.mongodb.core.ReactiveMongoOperations;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 import com.enseniamelo.usuarios.model.DatabaseSequence;
 
 import lombok.RequiredArgsConstructor;
-
-import java.util.Objects;
+import reactor.core.publisher.Mono;
 
 import static org.springframework.data.mongodb.core.FindAndModifyOptions.options;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
@@ -18,15 +17,14 @@ import static org.springframework.data.mongodb.core.query.Query.query;
 @RequiredArgsConstructor
 public class SequenceGeneratorService {
 
-    private final MongoOperations mongoOperations;
+    private final ReactiveMongoOperations mongoOperations;
 
-    public Integer generateSequence(String seqName) {
-        DatabaseSequence counter = mongoOperations.findAndModify(
+    public Mono<Integer> generateSequence(String seqName) {
+        return mongoOperations.findAndModify(
             query(where("_id").is(seqName)),
             new Update().inc("seq", 1),
             options().returnNew(true).upsert(true),
             DatabaseSequence.class
-        );
-        return Objects.requireNonNull(counter).getSeq();
+        ).map(DatabaseSequence::getSeq);
     }
 }

@@ -1,24 +1,18 @@
 package com.enseniamelo.usuarios.repository;
-
-import java.util.List;
-import java.util.Optional;
-
-import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.data.mongodb.repository.Query;
+import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
 
 import com.enseniamelo.usuarios.model.PerfilTutor;
-import com.enseniamelo.usuarios.model.Usuario;
 
-public interface PerfilTutorRepository extends MongoRepository<PerfilTutor, String> {
-    Optional<PerfilTutor> findByIdTutor(Integer idTutor);
-    boolean existsByIdTutor(Integer idTutor);
-    Optional<PerfilTutor> findByUsuario(Usuario usuario);
-    boolean existsByUsuario(Usuario usuario);
-    List<PerfilTutor> findByVerificado(Boolean verificado);
-    List<PerfilTutor> findByClasificacionGreaterThanEqual(Float clasificacionMinima);
-    List<PerfilTutor> findByVerificadoAndClasificacionGreaterThanEqual(Boolean verificado, Float clasificacionMinima);
-    long countByVerificado(Boolean verificado);
-    void deleteByIdTutor(Integer idTutor);
-    @Query("{ 'usuario.$id': ?0 }")
-    Optional<PerfilTutor> findByUsuarioId(String usuarioMongoId);
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+public interface PerfilTutorRepository extends ReactiveMongoRepository<PerfilTutor, String> {
+    Mono<PerfilTutor> findByIdTutor(Integer idTutor);
+    Mono<Boolean> existsByIdTutor(Integer idTutor);
+    Mono<PerfilTutor> findByIdUsuario(Integer idUsuario);
+    Mono<Boolean> existsByIdUsuario(Integer idUsuario);
+    Flux<PerfilTutor> findByVerificado(Boolean verificado);
+    Flux<PerfilTutor> findByVerificadoAndClasificacionGreaterThanEqual(Boolean verificado, Float clasificacionMinima);
+    Mono<Long> countByVerificado(Boolean verificado);
+    Mono<Void> deleteByIdTutor(Integer idTutor);
 }

@@ -1,17 +1,17 @@
 package com.enseniamelo.usuarios.repository;
-
-
-import java.util.Optional;
-
-import org.springframework.data.mongodb.repository.MongoRepository;
-
+import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
 
 import com.enseniamelo.usuarios.model.Usuario;
-public interface UsuarioRepository extends MongoRepository<Usuario, String> {
 
-    Optional<Usuario> findByIdUsuario(Integer idUsuario);
-    boolean existsByIdUsuario(Integer idUsuario);
-    boolean existsByEmail(String email);
-    void deleteByIdUsuario(Integer idUsuario);
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
+public interface UsuarioRepository extends ReactiveMongoRepository<Usuario, String> {
+    Mono<Usuario> findByIdUsuario(Integer idUsuario);
+    Mono<Boolean> existsByIdUsuario(Integer idUsuario);
+    Mono<Usuario> findByEmail(String email);
+    Mono<Boolean> existsByEmail(String email);
+    Mono<Void> deleteByIdUsuario(Integer idUsuario);
+    Flux<Usuario> findByRol(String rol);
+    Mono<Long> countByRol(String rol);
 }

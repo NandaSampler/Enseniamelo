@@ -14,8 +14,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -32,10 +33,9 @@ public class PerfilTutorController {
         @ApiResponse(responseCode = "200", description = "Lista de tutores obtenida")
     })
     @GetMapping
-    public ResponseEntity<List<PerfilTutorDTO>> obtenerTodos() {
+    public Flux<PerfilTutorDTO> obtenerTodos() {
         log.info("GET /v1/tutores - Obteniendo todos los tutores");
-        List<PerfilTutorDTO> tutores = perfilTutorService.obtenerTodos();
-        return ResponseEntity.ok(tutores);
+        return perfilTutorService.obtenerTodos();
     }
 
     @Operation(summary = "Buscar tutor por ID")
@@ -44,13 +44,14 @@ public class PerfilTutorController {
         @ApiResponse(responseCode = "404", description = "Tutor no encontrado")
     })
     @GetMapping("/{idTutor}")
-    public ResponseEntity<PerfilTutorDTO> buscarPorId(
+    public Mono<ResponseEntity<PerfilTutorDTO>> buscarPorId(
             @Parameter(description = "ID del tutor", required = true)
             @PathVariable Integer idTutor) {
         
         log.info("GET /v1/tutores/{} - Buscando tutor", idTutor);
-        PerfilTutorDTO tutor = perfilTutorService.buscarPorId(idTutor);
-        return ResponseEntity.ok(tutor);
+        return perfilTutorService.buscarPorId(idTutor)
+            .map(ResponseEntity::ok)
+            .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
     @Operation(summary = "Buscar perfil de tutor por ID de usuario")
@@ -59,13 +60,14 @@ public class PerfilTutorController {
         @ApiResponse(responseCode = "404", description = "Usuario no tiene perfil de tutor")
     })
     @GetMapping("/usuario/{idUsuario}")
-    public ResponseEntity<PerfilTutorDTO> buscarPorUsuario(
+    public Mono<ResponseEntity<PerfilTutorDTO>> buscarPorUsuario(
             @Parameter(description = "ID del usuario", required = true)
             @PathVariable Integer idUsuario) {
         
         log.info("GET /v1/tutores/usuario/{} - Buscando perfil del usuario", idUsuario);
-        PerfilTutorDTO tutor = perfilTutorService.buscarPorUsuario(idUsuario);
-        return ResponseEntity.ok(tutor);
+        return perfilTutorService.buscarPorUsuario(idUsuario)
+            .map(ResponseEntity::ok)
+            .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
     @Operation(summary = "Obtener tutores verificados")
@@ -73,10 +75,9 @@ public class PerfilTutorController {
         @ApiResponse(responseCode = "200", description = "Lista de tutores verificados")
     })
     @GetMapping("/verificados")
-    public ResponseEntity<List<PerfilTutorDTO>> obtenerVerificados() {
+    public Flux<PerfilTutorDTO> obtenerVerificados() {
         log.info("GET /v1/tutores/verificados - Obteniendo tutores verificados");
-        List<PerfilTutorDTO> tutores = perfilTutorService.obtenerVerificados();
-        return ResponseEntity.ok(tutores);
+        return perfilTutorService.obtenerVerificados();
     }
 
     @Operation(summary = "Obtener tutores con clasificación mínima")
@@ -84,13 +85,12 @@ public class PerfilTutorController {
         @ApiResponse(responseCode = "200", description = "Lista de tutores filtrados")
     })
     @GetMapping("/clasificacion/{minima}")
-    public ResponseEntity<List<PerfilTutorDTO>> obtenerPorClasificacion(
+    public Flux<PerfilTutorDTO> obtenerPorClasificacion(
             @Parameter(description = "Clasificación mínima (0-5)", required = true)
             @PathVariable Float minima) {
         
         log.info("GET /v1/tutores/clasificacion/{} - Filtrando por clasificación", minima);
-        List<PerfilTutorDTO> tutores = perfilTutorService.obtenerPorClasificacionMinima(minima);
-        return ResponseEntity.ok(tutores);
+        return perfilTutorService.obtenerPorClasificacionMinima(minima);
     }
 
     @Operation(summary = "Actualizar perfil de tutor")
@@ -99,14 +99,14 @@ public class PerfilTutorController {
         @ApiResponse(responseCode = "404", description = "Perfil no encontrado")
     })
     @PutMapping("/{idTutor}")
-    public ResponseEntity<PerfilTutorDTO> actualizarPerfil(
+    public Mono<ResponseEntity<PerfilTutorDTO>> actualizarPerfil(
             @Parameter(description = "ID del tutor", required = true)
             @PathVariable Integer idTutor,
             @Valid @RequestBody PerfilTutorDTO perfilDTO) {
         
         log.info("PUT /v1/tutores/{} - Actualizando perfil", idTutor);
-        PerfilTutorDTO actualizado = perfilTutorService.actualizarPerfil(idTutor, perfilDTO);
-        return ResponseEntity.ok(actualizado);
+        return perfilTutorService.actualizarPerfil(idTutor, perfilDTO)
+            .map(ResponseEntity::ok);
     }
 
     @Operation(summary = "Actualizar clasificación de tutor")
@@ -115,15 +115,15 @@ public class PerfilTutorController {
         @ApiResponse(responseCode = "404", description = "Tutor no encontrado")
     })
     @PatchMapping("/{idTutor}/clasificacion")
-    public ResponseEntity<PerfilTutorDTO> actualizarClasificacion(
+    public Mono<ResponseEntity<PerfilTutorDTO>> actualizarClasificacion(
             @Parameter(description = "ID del tutor", required = true)
             @PathVariable Integer idTutor,
             @RequestBody Map<String, Float> body) {
         
         Float clasificacion = body.get("clasificacion");
         log.info("PATCH /v1/tutores/{}/clasificacion - Actualizando clasificación a {}", idTutor, clasificacion);
-        PerfilTutorDTO actualizado = perfilTutorService.actualizarClasificacion(idTutor, clasificacion);
-        return ResponseEntity.ok(actualizado);
+        return perfilTutorService.actualizarClasificacion(idTutor, clasificacion)
+            .map(ResponseEntity::ok);
     }
 
     @Operation(summary = "Eliminar perfil de tutor")
@@ -132,12 +132,12 @@ public class PerfilTutorController {
         @ApiResponse(responseCode = "404", description = "Perfil no encontrado")
     })
     @DeleteMapping("/{idTutor}")
-    public ResponseEntity<Void> eliminarPerfil(
+    public Mono<ResponseEntity<Void>> eliminarPerfil(
             @Parameter(description = "ID del tutor", required = true)
             @PathVariable Integer idTutor) {
         
         log.info("DELETE /v1/tutores/{} - Eliminando perfil", idTutor);
-        perfilTutorService.eliminarPerfil(idTutor);
-        return ResponseEntity.noContent().build();
+        return perfilTutorService.eliminarPerfil(idTutor)
+            .then(Mono.just(ResponseEntity.noContent().<Void>build()));
     }
 }

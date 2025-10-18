@@ -2,7 +2,6 @@ package com.enseniamelo.usuarios.model;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
-import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -22,19 +21,16 @@ public class PerfilTutor {
     @Id
     @JsonIgnore
     private String id;
+    
     @Indexed(unique = true)
     private Integer idTutor;
-    private String ci; 
-    private Boolean verificado;
-    private Float clasificacion; 
-    private String biografia;
     
-    @DBRef
-    @JsonIgnore
-    private Usuario usuario;
-    @DBRef
-    @JsonIgnore
-    private VerificarSolicitud verificarSolicitud;
+    private String ci;
+    private Boolean verificado;
+    private Float clasificacion;
+    private String biografia;
+    private Integer idUsuario;  
+    private Integer idVerificarSolicitud;  
     private LocalDateTime creacion;
     private LocalDateTime actualizado;
 }

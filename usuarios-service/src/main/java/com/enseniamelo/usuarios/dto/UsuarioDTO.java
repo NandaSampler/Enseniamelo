@@ -85,7 +85,6 @@ public class UsuarioDTO {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private LocalDateTime actualizado;
 
-    // Interfaces para validación
     public interface OnCreate {}
     public interface OnUpdate {}
 }
