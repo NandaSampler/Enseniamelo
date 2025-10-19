@@ -1,5 +1,20 @@
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    display-request-duration: true
+    doc-expansion: none
+  servers:
+    - url: http://localhost:8081
+      description: "Servidor local de desarrollo (comentarios-service)"
+
 api:
   common:
     title: "Comments API"
     version: "1.0.0"
-    description: "API para gestionar Comentarios (comentarios-curso y comentarios-tutor) para el proyecto Enseñamelo"
+    description: >
+      API para gestionar Comentarios (comentarios-curso y comentarios-tutor)
+      dentro del proyecto Enseñamelo. Incluye endpoints reactivos y documentación OpenAPI 3.

@@ -2,69 +2,50 @@ package com.enseniamelo.commentsservice.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.support.WebExchangeBindException;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-/**
- * Manejador global de excepciones para el microservicio de comentarios.
- */
-@RestControllerAdvice
+@ControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * Maneja errores de validación de DTOs (Bean Validation).
-     */
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, Object> body = new HashMap<>();
-        Map<String, String> errors = new HashMap<>();
+    // ⚠️ Manejo de errores de validación (@Valid)
+    @ExceptionHandler(WebExchangeBindException.class)
+    public ResponseEntity<Map<String, Object>> handleValidationExceptions(WebExchangeBindException ex) {
+        Map<String, Object> response = new HashMap<>();
+        List<String> errores = ex.getFieldErrors()
+                .stream()
+                .map(error -> error.getDefaultMessage())
+                .toList();
 
-        ex.getBindingResult().getAllErrors().forEach(error -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
-        });
+        response.put("status", HttpStatus.BAD_REQUEST.value());
+        response.put("error", "Validación fallida");
+        response.put("mensajes", errores);
 
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("errors", errors);
-
-        return ResponseEntity.badRequest().body(body);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
-    /**
-     * Maneja cuando un recurso no es encontrado (404).
-     */
+    // ⚠️ Manejo de recursos no encontrados
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleResourceNotFound(ResourceNotFoundException ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.NOT_FOUND.value());
-        body.put("error", "Resource Not Found");
-        body.put("message", ex.getMessage());
-        body.put("resource", ex.getResource());
-        body.put("identifier", ex.getIdentifier());
-
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    public ResponseEntity<Map<String, Object>> handleNotFound(ResourceNotFoundException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", HttpStatus.NOT_FOUND.value());
+        response.put("error", "Recurso no encontrado");
+        response.put("mensaje", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 
-    /**
-     * Maneja excepciones genéricas (500).
-     */
+    // ⚠️ Manejo genérico de errores inesperados
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        body.put("error", "Internal Server Error");
-        body.put("message", ex.getMessage());
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        response.put("error", "Error interno del servidor");
+        response.put("mensaje", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 }

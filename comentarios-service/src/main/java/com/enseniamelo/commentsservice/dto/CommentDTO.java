@@ -14,7 +14,6 @@ public class CommentDTO {
     @NotNull(message = "userId is required")
     private Long userId;
 
-    // One of courseId OR tutorId must be present (we can't enforce cross-field with simple annotations here)
     private Long courseId;
     private Long tutorId;
 
