@@ -1,23 +1,7 @@
 version: '3.8'
 
 services:
-  mongodb:
-    image: mongo:8
-    container_name: mongodb
-    ports:
-      - "27017:27017"
-    environment:
-      - MONGO_INITDB_DATABASE=usuarios-db
-    volumes:
-      - mongo-data:/data/db
-    networks:
-      - partitions-net
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
+  # --- Zookeeper ---
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper
@@ -39,6 +23,7 @@ services:
       timeout: 5s
       retries: 5
 
+  # --- Kafka brokers ---
   kafka-1:
     image: confluentinc/cp-kafka:7.5.0
     container_name: kafka-1
@@ -132,6 +117,7 @@ services:
       timeout: 10s
       retries: 5
 
+  # --- Kafka UI ---
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
@@ -148,20 +134,18 @@ services:
     networks:
       - partitions-net
 
+  # --- Usuarios microservice (1) ---
   usuarios-1:
     build: .
     container_name: usuarios-service-1
     ports:
       - "8081:8081"
     environment:
-      - SPRING_DATA_MONGODB_HOST=mongodb
-      - SPRING_DATA_MONGODB_PORT=27017
-      - SPRING_DATA_MONGODB_DATABASE=usuarios-db
-      - SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS=kafka-1:29092,kafka-2:29093,kafka-3:29094
-      - SERVER_PORT=8081
+      # 💡 MongoDB Atlas URI (reemplaza con tu cadena real)
+      SPRING_DATA_MONGODB_URI: mongodb+srv://<usuario>:<password>@<cluster>.mongodb.net/usuarios-db?retryWrites=true&w=majority
+      SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: kafka-1:29092,kafka-2:29093,kafka-3:29094
+      SERVER_PORT: 8081
     depends_on:
-      mongodb:
-        condition: service_healthy
       kafka-1:
         condition: service_healthy
       kafka-2:
@@ -172,20 +156,17 @@ services:
       - partitions-net
     restart: on-failure
 
+  # --- Usuarios microservice (2) ---
   usuarios-2:
     build: .
     container_name: usuarios-service-2
     ports:
       - "8082:8082"
     environment:
-      - SPRING_DATA_MONGODB_HOST=mongodb
-      - SPRING_DATA_MONGODB_PORT=27017
-      - SPRING_DATA_MONGODB_DATABASE=usuarios-db
-      - SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS=kafka-1:29092,kafka-2:29093,kafka-3:29094
-      - SERVER_PORT=8082
+      SPRING_DATA_MONGODB_URI: mongodb+srv://<usuario>:<password>@<cluster>.mongodb.net/usuarios-db?retryWrites=true&w=majority
+      SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: kafka-1:29092,kafka-2:29093,kafka-3:29094
+      SERVER_PORT: 8082
     depends_on:
-      mongodb:
-        condition: service_healthy
       kafka-1:
         condition: service_healthy
       kafka-2:
@@ -201,7 +182,6 @@ networks:
     driver: bridge
 
 volumes:
-  mongo-data:
   zookeeper-data:
   zookeeper-logs:
   kafka-1-data:

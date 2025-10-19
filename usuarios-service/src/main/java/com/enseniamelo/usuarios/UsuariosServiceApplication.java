@@ -28,9 +28,15 @@ public class UsuariosServiceApplication {
     public static void main(String[] args) {
         ConfigurableApplicationContext ctx = SpringApplication.run(UsuariosServiceApplication.class, args);
 
-        String mongoDbHost = ctx.getEnvironment().getProperty("spring.data.mongodb.host");
-        String mongoDbPort = ctx.getEnvironment().getProperty("spring.data.mongodb.port");
-        LOGGER.info("Connected to MongoDb: " + mongoDbHost + ":" + mongoDbPort);
+        String mongoUri = ctx.getEnvironment().getProperty("spring.data.mongodb.uri");
+        if (mongoUri != null && mongoUri.contains("@")) {
+            String sanitizedUri = mongoUri.replaceAll("(?<=//)(.*)(?=@)", "****");
+            LOGGER.info("Connected to MongoDB Atlas using URI: {}", sanitizedUri);
+        } else if (mongoUri != null) {
+            LOGGER.info("Connected to MongoDB at: {}", mongoUri);
+        } else {
+            LOGGER.warn("MongoDB connection details not found in environment.");
+        }
     }
 
     @Autowired

@@ -1,24 +1,9 @@
 version: '3.8'
 
 services:
-  mongodb:
-    image: mongo:8
-    container_name: mongodb
-    ports:
-      - "27017:27017"
-    environment:
-      - MONGO_INITDB_DATABASE=usuarios-db
-    volumes:
-      - mongo-data:/data/db
-    networks:
-      - microservices-net
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-
+  # ======================================================
+  # 🐘 Zookeeper
+  # ======================================================
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper
@@ -38,6 +23,9 @@ services:
       timeout: 5s
       retries: 5
 
+  # ======================================================
+  # ⚙️ Kafka
+  # ======================================================
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: kafka
@@ -67,7 +55,9 @@ services:
       timeout: 10s
       retries: 5
 
-
+  # ======================================================
+  # 📊 Kafka UI
+  # ======================================================
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
@@ -84,13 +74,15 @@ services:
     networks:
       - microservices-net
 
-
+  # ======================================================
+  # 🐰 RabbitMQ
+  # ======================================================
   rabbitmq:
     image: rabbitmq:3.12-management
     container_name: rabbitmq
     ports:
-      - "5672:5672"  
-      - "15672:15672" 
+      - "5672:5672"
+      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
@@ -105,34 +97,39 @@ services:
       timeout: 5s
       retries: 5
 
-
+  # ======================================================
+  # 👤 Microservicio de Usuarios
+  # ======================================================
   usuarios:
     build: .
     container_name: usuarios-service
     ports:
       - "8081:8081"
     environment:
-      # MongoDB
-      - SPRING_DATA_MONGODB_HOST=mongodb
-      - SPRING_DATA_MONGODB_PORT=27017
-      - SPRING_DATA_MONGODB_DATABASE=usuarios-db
+      # =============================
+      # 🍃 MongoDB Atlas
+      # =============================
+      - SPRING_DATA_MONGODB_URI=mongodb+srv://jaredpimentel_db_user:DpCito170209@cluster0.cibyezm.mongodb.net/enseniamelo?retryWrites=true&w=majority
+      - SPRING_DATA_MONGODB_DATABASE=enseniamelo
+
       # Kafka
       - SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS=kafka:29092
+
     depends_on:
-      mongodb:
-        condition: service_healthy
       kafka:
         condition: service_healthy
     networks:
       - microservices-net
     restart: on-failure
 
+# ======================================================
+# 🔗 Redes y Volúmenes
+# ======================================================
 networks:
   microservices-net:
     driver: bridge
 
 volumes:
-  mongo-data:
   zookeeper-data:
   zookeeper-logs:
   kafka-data:
