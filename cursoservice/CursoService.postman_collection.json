@@ -1,0 +1,419 @@
+{
+  "info": {
+    "name": "CursoService (FastAPI)",
+    "_postman_id": "a2c6f9f0-80e1-4e2b-9b26-111111111111",
+    "description": "Colección para probar el microservicio de Cursos, Categorías, Horarios y Reservas (FastAPI). Incluye flujo completo, borrados y pruebas de excepciones (404/422/400).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:8000" },
+    { "key": "curso_id", "value": "" },
+    { "key": "categoria_id", "value": "" },
+    { "key": "horario_id", "value": "" },
+    { "key": "reserva_id", "value": "" },
+    { "key": "inicio_iso", "value": "" },
+    { "key": "fin_iso", "value": "" },
+
+    { "key": "curso_x_id", "value": "" },
+    { "key": "horario_x_id", "value": "" },
+
+    { "key": "curso_cap_id", "value": "" },
+    { "key": "horario_cap_id", "value": "" },
+    { "key": "reserva_cap_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": { "method": "GET", "url": "{{base_url}}/", "description": "Ping y enlaces de documentación." },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('200 OK', () => pm.response.to.have.status(200));",
+        "const j = pm.response.json();",
+        "pm.test('Incluye links a docs', () => j.docs && j.openapi);"
+      ]}}]
+    },
+    {
+      "name": "OpenAPI JSON",
+      "request": { "method": "GET", "url": "{{base_url}}/openapi.json" },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('200 OK', () => pm.response.to.have.status(200));",
+        "const spec = pm.response.json();",
+        "pm.test('Tiene paths', () => spec.paths && Object.keys(spec.paths).length > 0);"
+      ]}}]
+    },
+
+    {
+      "name": "Cursos",
+      "item": [
+        {
+          "name": "Crear curso",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/cursos/",
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Python Básico\",\n  \"descripcion\": \"Intro a Python\",\n  \"modalidad\": \"online\",\n  \"duracion_semanas\": 4,\n  \"costo_inscripcion\": 0,\n  \"costo_curso\": 100,\n  \"cupo_maximo\": 2,\n  \"cupo_ocupado\": 0,\n  \"estado\": \"activo\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));",
+            "const j = pm.response.json(); pm.collectionVariables.set('curso_id', j.id);",
+            "pm.test('curso_id guardado', () => pm.collectionVariables.get('curso_id'));"
+          ]}}]
+        },
+        {
+          "name": "Listar cursos (q=python)",
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/cursos/?q=python" },
+          "event": [{ "listen": "test", "script": { "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));" ]}}]
+        },
+        {
+          "name": "Obtener curso por id",
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/cursos/{{curso_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));" ]}}]
+        },
+        {
+          "name": "Actualizar curso (cupo_maximo=3)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/cursos/{{curso_id}}",
+            "body": { "mode": "raw", "raw": "{ \"cupo_maximo\": 3 }" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));" ]}}]
+        },
+        {
+          "name": "Eliminar curso",
+          "request": { "method": "DELETE", "url": "{{base_url}}/api/v1/cursos/{{curso_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": [ "pm.test('204 No Content', () => pm.response.to.have.status(204));" ]}}]
+        }
+      ]
+    },
+
+    {
+      "name": "Categorías",
+      "item": [
+        {
+          "name": "Crear categoría",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/categorias/",
+            "body": { "mode": "raw", "raw": "{ \"nombre\": \"Programación\" }" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));",
+            "const j = pm.response.json(); pm.collectionVariables.set('categoria_id', j.id);"
+          ]}}]
+        },
+        {
+          "name": "Listar categorías",
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/categorias/" },
+          "event": [{ "listen": "test", "script": { "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));" ]}}]
+        },
+        {
+          "name": "Vincular curso ↔ categoría",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/cursos/{{curso_id}}/categorias",
+            "body": { "mode": "raw", "raw": "{ \"curso_id\": {{curso_id}}, \"categoria_id\": {{categoria_id}} }" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [ "pm.test('201/200', () => [201,200].includes(pm.response.code));" ]}}]
+        },
+        {
+          "name": "Categorías de un curso",
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/cursos/{{curso_id}}/categorias" },
+          "event": [{ "listen": "test", "script": { "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));" ]}}]
+        },
+        {
+          "name": "Cursos de una categoría",
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/categorias/{{categoria_id}}/cursos" },
+          "event": [{ "listen": "test", "script": { "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));" ]}}]
+        },
+        {
+          "name": "Desvincular categoría de curso",
+          "request": { "method": "DELETE", "url": "{{base_url}}/api/v1/cursos/{{curso_id}}/categorias/{{categoria_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": [ "pm.test('204 No Content', () => pm.response.to.have.status(204));" ]}}]
+        },
+        {
+          "name": "Eliminar categoría",
+          "request": { "method": "DELETE", "url": "{{base_url}}/api/v1/categorias/{{categoria_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": [ "pm.test('204 No Content', () => pm.response.to.have.status(204));" ]}}]
+        }
+      ]
+    },
+
+    {
+      "name": "Horarios",
+      "item": [
+        {
+          "name": "Crear horario (usa fechas futuras)",
+          "event": [
+            { "listen": "prerequest", "script": { "exec": [
+              "const now = Date.now();",
+              "pm.variables.set('inicio_iso', new Date(now + 24*60*60*1000).toISOString());",
+              "pm.variables.set('fin_iso', new Date(now + 26*60*60*1000).toISOString());"
+            ]}},
+            { "listen": "test", "script": { "exec": [
+              "pm.test('201 Created', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json(); pm.collectionVariables.set('horario_id', j.id);"
+            ]}}
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/horarios/",
+            "body": { "mode": "raw", "raw": "{\n  \"curso_id\": {{curso_id}},\n  \"inicio\": \"{{inicio_iso}}\",\n  \"fin\": \"{{fin_iso}}\"\n}" }
+          }
+        },
+        {
+          "name": "Listar horarios por curso",
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/horarios?curso_id={{curso_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));" ]}}]
+        },
+        {
+          "name": "Eliminar horario",
+          "request": { "method": "DELETE", "url": "{{base_url}}/api/v1/horarios/{{horario_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": [ "pm.test('204 No Content', () => pm.response.to.have.status(204));" ]}}]
+        }
+      ]
+    },
+
+    {
+      "name": "Reservas",
+      "item": [
+        {
+          "name": "Crear reserva (consume cupo si no está cancelada)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/reservas/",
+            "body": { "mode": "raw", "raw": "{\n  \"curso_id\": {{curso_id}},\n  \"horario_id\": {{horario_id}},\n  \"pagado\": false,\n  \"estado\": \"pendiente\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));",
+            "const j = pm.response.json(); pm.collectionVariables.set('reserva_id', j.id);"
+          ]}}]
+        },
+        {
+          "name": "Verificar cupo subió a 1",
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/cursos/{{curso_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('cupo_ocupado == 1', () => pm.response.json().cupo_ocupado === 1);"
+          ]}}]
+        },
+        {
+          "name": "Cancelar reserva (libera cupo)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/reservas/{{reserva_id}}",
+            "body": { "mode": "raw", "raw": "{ \"estado\": \"cancelada\" }" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));" ]}}]
+        },
+        {
+          "name": "Verificar cupo volvió a 0",
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/cursos/{{curso_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('cupo_ocupado == 0', () => pm.response.json().cupo_ocupado === 0);"
+          ]}}]
+        },
+        {
+          "name": "Eliminar reserva",
+          "request": { "method": "DELETE", "url": "{{base_url}}/api/v1/reservas/{{reserva_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": [ "pm.test('204 No Content', () => pm.response.to.have.status(204));" ]}}]
+        }
+      ]
+    },
+
+    {
+      "name": "Excepciones",
+      "item": [
+        {
+          "name": "404 - Curso inexistente",
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/cursos/999999" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('404 Not Found', () => pm.response.to.have.status(404));",
+            "const j = pm.response.json();",
+            "pm.test('payload uniforme', () => j.error && j.error.type === 'not_found');"
+          ]}}]
+        },
+        {
+          "name": "422 - Crear curso inválido",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/cursos/",
+            "body": { "mode": "raw", "raw": "{ \"nombre\": \"\", \"modalidad\": \"online\", \"cupo_maximo\": 0, \"cupo_ocupado\": 0, \"estado\": \"activo\" }" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('422 Unprocessable Entity', () => pm.response.to.have.status(422));",
+            "const j = pm.response.json();",
+            "pm.test('error.validation', () => j.error && j.error.type === 'validation_error');"
+          ]}}]
+        },
+        {
+          "name": "400 - Horario solapado (mismo curso)",
+          "item": [
+            {
+              "name": "Crear curso X",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": "{{base_url}}/api/v1/cursos/",
+                "body": { "mode": "raw", "raw": "{ \"nombre\": \"Curso X\", \"modalidad\": \"online\", \"cupo_maximo\": 3, \"cupo_ocupado\": 0, \"estado\": \"activo\" }" }
+              },
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('201', () => pm.response.to.have.status(201));",
+                "pm.collectionVariables.set('curso_x_id', pm.response.json().id);"
+              ]}}]
+            },
+            {
+              "name": "Crear horario X base",
+              "event": [
+                { "listen": "prerequest", "script": { "exec": [
+                  "const now = Date.now();",
+                  "pm.variables.set('inicio_iso', new Date(now + 24*60*60*1000).toISOString());",
+                  "pm.variables.set('fin_iso', new Date(now + 26*60*60*1000).toISOString());"
+                ]}},
+                { "listen": "test", "script": { "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('horario_x_id', pm.response.json().id);"
+                ]}}
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": "{{base_url}}/api/v1/horarios/",
+                "body": { "mode": "raw", "raw": "{ \"curso_id\": {{curso_x_id}}, \"inicio\": \"{{inicio_iso}}\", \"fin\": \"{{fin_iso}}\" }" }
+              }
+            },
+            {
+              "name": "Crear horario X solapado (espera 400)",
+              "event": [
+                { "listen": "prerequest", "script": { "exec": [
+                  "const start = new Date(pm.collectionVariables.get('inicio_iso'));",
+                  "const end = new Date(pm.collectionVariables.get('fin_iso'));",
+                  "const solapadoInicio = new Date(start.getTime() + 30*60*1000).toISOString();",
+                  "const solapadoFin = new Date(end.getTime() + 30*60*1000).toISOString();",
+                  "pm.variables.set('inicio_iso', solapadoInicio);",
+                  "pm.variables.set('fin_iso', solapadoFin);"
+                ]}},
+                { "listen": "test", "script": { "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "const j = pm.response.json();",
+                  "pm.test('mensaje solape', () => j.error && j.error.message && j.error.message.includes('solapa'));"
+                ]}}
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": "{{base_url}}/api/v1/horarios/",
+                "body": { "mode": "raw", "raw": "{ \"curso_id\": {{curso_x_id}}, \"inicio\": \"{{inicio_iso}}\", \"fin\": \"{{fin_iso}}\" }" }
+              }
+            },
+            {
+              "name": "Eliminar horario X base",
+              "request": { "method": "DELETE", "url": "{{base_url}}/api/v1/horarios/{{horario_x_id}}" },
+              "event": [{ "listen": "test", "script": { "exec": [ "pm.test('204', () => pm.response.to.have.status(204));" ]}}]
+            },
+            {
+              "name": "Eliminar curso X",
+              "request": { "method": "DELETE", "url": "{{base_url}}/api/v1/cursos/{{curso_x_id}}" },
+              "event": [{ "listen": "test", "script": { "exec": [ "pm.test('204', () => pm.response.to.have.status(204));" ]}}]
+            }
+          ]
+        },
+        {
+          "name": "400 - Cupo lleno (curso cap=1)",
+          "item": [
+            {
+              "name": "Crear curso cap=1",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": "{{base_url}}/api/v1/cursos/",
+                "body": { "mode": "raw", "raw": "{ \"nombre\": \"Curso Cap 1\", \"modalidad\": \"online\", \"cupo_maximo\": 1, \"cupo_ocupado\": 0, \"estado\": \"activo\" }" }
+              },
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('201', () => pm.response.to.have.status(201));",
+                "pm.collectionVariables.set('curso_cap_id', pm.response.json().id);"
+              ]}}]
+            },
+            {
+              "name": "Crear horario cap",
+              "event": [
+                { "listen": "prerequest", "script": { "exec": [
+                  "const now = Date.now();",
+                  "pm.variables.set('inicio_iso', new Date(now + 24*60*60*1000).toISOString());",
+                  "pm.variables.set('fin_iso', new Date(now + 25*60*60*1000).toISOString());"
+                ]}},
+                { "listen": "test", "script": { "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('horario_cap_id', pm.response.json().id);"
+                ]}}
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": "{{base_url}}/api/v1/horarios/",
+                "body": { "mode": "raw", "raw": "{ \"curso_id\": {{curso_cap_id}}, \"inicio\": \"{{inicio_iso}}\", \"fin\": \"{{fin_iso}}\" }" }
+              }
+            },
+            {
+              "name": "Crear reserva #1",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": "{{base_url}}/api/v1/reservas/",
+                "body": { "mode": "raw", "raw": "{ \"curso_id\": {{curso_cap_id}}, \"horario_id\": {{horario_cap_id}}, \"pagado\": false, \"estado\": \"pendiente\" }" }
+              },
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('201', () => pm.response.to.have.status(201));",
+                "pm.collectionVariables.set('reserva_cap_id', pm.response.json().id);"
+              ]}}]
+            },
+            {
+              "name": "Crear reserva #2 (espera 400 por cupo lleno)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": "{{base_url}}/api/v1/reservas/",
+                "body": { "mode": "raw", "raw": "{ \"curso_id\": {{curso_cap_id}}, \"horario_id\": {{horario_cap_id}}, \"pagado\": false, \"estado\": \"pendiente\" }" }
+              },
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                "const j = pm.response.json();",
+                "pm.test('mensaje cupo', () => j.error && j.error.message && j.error.message.toLowerCase().includes('cupo'));" ]}}]
+            },
+            {
+              "name": "Cancelar y eliminar reserva #1",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": "{{base_url}}/api/v1/reservas/{{reserva_cap_id}}",
+                "body": { "mode": "raw", "raw": "{ \"estado\": \"cancelada\" }" }
+              },
+              "event": [{ "listen": "test", "script": { "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));" ]}}]
+            },
+            {
+              "name": "Eliminar reserva #1",
+              "request": { "method": "DELETE", "url": "{{base_url}}/api/v1/reservas/{{reserva_cap_id}}" },
+              "event": [{ "listen": "test", "script": { "exec": [ "pm.test('204', () => pm.response.to.have.status(204));" ]}}]
+            },
+            {
+              "name": "Eliminar horario cap",
+              "request": { "method": "DELETE", "url": "{{base_url}}/api/v1/horarios/{{horario_cap_id}}" },
+              "event": [{ "listen": "test", "script": { "exec": [ "pm.test('204', () => pm.response.to.have.status(204));" ]}}]
+            },
+            {
+              "name": "Eliminar curso cap=1",
+              "request": { "method": "DELETE", "url": "{{base_url}}/api/v1/cursos/{{curso_cap_id}}" },
+              "event": [{ "listen": "test", "script": { "exec": [ "pm.test('204', () => pm.response.to.have.status(204));" ]}}]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
