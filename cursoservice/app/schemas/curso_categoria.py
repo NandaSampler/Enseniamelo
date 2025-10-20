@@ -1,17 +1,14 @@
-# cursoservice/app/schemas/curso_categoria.py
 from __future__ import annotations
 from typing import Optional
 from datetime import datetime
-from pydantic import BaseModel, Field, conint
-
+from pydantic import BaseModel, Field
 
 class CursoCategoriaLink(BaseModel):
-    curso_id: conint(ge=1) = Field(..., description="FK a curso.id")
-    categoria_id: conint(ge=1) = Field(..., description="FK a categoria.id")
-
+    curso_id: str = Field(..., description="FK a curso.id (ObjectId)")
+    categoria_id: str = Field(..., description="FK a categoria.id (ObjectId)")
 
 class CursoCategoriaOut(CursoCategoriaLink):
-    id: int = Field(..., description="Identificador del vínculo curso-categoría")
+    id: str = Field(..., description="Id del vínculo curso-categoría (ObjectId)")
     creado: Optional[datetime] = None
 
     model_config = {"from_attributes": True}

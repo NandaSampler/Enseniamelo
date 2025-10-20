@@ -1,12 +1,10 @@
-# cursoservice/app/schemas/horario.py
 from __future__ import annotations
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field, conint, field_validator
-
+from pydantic import BaseModel, Field, field_validator
 
 class HorarioBase(BaseModel):
-    curso_id: conint(ge=1) = Field(..., description="FK a curso.id")
+    curso_id: str = Field(..., description="FK a curso.id (ObjectId)")
     inicio: datetime = Field(..., description="Fecha y hora de inicio")
     fin: datetime = Field(..., description="Fecha y hora de fin")
 
@@ -18,13 +16,11 @@ class HorarioBase(BaseModel):
             raise ValueError("fin debe ser mayor que inicio")
         return fin
 
-
 class HorarioCreate(HorarioBase):
     pass
 
-
 class HorarioUpdate(BaseModel):
-    curso_id: Optional[conint(ge=1)] = None
+    curso_id: Optional[str] = None
     inicio: Optional[datetime] = None
     fin: Optional[datetime] = None
 
@@ -38,9 +34,8 @@ class HorarioUpdate(BaseModel):
             raise ValueError("fin debe ser mayor que inicio")
         return fin
 
-
 class HorarioOut(HorarioBase):
-    id: int
+    id: str
     creado: Optional[datetime] = None
     actualizado: Optional[datetime] = None
 

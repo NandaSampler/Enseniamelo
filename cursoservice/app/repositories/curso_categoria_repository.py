@@ -1,66 +1,75 @@
 # cursoservice/app/repositories/curso_categoria_repository.py
 from __future__ import annotations
 from datetime import datetime
-from itertools import count
-from threading import RLock
-from typing import Dict, List, Tuple
+from typing import List
+
+from bson import ObjectId
+from app.core.db import get_collection
 
 from app.schemas.curso_categoria import CursoCategoriaLink, CursoCategoriaOut
 
 
 class CursoCategoriaRepository:
     """
-    Repositorio in-memory del vínculo curso-categoría.
-    No resuelve objetos completos; solo mantiene los pares y su id.
+    Repositorio Mongo para el vínculo curso-categoría.
+    Guarda pares (curso_id, categoria_id) y expone queries de ids.
     """
     def __init__(self) -> None:
-        self._data: Dict[int, dict] = {}            # id -> record
-        self._index: Dict[Tuple[int, int], int] = {}  # (curso_id,categoria_id) -> id
-        self._id = count(start=1)
-        self._lock = RLock()
+        self.col = get_collection("curso_categorias")
+        # Índice único para evitar duplicados del mismo par
+        self.col.create_index(
+            [("curso_id", 1), ("categoria_id", 1)],
+            unique=True,
+            name="uix_curso_categoria",
+        )
 
     def list(self) -> List[CursoCategoriaOut]:
-        with self._lock:
-            return [CursoCategoriaOut(**r) for r in self._data.values()]
+        docs = list(self.col.find({}))
+        return [CursoCategoriaOut(**self._normalize(d)) for d in docs]
 
     def add(self, link: CursoCategoriaLink) -> CursoCategoriaOut:
-        key = (link.curso_id, link.categoria_id)
-        with self._lock:
-            if key in self._index:
-                # ya existe, retornamos el existente
-                rid = self._index[key]
-                return CursoCategoriaOut(**self._data[rid])
+        filtro = {
+            "curso_id": ObjectId(link.curso_id),
+            "categoria_id": ObjectId(link.categoria_id),
+        }
+        # Si ya existe, devolverlo; si no, insertarlo
+        existing = self.col.find_one(filtro)
+        if existing:
+            return CursoCategoriaOut(**self._normalize(existing))
 
-            rid = next(self._id)
-            record = link.model_dump()
-            record.update({"id": rid, "creado": datetime.utcnow()})
-            self._data[rid] = record
-            self._index[key] = rid
-            return CursoCategoriaOut(**record)
+        data = {
+            **filtro,
+            "creado": datetime.utcnow(),
+        }
+        res = self.col.insert_one(data)
+        data["_id"] = res.inserted_id
+        return CursoCategoriaOut(**self._normalize(data))
 
-    def remove(self, curso_id: int, categoria_id: int) -> None:
-        key = (curso_id, categoria_id)
-        with self._lock:
-            rid = self._index.get(key)
-            if rid is None:
-                # si no existe, consideramos idempotente
-                return
-            del self._index[key]
-            del self._data[rid]
+    def remove(self, curso_id: str, categoria_id: str) -> None:
+        self.col.delete_one(
+            {"curso_id": ObjectId(curso_id), "categoria_id": ObjectId(categoria_id)}
+        )
+        # idempotente: no lanza error si no existe
 
-    # Query helpers (ids; el join lo hará el Service)
-    def list_category_ids_of_course(self, curso_id: int) -> List[int]:
-        with self._lock:
-            return [cat for (cur, cat), _id in self._index.items() if cur == curso_id]
+    # Query helpers (ids; el "join" lo hará el Service)
+    def list_category_ids_of_course(self, curso_id: str) -> List[str]:
+        cur = self.col.find({"curso_id": ObjectId(curso_id)}, {"categoria_id": 1})
+        return [str(doc["categoria_id"]) for doc in cur]
 
-    def list_course_ids_of_category(self, categoria_id: int) -> List[int]:
-        with self._lock:
-            return [cur for (cur, cat), _id in self._index.items() if cat == categoria_id]
+    def list_course_ids_of_category(self, categoria_id: str) -> List[str]:
+        cur = self.col.find({"categoria_id": ObjectId(categoria_id)}, {"curso_id": 1})
+        return [str(doc["curso_id"]) for doc in cur]
 
     def clear(self) -> None:
-        with self._lock:
-            self._data.clear()
-            self._index.clear()
+        self.col.delete_many({})
 
+    # helpers
+    def _normalize(self, doc: dict) -> dict:
+        doc = dict(doc)
+        doc["id"] = str(doc["_id"])
+        doc["curso_id"] = str(doc["curso_id"])
+        doc["categoria_id"] = str(doc["categoria_id"])
+        doc.pop("_id", None)
+        return doc
 
 curso_categoria_repo = CursoCategoriaRepository()

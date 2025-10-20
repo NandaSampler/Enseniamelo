@@ -12,13 +12,13 @@ from app.repositories.categoria_repository import categoria_repo
 
 
 class CursoCategoriaService:
-    """Reglas de negocio para el vínculo Curso-Categoria."""
+    """Reglas de negocio para el vínculo Curso-Categoria (Mongo)."""
 
     def list(self) -> List[CursoCategoriaOut]:
         return curso_categoria_repo.list()
 
     def add(self, link: CursoCategoriaLink) -> CursoCategoriaOut:
-        # Integridad referencial
+        # Integridad referencial básica
         try:
             curso_repo.get(link.curso_id)
         except KeyError:
@@ -30,11 +30,11 @@ class CursoCategoriaService:
 
         return curso_categoria_repo.add(link)
 
-    def remove(self, curso_id: int, categoria_id: int) -> None:
+    def remove(self, curso_id: str, categoria_id: str) -> None:
         # idempotente si no existe
         curso_categoria_repo.remove(curso_id, categoria_id)
 
-    def list_categories_of_course(self, curso_id: int) -> List[CategoriaOut]:
+    def list_categories_of_course(self, curso_id: str) -> List[CategoriaOut]:
         # valida curso
         try:
             curso_repo.get(curso_id)
@@ -51,7 +51,7 @@ class CursoCategoriaService:
                 continue
         return out
 
-    def list_courses_of_category(self, categoria_id: int) -> List[CursoOut]:
+    def list_courses_of_category(self, categoria_id: str) -> List[CursoOut]:
         # valida categoría
         try:
             categoria_repo.get(categoria_id)

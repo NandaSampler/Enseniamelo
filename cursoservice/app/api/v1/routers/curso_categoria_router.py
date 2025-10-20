@@ -1,4 +1,3 @@
-# cursoservice/app/api/v1/routers/curso_categoria_router.py
 from typing import List
 from fastapi import APIRouter, Depends, status
 from app.schemas.curso_categoria import CursoCategoriaLink, CursoCategoriaOut

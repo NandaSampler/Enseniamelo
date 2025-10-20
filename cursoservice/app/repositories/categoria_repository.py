@@ -1,59 +1,69 @@
 # cursoservice/app/repositories/categoria_repository.py
 from __future__ import annotations
 from datetime import datetime
-from itertools import count
-from threading import RLock
-from typing import Dict, List
+from typing import List, Optional
+
+from bson import ObjectId
+from pymongo import ReturnDocument
 
 from app.schemas.categoria import CategoriaCreate, CategoriaUpdate, CategoriaOut
+from app.core.db import get_collection
 
 
 class CategoriaRepository:
-    """Repositorio in-memory para Categoria."""
     def __init__(self) -> None:
-        self._data: Dict[int, dict] = {}
-        self._id = count(start=1)
-        self._lock = RLock()
+        self.col = get_collection("categorias")
+        # Útil si quieres evitar duplicados por nombre (opcional, comenta si no aplica)
+        # self.col.create_index("nombre", unique=True)
 
-    def list(self) -> List[CategoriaOut]:
-        with self._lock:
-            return [CategoriaOut(**r) for r in self._data.values()]
+    def list(self, q: Optional[str] = None) -> List[CategoriaOut]:
+        filtro = {}
+        if q:
+            filtro = {
+                "$or": [
+                    {"nombre": {"$regex": q, "$options": "i"}},
+                    {"descripcion": {"$regex": q, "$options": "i"}},
+                ]
+            }
+        docs = list(self.col.find(filtro))
+        return [CategoriaOut(**self._normalize(d)) for d in docs]
 
-    def get(self, categoria_id: int) -> CategoriaOut:
-        with self._lock:
-            r = self._data.get(categoria_id)
-        if not r:
+    def get(self, categoria_id: str) -> CategoriaOut:
+        doc = self.col.find_one({"_id": ObjectId(categoria_id)})
+        if not doc:
             raise KeyError("categoria no encontrada")
-        return CategoriaOut(**r)
+        return CategoriaOut(**self._normalize(doc))
 
     def create(self, payload: CategoriaCreate) -> CategoriaOut:
         now = datetime.utcnow()
-        new_id = next(self._id)
-        record = payload.model_dump()
-        record.update({"id": new_id, "creado": now, "actualizado": now})
-        with self._lock:
-            self._data[new_id] = record
-        return CategoriaOut(**record)
+        data = payload.model_dump()
+        data.update({"creado": now, "actualizado": now})
+        res = self.col.insert_one(data)
+        data["_id"] = res.inserted_id
+        return CategoriaOut(**self._normalize(data))
 
-    def update(self, categoria_id: int, payload: CategoriaUpdate) -> CategoriaOut:
-        with self._lock:
-            if categoria_id not in self._data:
-                raise KeyError("categoria no encontrada")
-            current = self._data[categoria_id].copy()
-            current.update(payload.model_dump(exclude_unset=True))
-            current["actualizado"] = datetime.utcnow()
-            self._data[categoria_id] = current
-            return CategoriaOut(**current)
+    def update(self, categoria_id: str, payload: CategoriaUpdate) -> CategoriaOut:
+        update_data = payload.model_dump(exclude_unset=True)
+        update_data["actualizado"] = datetime.utcnow()
+        doc = self.col.find_one_and_update(
+            {"_id": ObjectId(categoria_id)},
+            {"$set": update_data},
+            return_document=ReturnDocument.AFTER,
+        )
+        if not doc:
+            raise KeyError("categoria no encontrada")
+        return CategoriaOut(**self._normalize(doc))
 
-    def delete(self, categoria_id: int) -> None:
-        with self._lock:
-            if categoria_id not in self._data:
-                raise KeyError("categoria no encontrada")
-            del self._data[categoria_id]
+    def delete(self, categoria_id: str) -> None:
+        res = self.col.delete_one({"_id": ObjectId(categoria_id)})
+        if res.deleted_count == 0:
+            raise KeyError("categoria no encontrada")
 
-    def clear(self) -> None:
-        with self._lock:
-            self._data.clear()
-
+    # helpers
+    def _normalize(self, doc: dict) -> dict:
+        doc = dict(doc)
+        doc["id"] = str(doc["_id"])
+        doc.pop("_id", None)
+        return doc
 
 categoria_repo = CategoriaRepository()

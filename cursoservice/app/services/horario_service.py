@@ -13,12 +13,12 @@ def _overlaps(a_start, a_end, b_start, b_end) -> bool:
 
 
 class HorarioService:
-    """Reglas de negocio para Horario."""
+    """Reglas de negocio para Horario (Mongo)."""
 
-    def list(self, curso_id: Optional[int] = None) -> List[HorarioOut]:
+    def list(self, curso_id: Optional[str] = None) -> List[HorarioOut]:
         return horario_repo.list(curso_id=curso_id)
 
-    def get(self, horario_id: int) -> HorarioOut:
+    def get(self, horario_id: str) -> HorarioOut:
         try:
             return horario_repo.get(horario_id)
         except KeyError:
@@ -31,15 +31,14 @@ class HorarioService:
         except KeyError:
             raise KeyError("curso no encontrado")
 
-        # Evitar solapes de horarios del mismo curso (regla opcional)
+        # Evitar solapes de horarios del mismo curso
         for h in horario_repo.list(curso_id=payload.curso_id):
             if _overlaps(payload.inicio, payload.fin, h.inicio, h.fin):
                 raise ValueError("el horario se solapa con otro existente para el mismo curso")
 
         return horario_repo.create(payload)
 
-    def update(self, horario_id: int, payload: HorarioUpdate) -> HorarioOut:
-        # Si cambia curso_id o rangos, validar
+    def update(self, horario_id: str, payload: HorarioUpdate) -> HorarioOut:
         current = self.get(horario_id)
 
         new_curso_id = payload.curso_id if payload.curso_id is not None else current.curso_id
@@ -62,9 +61,9 @@ class HorarioService:
         except KeyError:
             raise KeyError("horario no encontrado")
 
-    def delete(self, horario_id: int) -> None:
-        # Podríamos impedir borrar si hay reservas sobre ese horario
-        from app.repositories.reserva_repository import reserva_repo  # import local para evitar ciclos
+    def delete(self, horario_id: str) -> None:
+        # Impedir borrar si hay reservas para ese horario
+        from app.repositories.reserva_repository import reserva_repo  # evitar ciclos
         if reserva_repo.list(horario_id=horario_id):
             raise ValueError("no se puede eliminar: existen reservas para este horario")
         try:

@@ -1,96 +1,176 @@
 # cursoservice/app/repositories/curso_repository.py
 from __future__ import annotations
 from datetime import datetime
-from itertools import count
-from threading import RLock
-from typing import Dict, List, Optional
+from typing import List, Optional, Dict, Any
+
+from bson import ObjectId
+from pymongo import ReturnDocument
 
 from app.schemas.curso import CursoCreate, CursoUpdate, CursoOut
+from app.core.db import get_collection
 
 
 class CursoRepository:
-    """Repositorio in-memory para Curso."""
+    """
+    Repositorio Mongo para Curso.
 
+    Notas de compatibilidad de campos:
+    - Para cupos, soporta ambos esquemas:
+      * (a) tiene_cupo + cupo       -> cupo es el máximo permitido
+      * (b) cupo_maximo             -> máximo permitido
+    - Siempre mantiene `cupo_ocupado` (consumidos). Si no existe, lo inicia en 0.
+    - Referencia a tutor: `tutor_id` guardado como ObjectId.
+    """
     def __init__(self) -> None:
-        self._data: Dict[int, dict] = {}
-        self._id = count(start=1)
-        self._lock = RLock()
+        self.col = get_collection("cursos")
+        # Índices útiles
+        self.col.create_index("tutor_id")
+        self.col.create_index([("nombre", "text"), ("descripcion", "text")])
 
-    # CRUD
-    def list(self, q: Optional[str] = None) -> List[CursoOut]:
-        with self._lock:
-            items = list(self._data.values())
+    # ---------- Helpers internos ----------
+    def _max_cupo_from_doc(self, doc: Dict[str, Any]) -> Optional[int]:
+        """Devuelve el máximo de cupos definido en el documento (None si no aplica)."""
+        if doc.get("tiene_cupo") is True:
+            # esquema (a)
+            if isinstance(doc.get("cupo"), int):
+                return doc["cupo"]
+        # esquema (b)
+        if isinstance(doc.get("cupo_maximo"), int):
+            return doc["cupo_maximo"]
+        return None
+
+    def _normalize(self, doc: dict) -> dict:
+        d = dict(doc)
+        d["id"] = str(d["_id"])
+        d.pop("_id", None)
+        # refs a string
+        if "tutor_id" in d and isinstance(d["tutor_id"], ObjectId):
+            d["tutor_id"] = str(d["tutor_id"])
+        return d
+
+    def _ensure_ref_types(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Castea referencias que vengan como str a ObjectId."""
+        out = dict(data)
+        if "tutor_id" in out and out["tutor_id"] is not None and not isinstance(out["tutor_id"], ObjectId):
+            out["tutor_id"] = ObjectId(out["tutor_id"])
+        return out
+
+    # ---------- CRUD ----------
+    def list(self, q: Optional[str] = None, tutor_id: Optional[str] = None) -> List[CursoOut]:
+        filtro: Dict[str, Any] = {}
+        if tutor_id:
+            filtro["tutor_id"] = ObjectId(tutor_id)
+
+        # Búsqueda por texto o regex; si hay índice de texto, se usa $text
         if q:
-            ql = q.lower()
-            items = [
-                r for r in items
-                if ql in r["nombre"].lower() or (r.get("descripcion") and ql in r["descripcion"].lower())
+            # preferimos $or con regex para ser case-insensitive y simple
+            filtro["$or"] = [
+                {"nombre": {"$regex": q, "$options": "i"}},
+                {"descripcion": {"$regex": q, "$options": "i"}},
             ]
-        return [CursoOut(**r) for r in items]
 
-    def get(self, curso_id: int) -> CursoOut:
-        with self._lock:
-            r = self._data.get(curso_id)
-        if not r:
+        docs = list(self.col.find(filtro))
+        return [CursoOut(**self._normalize(d)) for d in docs]
+
+    def get(self, curso_id: str) -> CursoOut:
+        doc = self.col.find_one({"_id": ObjectId(curso_id)})
+        if not doc:
             raise KeyError("curso no encontrado")
-        return CursoOut(**r)
+        return CursoOut(**self._normalize(doc))
 
     def create(self, payload: CursoCreate) -> CursoOut:
         now = datetime.utcnow()
-        new_id = next(self._id)
-        record = payload.model_dump()
-        record.update({"id": new_id, "creado": now, "actualizado": now})
-        with self._lock:
-            self._data[new_id] = record
-        return CursoOut(**record)
+        data = payload.model_dump()
+        data = self._ensure_ref_types(data)
 
-    def update(self, curso_id: int, payload: CursoUpdate) -> CursoOut:
-        with self._lock:
-            if curso_id not in self._data:
-                raise KeyError("curso no encontrado")
-            current = self._data[curso_id].copy()
-            current.update(payload.model_dump(exclude_unset=True))
-            # Regla mínima de integridad local (el resto va en Service)
-            if current.get("cupo_maximo") is not None and current.get("cupo_ocupado", 0) > current["cupo_maximo"]:
-                raise ValueError("cupo_ocupado no puede ser mayor que cupo_maximo")
-            current["actualizado"] = datetime.utcnow()
-            self._data[curso_id] = current
-            return CursoOut(**current)
+        # valores por defecto/normalización
+        if "cupo_ocupado" not in data:
+            data["cupo_ocupado"] = 0
 
-    def delete(self, curso_id: int) -> None:
-        with self._lock:
-            if curso_id not in self._data:
-                raise KeyError("curso no encontrado")
-            del self._data[curso_id]
+        # reglas suaves de integridad
+        max_cupo = self._max_cupo_from_doc(data)
+        if max_cupo is not None and data.get("cupo_ocupado", 0) > max_cupo:
+            raise ValueError("cupo_ocupado no puede ser mayor que el máximo permitido")
 
-    # Utilidades para cupos (usadas por Service de reservas)
-    def increment_cupo(self, curso_id: int, amount: int = 1) -> CursoOut:
-        with self._lock:
-            if curso_id not in self._data:
-                raise KeyError("curso no encontrado")
-            rec = self._data[curso_id]
-            rec["cupo_ocupado"] = rec.get("cupo_ocupado", 0) + amount
-            if rec["cupo_ocupado"] > rec["cupo_maximo"]:
-                raise ValueError("No hay cupos disponibles")
-            rec["actualizado"] = datetime.utcnow()
-            self._data[curso_id] = rec
-            return CursoOut(**rec)
+        data.update({"creado": now, "actualizado": now})
+        res = self.col.insert_one(data)
+        data["_id"] = res.inserted_id
+        return CursoOut(**self._normalize(data))
 
-    def decrement_cupo(self, curso_id: int, amount: int = 1) -> CursoOut:
-        with self._lock:
-            if curso_id not in self._data:
-                raise KeyError("curso no encontrado")
-            rec = self._data[curso_id]
-            rec["cupo_ocupado"] = max(0, rec.get("cupo_ocupado", 0) - amount)
-            rec["actualizado"] = datetime.utcnow()
-            self._data[curso_id] = rec
-            return CursoOut(**rec)
+    def update(self, curso_id: str, payload: CursoUpdate) -> CursoOut:
+        update_data = payload.model_dump(exclude_unset=True)
+        update_data = self._ensure_ref_types(update_data)
+        update_data["actualizado"] = datetime.utcnow()
 
-    # Para tests
+        # Validación con el documento actual (para chequear cupos)
+        current = self.col.find_one({"_id": ObjectId(curso_id)})
+        if not current:
+            raise KeyError("curso no encontrado")
+
+        candidate = {**current, **update_data}
+        max_cupo = self._max_cupo_from_doc(candidate)
+        if max_cupo is not None and candidate.get("cupo_ocupado", 0) > max_cupo:
+            raise ValueError("cupo_ocupado no puede ser mayor que el máximo permitido")
+
+        doc = self.col.find_one_and_update(
+            {"_id": ObjectId(curso_id)},
+            {"$set": update_data},
+            return_document=ReturnDocument.AFTER,
+        )
+        if not doc:
+            raise KeyError("curso no encontrado")
+        return CursoOut(**self._normalize(doc))
+
+    def delete(self, curso_id: str) -> None:
+        res = self.col.delete_one({"_id": ObjectId(curso_id)})
+        if res.deleted_count == 0:
+            raise KeyError("curso no encontrado")
+
+    # ---------- Cupos (usados por ReservaService) ----------
+    def increment_cupo(self, curso_id: str, amount: int = 1) -> CursoOut:
+        """
+        Consume cupos del curso. Verifica límite (cupo/cupo_maximo).
+        """
+        cur = self.col.find_one({"_id": ObjectId(curso_id)})
+        if not cur:
+            raise KeyError("curso no encontrado")
+
+        max_cupo = self._max_cupo_from_doc(cur)
+        if max_cupo is None:
+            # no controla cupos: permitimos pero no sobrepasar si existiese cupo_ocupado+max None
+            max_cupo = float("inf")
+
+        nuevo = (cur.get("cupo_ocupado", 0) or 0) + amount
+        if nuevo > max_cupo:
+            raise ValueError("No hay cupos disponibles")
+
+        doc = self.col.find_one_and_update(
+            {"_id": ObjectId(curso_id)},
+            {"$inc": {"cupo_ocupado": amount}, "$set": {"actualizado": datetime.utcnow()}},
+            return_document=ReturnDocument.AFTER,
+        )
+        return CursoOut(**self._normalize(doc))
+
+    def decrement_cupo(self, curso_id: str, amount: int = 1) -> CursoOut:
+        """
+        Libera cupos del curso, sin bajar de 0.
+        """
+        cur = self.col.find_one({"_id": ObjectId(curso_id)})
+        if not cur:
+            raise KeyError("curso no encontrado")
+
+        nuevo = max(0, (cur.get("cupo_ocupado", 0) or 0) - amount)
+        doc = self.col.find_one_and_update(
+            {"_id": ObjectId(curso_id)},
+            {"$set": {"cupo_ocupado": nuevo, "actualizado": datetime.utcnow()}},
+            return_document=ReturnDocument.AFTER,
+        )
+        return CursoOut(**self._normalize(doc))
+
+    # Utilidad para tests
     def clear(self) -> None:
-        with self._lock:
-            self._data.clear()
+        self.col.delete_many({})
 
 
-# Singleton del repositorio
+# Singleton
 curso_repo = CursoRepository()
