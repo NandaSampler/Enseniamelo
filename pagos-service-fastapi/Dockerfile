@@ -6,8 +6,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Sistema
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential curl && \
+    build-essential curl ca-certificates && \
     rm -rf /var/lib/apt/lists/*
+
 
 WORKDIR /app
 
