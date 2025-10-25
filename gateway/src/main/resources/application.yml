@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: gateway-service
+    name: gateway-service  # ✅ Cambiar a gateway-service para consistencia
   
   cloud:
     gateway:
@@ -13,27 +13,42 @@ spring:
           lower-case-service-id: true
       
       routes:
-        - id: usuarios-service
+        # ✅ Ruta 1: Acceso directo a /v1/usuario
+        - id: usuarios-v1-direct
           uri: lb://usuarios-service
           predicates:
-            - Path=/api/usuarios/**
-          filters:
-            - RewritePath=/api/usuarios/(?<segment>.*), /$\{segment}
-            - AddRequestHeader=X-Gateway, gateway-service
+            - Path=/v1/usuario,/v1/usuario/**
+          order: 1
         
+        # ✅ Ruta 2: Con prefijo /api para frontend
+        - id: usuarios-v1-api
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/api/v1/usuario,/api/v1/usuario/**
+          filters:
+            - RewritePath=/api(?<segment>.*), $\{segment}
+          order: 1
+        
+        # ✅ Ruta 3: Swagger UI
         - id: usuarios-swagger-ui
           uri: lb://usuarios-service
           predicates:
-            - Path=/swagger-ui/**
-          filters:
-            - AddRequestHeader=X-Gateway, gateway-service
+            - Path=/swagger-ui/**,/swagger-ui.html
+          order: 1
         
+        # ✅ Ruta 4: API Docs
         - id: usuarios-api-docs
           uri: lb://usuarios-service
           predicates:
             - Path=/v3/api-docs/**
-          filters:
-            - AddRequestHeader=X-Gateway, gateway-service
+          order: 1
+        
+        # ✅ Ruta 5: Webjars (recursos de Swagger)
+        - id: usuarios-webjars
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/webjars/**
+          order: 1
 
       globalcors:
         corsConfigurations:
@@ -56,12 +71,12 @@ spring:
 eureka:
   client:
     serviceUrl:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://eureka-server:8761/eureka/}
+      defaultZone: http://eureka-server:8761/eureka/
     fetch-registry: true
     register-with-eureka: true
   instance:
     preferIpAddress: true
-    hostname: ${EUREKA_INSTANCE_HOSTNAME:gateway-service}
+    hostname: gateway-service
     lease-renewal-interval-in-seconds: 10
     lease-expiration-duration-in-seconds: 30
 
@@ -80,5 +95,6 @@ logging:
   level:
     root: INFO
     org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.gateway.handler.RoutePredicateHandlerMapping: TRACE
     org.springframework.web: DEBUG
     reactor.netty: INFO

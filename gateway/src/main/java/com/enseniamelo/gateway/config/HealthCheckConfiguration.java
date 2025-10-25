@@ -1,3 +1,4 @@
+package com.enseniamelo.gateway.config;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;

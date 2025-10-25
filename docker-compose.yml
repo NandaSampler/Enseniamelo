@@ -132,14 +132,14 @@ services:
     restart: on-failure
 
   gateway:
-    build: ./gateway
-    container_name: gateway
+    build: ./gateway  # ✅ Cambié de ./gateway a ./gateway-service si tu carpeta se llama gateway-service
+    container_name: gateway-service  # ✅ Cambié a gateway-service para consistencia
     ports:
       - "8080:8080"
     environment:
-      - SPRING_APPLICATION_NAME=gateway
+      - SPRING_APPLICATION_NAME=gateway-service  # ✅ Cambié a gateway-service
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - EUREKA_INSTANCE_HOSTNAME=gateway
+      - EUREKA_INSTANCE_HOSTNAME=gateway-service  # ✅ Cambié a gateway-service
       - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
       - SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_ENABLED=true
       - SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_LOWER_CASE_SERVICE_ID=true
