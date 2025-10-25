@@ -1,4 +1,4 @@
-package com.enseniamelo.mensajeservice.exceptions;
+package com.enseniamelo.mensajeservice.util.exceptions;
 
 public class InvalidInputException extends RuntimeException {
   public InvalidInputException() {}

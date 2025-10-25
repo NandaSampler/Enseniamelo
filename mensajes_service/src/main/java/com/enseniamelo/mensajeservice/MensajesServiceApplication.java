@@ -1,13 +1,30 @@
 package com.enseniamelo.mensajeservice;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
+@ComponentScan({"com.enseniamelo.mensajeservice", "bo.edu.ucb.microservices.util"})
 public class MensajesServiceApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(MensajesServiceApplication.class, args);
-	}
+	private static final Logger LOGGER = LoggerFactory.getLogger(MensajesServiceApplication.class);
 
+	public static void main(String[] args) {
+		ConfigurableApplicationContext ctx = SpringApplication.run(MensajesServiceApplication.class, args);
+
+		String mongoUri = ctx.getEnvironment().getProperty("spring.data.mongodb.uri");
+		if (mongoUri != null && mongoUri.contains("@")) {
+			String sanitizedUri = mongoUri.replaceAll("(?<=//)(.*)(?=@)", "****");
+			LOGGER.info("Conexion a Mongo Atlas usando URI: {}", sanitizedUri);
+		} else if (mongoUri != null) {
+			LOGGER.info("Conexion a MongoDB en: {}", mongoUri);
+		} else {
+			LOGGER.warn("Detalles de conexión a MongoDB no encontrados en el entorno.");
+		}
+	}
 }

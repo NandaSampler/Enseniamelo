@@ -1,62 +1,40 @@
 package com.enseniamelo.mensajeservice.dto;
 
 
+import java.time.LocalDate;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Schema(description = "DTO para los chats")
+@Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ChatDTO {
-    @Schema(description = "Identificador del chat", example = "1")
+    @Schema(description = "Identificador del chat", example = "1agaj21hj1h3", accessMode = Schema.AccessMode.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Long id;
 
+    @NotNull(message = "El campo 'chatId' no puede ser nulo")
+    @Schema(description = "Identificador del chat", example = "1", accessMode = Schema.AccessMode.READ_ONLY)
+    private Integer chatId;
+
     @NotNull(message = "El campo 'creado' no puede ser nulo")
-    @Schema(description = "Hora de creación del chat", example = "12:30:00")
-    private Long creado;
+    @Schema(description = "Fecha de la creación del chat", example = "2023-03-15", accessMode = Schema.AccessMode.READ_ONLY)
+    private LocalDate fechaCreacion;
 
-    @NotNull(message = "El campo 'cerrado' no puede ser nulo")
-    @Schema(description = "Hora de cierre del chat", example = "12:30:00")
-    private Long cerrado;
+    @NotNull(message = "El campo 'usuarioEmisor' no puede ser nulo")
+    @Schema(description = "Id del usuario emisor del chat", example = "1dsfa1231bas", accessMode = Schema.AccessMode.READ_ONLY)
+    private String usuario_emisor;
 
-    public ChatDTO() {}
-
-    public ChatDTO(Long id, Long creado, Long cerrado) {
-        this.id = id;
-        this.creado = creado;
-        this.cerrado = cerrado;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Long getCreado() {
-        return creado;
-    }
-
-    public void setCreado(Long creado) {
-        this.creado = creado;
-    }
-
-    public Long getCerrado() {
-        return cerrado;
-    }
-
-    public void setCerrado(Long cerrado) {
-        this.cerrado = cerrado;
-    }
-
-    @Override
-    public String toString() {
-        return "ChatDTO{" +
-                "id=" + id +
-                ", creado=" + creado +
-                ", cerrado=" + cerrado +
-                '}';
-    }
+    @NotNull(message = "El campo 'usuarioReceptor' no puede ser nulo")
+    @Schema(description = "Id del suario receptor del chat", example = "2dsfq123acxza", accessMode = Schema.AccessMode.READ_ONLY)
+    private String usuario_receptor;
 }

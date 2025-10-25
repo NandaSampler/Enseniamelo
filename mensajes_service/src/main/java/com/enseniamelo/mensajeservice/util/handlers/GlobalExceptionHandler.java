@@ -1,4 +1,4 @@
-package com.enseniamelo.mensajeservice.handlers;
+package com.enseniamelo.mensajeservice.util.handlers;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ServerWebInputException;
 
-import com.enseniamelo.mensajeservice.exceptions.ResourceNotFoundException;
+import com.enseniamelo.mensajeservice.util.exceptions.ResourceNotFoundException;
 
 import reactor.core.publisher.Mono;
 

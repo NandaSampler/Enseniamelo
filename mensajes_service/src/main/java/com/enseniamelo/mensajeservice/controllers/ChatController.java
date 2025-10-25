@@ -14,11 +14,15 @@ import com.enseniamelo.mensajeservice.dto.ChatDTO;
 import com.enseniamelo.mensajeservice.services.ChatService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -28,12 +32,36 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("api/chats")
 @Tag(name = "Chat", description = "API para gestionar los chats")
+@Slf4j
 public class ChatController {
     
     private final ChatService service;
 
     public ChatController(ChatService service) {
         this.service = service;
+    }
+
+    // ----------------Crear chat----------------
+    // POST: http://localhost:8082/api/chats
+    @Operation(
+        summary = "${api.chat.create-chat.description}",
+        description = "${api.chat.create-chat.notes}"
+    )
+    @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
+            @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
+            @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
+    @PostMapping
+    @ResponseStatus(code = org.springframework.http.HttpStatus.CREATED)
+    public Mono<ChatDTO> createChat(
+        @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                description = "${api.usuario.schema.usuario.description}",
+                required = true,
+                content = @Content(mediaType = "application/json", schema = @Schema(implementation = ChatDTO.class))
+            ) @Valid @RequestBody ChatDTO chatDTO) {
+        log.info("POST /api/chats - Crear chat: {}", chatDTO);
+        return service.crearChat(chatDTO)
+        .doOnSuccess(creado -> log.info("Chat creado exitosamente: {}", creado.getChatId()))
+        .doOnError(error -> log.error("Error al crear el chat: {}", error.getMessage()));
     }
 
     // ----------------Obtener todos los chats----------------
@@ -48,7 +76,10 @@ public class ChatController {
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @GetMapping
     public Flux<ChatDTO> getChats() {
-        return service.findAll();
+        log.info("GET /api/chats - Obtener todos los chats");
+        return service.obtenerTodos()
+        .doOnComplete(() -> log.info("Chats obtenidos exitosamente"))
+        .doOnError(error -> log.error("Error al obtener los chats: {}", error.getMessage()));
     }  
     
     // ----------------Obtener chat por id----------------
@@ -61,25 +92,13 @@ public class ChatController {
             @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @GetMapping("/{id}")
-    public Mono<ChatDTO> getChatsById(@PathVariable @Min(1) Long id) {
-        return service.findById(id);
+    public Mono<ChatDTO> getChatsById(
+            @Parameter(description = "${api.chat.get-chat-by-id.parameters.id}", required = true)
+            @PathVariable @Min(1) String id) {
+        return service.obtenerPorId(id)
+        .doOnSuccess(chat -> log.info("Chat obtenido exitosamente: {}", chat))
+        .doOnError(error -> log.error("Error al obtener el chat: {}", error.getMessage()));
     }
-
-    // ----------------Crear chat----------------
-    // POST: http://localhost:8082/api/chats
-    @Operation(
-        summary = "${api.chat.create-chat.description}",
-        description = "${api.chat.create-chat.notes}"
-    )
-    @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
-            @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
-            @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
-    @PostMapping
-    @ResponseStatus(code = org.springframework.http.HttpStatus.CREATED)
-    public Mono<ChatDTO> createChat(@Valid @RequestBody ChatDTO chatDTO) {
-        return service.createChat(chatDTO);
-    }
-
 
     // ----------------Actualizar chat----------------
     // PUT: http://localhost:8082/api/chats/{id}
@@ -92,8 +111,12 @@ public class ChatController {
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @PutMapping("/{id}")
     @ResponseStatus(code = org.springframework.http.HttpStatus.NO_CONTENT)
-    public Mono<ChatDTO> updateChat(@PathVariable @Min(1) Long id, @Valid @RequestBody ChatDTO chatDTO) {
-        return service.updateChat(id, chatDTO);
+    public Mono<ChatDTO> updateChat(
+        @Parameter(description = "${api.chat.update-chat.parameters.id}", required = true)
+        @PathVariable @Min(1) String id, @Valid @RequestBody ChatDTO chatDTO) {
+        return service.actualizarChat(id, chatDTO)
+                .doOnSuccess(actualizado -> log.info("Chat actualizado exitosamente: {}", actualizado))
+                .doOnError(error -> log.error("Error al actualizar el chat: {}", error.getMessage()));
     }
 
     // ----------------Eliminar chat----------------
@@ -107,7 +130,11 @@ public class ChatController {
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @DeleteMapping("/{id}")
     @ResponseStatus(code = org.springframework.http.HttpStatus.NO_CONTENT)
-    public Mono<Void> deleteChat(@PathVariable @Min(1) Long id) {
-        return service.deleteChat(id);
+    public Mono<Void> deleteChat(
+        @Parameter(description = "${api.chat.delete-chat.parameters.id}", required = true)
+        @PathVariable @Min(1) String id) {
+        return service.eliminarChat(id)
+                .doOnSuccess(v -> log.info("Chat eliminado exitosamente con ID: {}", id))
+                .doOnError(error -> log.error("Error al eliminar el chat: {}", error.getMessage()));
     }
 }

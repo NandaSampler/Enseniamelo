@@ -1,4 +1,4 @@
-package com.enseniamelo.mensajeservice.http;
+package com.enseniamelo.mensajeservice.util.http;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;

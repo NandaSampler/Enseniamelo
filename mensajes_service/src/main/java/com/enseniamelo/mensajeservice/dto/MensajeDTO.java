@@ -1,82 +1,52 @@
 package com.enseniamelo.mensajeservice.dto;
 
-import java.util.Date;
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Schema(description = "DTO para los mensajes")
+@Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class MensajeDTO {
 
-    @Schema(description = "Identificador del mensaje", example = "1")
+    @Schema(description = "Identificador del mensaje", example = "1asfsfwe231", accessMode = Schema.AccessMode.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Long id;
 
-    @NotBlank(message = "El texto es obligatorio")
-    @Size(min = 1, message = "El texto debe tener por lo menos 1 caracter")
-    @Schema(description = "Texto del mensaje", example = "Hola, este es un mensaje.")
-    private String texto;
+    @NotNull(message = "El campo 'mensajeId' no puede ser nulo")
+    @Schema(description = "Identificador del mensaje", example = "1", accessMode = Schema.AccessMode.READ_ONLY)
+    private Integer mensajeId;
 
-    @NotNull(message = "La hora es obligatoria")
-    @Schema(description = "Hora del mensaje", example = "12:30:00")
-    private Date hora;
+    @NotBlank(message = "El contenido es obligatorio")
+    @Size(min = 1, message = "El contenido debe tener por lo menos 1 caracter")
+    @Schema(description = "Contenido del mensaje", example = "Hola, este es un mensaje.", accessMode = Schema.AccessMode.READ_ONLY)
+    private String contenido;
 
     @NotBlank(message = "El estado es obligatorio")
-    @Schema(description = "Estado del mensaje", example = "ENVIADO")
+    @Schema(description = "Estado del mensaje", example = "ENVIADO", accessMode = Schema.AccessMode.READ_ONLY)
     private String estado;
 
-    public MensajeDTO() {
-    }
+    @NotNull(message = "La fecha es obligatoria")
+    @Schema(description = "Fecha del mensaje", example = "2023-03-15", accessMode = Schema.AccessMode.READ_ONLY)
+    private LocalDate fecha;
 
-    public MensajeDTO(Long id, String texto, Date hora, String estado) {
-        this.id = id;
-        this.texto = texto;
-        this.hora = hora;
-        this.estado = estado;
-    }
+    @NotNull(message = "La hora es obligatoria")
+    @Schema(description = "Hora del mensaje", example = "12:30:00", accessMode = Schema.AccessMode.READ_ONLY)
+    private LocalTime hora;
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getTexto() {
-        return texto;
-    }
-
-    public void setTexto(String texto) {
-        this.texto = texto;
-    }
-
-    public Date getHora() {
-        return hora;
-    }
-
-    public void setHora(Date hora) {
-        this.hora = hora;
-    }
-
-    public String getEstado() {
-        return estado;
-    }
-
-    public void setEstado(String estado) {
-        this.estado = estado;
-    }
-
-    @Override
-    public String toString() {
-        return "MensajeDTO{" +
-                "id=" + id +
-                ", texto='" + texto + '\'' +
-                ", hora=" + hora +
-                ", estado='" + estado + '\'' +
-                '}';
-    }
+    @NotNull(message = "El chatId es obligatorio")
+    @Schema(description = "Identificador del chat asociado al mensaje", example = "1174had781hajks123", accessMode = Schema.AccessMode.READ_ONLY)
+    private String chatId;
 }

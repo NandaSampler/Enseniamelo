@@ -1,4 +1,4 @@
-package com.enseniamelo.mensajeservice.http;
+package com.enseniamelo.mensajeservice.util.http;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -16,9 +16,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.server.ServerWebInputException;
 
-import com.enseniamelo.mensajeservice.exceptions.BadRequestException;
-import com.enseniamelo.mensajeservice.exceptions.InvalidInputException;
-import com.enseniamelo.mensajeservice.exceptions.NotFoundException;
+import com.enseniamelo.mensajeservice.util.exceptions.BadRequestException;
+import com.enseniamelo.mensajeservice.util.exceptions.InvalidInputException;
+import com.enseniamelo.mensajeservice.util.exceptions.NotFoundException;
 
 @RestControllerAdvice
 class GlobalControllerExceptionHandler {

@@ -1,10 +1,13 @@
 package com.enseniamelo.mensajeservice.services;
 
+import org.springframework.stereotype.Service;
+
 import com.enseniamelo.mensajeservice.dto.MensajeDTO;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+@Service
 public interface  MensajeService {
     Flux<MensajeDTO> findAll();
 
