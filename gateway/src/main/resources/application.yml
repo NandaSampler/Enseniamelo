@@ -1,0 +1,100 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway-service  # ✅ Cambiar a gateway-service para consistencia
+  
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      
+      routes:
+        # ✅ Ruta 1: Acceso directo a /v1/usuario
+        - id: usuarios-v1-direct
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/v1/usuario,/v1/usuario/**
+          order: 1
+        
+        # ✅ Ruta 2: Con prefijo /api para frontend
+        - id: usuarios-v1-api
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/api/v1/usuario,/api/v1/usuario/**
+          filters:
+            - RewritePath=/api(?<segment>.*), $\{segment}
+          order: 1
+        
+        # ✅ Ruta 3: Swagger UI
+        - id: usuarios-swagger-ui
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/swagger-ui/**,/swagger-ui.html
+          order: 1
+        
+        # ✅ Ruta 4: API Docs
+        - id: usuarios-api-docs
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/v3/api-docs/**
+          order: 1
+        
+        # ✅ Ruta 5: Webjars (recursos de Swagger)
+        - id: usuarios-webjars
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/webjars/**
+          order: 1
+
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: 
+              - "http://localhost:3000"
+              - "http://localhost:4200"
+              - "http://localhost:5173"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://eureka-server:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    preferIpAddress: true
+    hostname: gateway-service
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway,routes
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.gateway.handler.RoutePredicateHandlerMapping: TRACE
+    org.springframework.web: DEBUG
+    reactor.netty: INFO

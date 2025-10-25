@@ -2,6 +2,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "UsuariosServiceApplication",
+            "request": "launch",
+            "mainClass": "com.enseniamelo.usuarios.UsuariosServiceApplication",
+            "projectName": "usuarios"
+        },
+        {
+            "type": "java",
             "name": "Spring Boot-TutorServiceApplication<tutor-service>",
             "request": "launch",
             "cwd": "${workspaceFolder}",
