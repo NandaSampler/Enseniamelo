@@ -131,6 +131,28 @@ services:
       retries: 5
     restart: on-failure
 
+  cursoservice:
+    build: ./cursoservice
+    container_name: cursoservice
+    env_file:
+      - ./cursoservice/.env
+    environment:
+      APP_NAME: "CURSOSERVICE"
+      PORT: "8000"
+      EUREKA_SERVER: "http://eureka-server:8761/eureka/"
+    ports:
+      - "8000:8000"       # opcional, para debug
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
   gateway:
     build: ./gateway  
     container_name: gateway-service  
@@ -146,8 +168,8 @@ services:
     depends_on:
       eureka-server:
         condition: service_healthy
-      usuarios:
-        condition: service_healthy
+      #usuarios:
+        #condition: service_healthy
     networks:
       - microservices-net
     healthcheck:

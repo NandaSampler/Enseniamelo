@@ -1,10 +1,10 @@
-# cursoservice/app/repositories/reserva_repository.py
 from __future__ import annotations
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from bson import ObjectId
 from pymongo import ReturnDocument
+from pymongo.errors import PyMongoError
 
 from app.schemas.reserva import ReservaCreate, ReservaUpdate, ReservaOut
 from app.core.db import get_collection
@@ -13,17 +13,23 @@ from app.core.db import get_collection
 class ReservaRepository:
     """Repositorio Mongo para Reserva."""
     def __init__(self) -> None:
+        # NO crear índices aquí
         self.col = get_collection("reservas")
-        # Índices útiles para listados
-        self.col.create_index("curso_id")
-        self.col.create_index("horario_id")
 
-    def list(
-        self,
-        curso_id: Optional[str] = None,
-        horario_id: Optional[str] = None,
-    ) -> List[ReservaOut]:
-        filtro = {}
+    def ensure_indexes(self) -> None:
+        try:
+            self.col.create_index("curso_id")
+        except PyMongoError:
+            pass
+        try:
+            self.col.create_index("horario_id")
+        except PyMongoError:
+            pass
+
+    def list(self,
+             curso_id: Optional[str] = None,
+             horario_id: Optional[str] = None) -> List[ReservaOut]:
+        filtro: Dict[str, Any] = {}
         if curso_id is not None:
             filtro["curso_id"] = ObjectId(curso_id)
         if horario_id is not None:
@@ -40,12 +46,10 @@ class ReservaRepository:
     def create(self, payload: ReservaCreate) -> ReservaOut:
         now = datetime.utcnow()
         data = payload.model_dump()
-        # normalizar referencias si existen
         if "curso_id" in data and data["curso_id"] is not None:
             data["curso_id"] = ObjectId(data["curso_id"])
         if "horario_id" in data and data["horario_id"] is not None:
             data["horario_id"] = ObjectId(data["horario_id"])
-        # en tu in-memory usabas "fecha" como timestamp de creación
         data.update({"fecha": now, "actualizado": now})
         res = self.col.insert_one(data)
         data["_id"] = res.inserted_id
@@ -77,13 +81,21 @@ class ReservaRepository:
 
     # helpers
     def _normalize(self, doc: dict) -> dict:
-        doc = dict(doc)
-        doc["id"] = str(doc["_id"])
-        doc.pop("_id", None)
-        if "curso_id" in doc and isinstance(doc["curso_id"], ObjectId):
-            doc["curso_id"] = str(doc["curso_id"])
-        if "horario_id" in doc and isinstance(doc["horario_id"], ObjectId):
-            doc["horario_id"] = str(doc["horario_id"])
-        return doc
+        d = dict(doc)
+        d["id"] = str(d["_id"])
+        d.pop("_id", None)
+        if "curso_id" in d and isinstance(d["curso_id"], ObjectId):
+            d["curso_id"] = str(d["curso_id"])
+        if "horario_id" in d and isinstance(d["horario_id"], ObjectId):
+            d["horario_id"] = str(d["horario_id"])
+        return d
 
-reserva_repo = ReservaRepository()
+
+# --- Singleton perezoso ---
+_repo: Optional[ReservaRepository] = None
+
+def get_reserva_repo() -> ReservaRepository:
+    global _repo
+    if _repo is None:
+        _repo = ReservaRepository()
+    return _repo

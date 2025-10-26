@@ -1,15 +1,14 @@
-FROM eclipse-temurin:17-jdk-alpine AS build
+# ---------- Build stage ----------
+FROM maven:3.9.9-eclipse-temurin-17 AS build
 WORKDIR /app
 COPY pom.xml .
 COPY src ./src
-RUN apk add --no-cache maven
-RUN mvn clean package -DskipTests
+RUN mvn -q -e -DskipTests clean package
 
-FROM eclipse-temurin:17-jre-alpine
+# ---------- Runtime stage ----------
+FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
-RUN apk add --no-cache curl
-
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java","-jar","/app/app.jar"]

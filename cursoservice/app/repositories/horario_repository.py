@@ -1,10 +1,10 @@
-# cursoservice/app/repositories/horario_repository.py
 from __future__ import annotations
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from bson import ObjectId
 from pymongo import ReturnDocument
+from pymongo.errors import PyMongoError
 
 from app.schemas.horario import HorarioCreate, HorarioUpdate, HorarioOut
 from app.core.db import get_collection
@@ -13,12 +13,21 @@ from app.core.db import get_collection
 class HorarioRepository:
     """Repositorio Mongo para Horario."""
     def __init__(self) -> None:
+        # NO crear índices aquí
         self.col = get_collection("horarios")
-        # Búsquedas frecuentes por curso
-        self.col.create_index("curso_id")
+
+    def ensure_indexes(self) -> None:
+        try:
+            self.col.create_index("curso_id")
+        except PyMongoError:
+            pass
+        try:
+            self.col.create_index([("inicio", 1), ("fin", 1)])
+        except PyMongoError:
+            pass
 
     def list(self, curso_id: Optional[str] = None) -> List[HorarioOut]:
-        filtro = {}
+        filtro: Dict[str, Any] = {}
         if curso_id is not None:
             filtro["curso_id"] = ObjectId(curso_id)
         docs = list(self.col.find(filtro))
@@ -33,7 +42,6 @@ class HorarioRepository:
     def create(self, payload: HorarioCreate) -> HorarioOut:
         now = datetime.utcnow()
         data = payload.model_dump()
-        # normalizar referencias si existen
         if "curso_id" in data and data["curso_id"] is not None:
             data["curso_id"] = ObjectId(data["curso_id"])
         data.update({"creado": now, "actualizado": now})
@@ -65,12 +73,19 @@ class HorarioRepository:
 
     # helpers
     def _normalize(self, doc: dict) -> dict:
-        doc = dict(doc)
-        doc["id"] = str(doc["_id"])
-        doc.pop("_id", None)
-        # devolver refs como str
-        if "curso_id" in doc and isinstance(doc["curso_id"], ObjectId):
-            doc["curso_id"] = str(doc["curso_id"])
-        return doc
+        d = dict(doc)
+        d["id"] = str(d["_id"])
+        d.pop("_id", None)
+        if "curso_id" in d and isinstance(d["curso_id"], ObjectId):
+            d["curso_id"] = str(d["curso_id"])
+        return d
 
-horario_repo = HorarioRepository()
+
+# --- Singleton perezoso ---
+_repo: Optional[HorarioRepository] = None
+
+def get_horario_repo() -> HorarioRepository:
+    global _repo
+    if _repo is None:
+        _repo = HorarioRepository()
+    return _repo

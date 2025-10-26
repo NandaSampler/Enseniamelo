@@ -1,11 +1,11 @@
-# cursoservice/app/repositories/curso_categoria_repository.py
 from __future__ import annotations
 from datetime import datetime
 from typing import List
 
 from bson import ObjectId
-from app.core.db import get_collection
+from pymongo.errors import PyMongoError
 
+from app.core.db import get_collection
 from app.schemas.curso_categoria import CursoCategoriaLink, CursoCategoriaOut
 
 
@@ -15,13 +15,18 @@ class CursoCategoriaRepository:
     Guarda pares (curso_id, categoria_id) y expone queries de ids.
     """
     def __init__(self) -> None:
+        # NO crear índices aquí
         self.col = get_collection("curso_categorias")
-        # Índice único para evitar duplicados del mismo par
-        self.col.create_index(
-            [("curso_id", 1), ("categoria_id", 1)],
-            unique=True,
-            name="uix_curso_categoria",
-        )
+
+    def ensure_indexes(self) -> None:
+        try:
+            self.col.create_index(
+                [("curso_id", 1), ("categoria_id", 1)],
+                unique=True,
+                name="uix_curso_categoria",
+            )
+        except PyMongoError:
+            pass
 
     def list(self) -> List[CursoCategoriaOut]:
         docs = list(self.col.find({}))
@@ -32,15 +37,11 @@ class CursoCategoriaRepository:
             "curso_id": ObjectId(link.curso_id),
             "categoria_id": ObjectId(link.categoria_id),
         }
-        # Si ya existe, devolverlo; si no, insertarlo
         existing = self.col.find_one(filtro)
         if existing:
             return CursoCategoriaOut(**self._normalize(existing))
 
-        data = {
-            **filtro,
-            "creado": datetime.utcnow(),
-        }
+        data = {**filtro, "creado": datetime.utcnow()}
         res = self.col.insert_one(data)
         data["_id"] = res.inserted_id
         return CursoCategoriaOut(**self._normalize(data))
@@ -49,9 +50,8 @@ class CursoCategoriaRepository:
         self.col.delete_one(
             {"curso_id": ObjectId(curso_id), "categoria_id": ObjectId(categoria_id)}
         )
-        # idempotente: no lanza error si no existe
 
-    # Query helpers (ids; el "join" lo hará el Service)
+    # Query helpers
     def list_category_ids_of_course(self, curso_id: str) -> List[str]:
         cur = self.col.find({"curso_id": ObjectId(curso_id)}, {"categoria_id": 1})
         return [str(doc["categoria_id"]) for doc in cur]
@@ -65,11 +65,19 @@ class CursoCategoriaRepository:
 
     # helpers
     def _normalize(self, doc: dict) -> dict:
-        doc = dict(doc)
-        doc["id"] = str(doc["_id"])
-        doc["curso_id"] = str(doc["curso_id"])
-        doc["categoria_id"] = str(doc["categoria_id"])
-        doc.pop("_id", None)
-        return doc
+        d = dict(doc)
+        d["id"] = str(d["_id"])
+        d["curso_id"] = str(d["curso_id"])
+        d["categoria_id"] = str(d["categoria_id"])
+        d.pop("_id", None)
+        return d
 
-curso_categoria_repo = CursoCategoriaRepository()
+
+# --- Singleton perezoso ---
+_repo: CursoCategoriaRepository | None = None
+
+def get_curso_categoria_repo() -> CursoCategoriaRepository:
+    global _repo
+    if _repo is None:
+        _repo = CursoCategoriaRepository()
+    return _repo

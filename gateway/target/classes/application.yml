@@ -38,6 +38,14 @@ spring:
           predicates:
             - Path=/openapi/v3/api-docs,/openapi/v3/api-docs/**
           order: 1
+
+
+        - id: cursoservice
+          uri: lb://cursoservice     # con locator lower-case, vale así
+          predicates:
+            - Path=/curso/**         # prefijo externo
+          filters:
+            - StripPrefix=1          # /curso/api -> /api en FastAPI
         
         # ============ SWAGGER/OPENAPI (Alias sin /openapi/) ============
         - id: usuarios-swagger-ui-alias

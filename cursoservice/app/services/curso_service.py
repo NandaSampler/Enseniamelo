@@ -1,36 +1,47 @@
-# cursoservice/app/services/curso_service.py
 from __future__ import annotations
 from typing import List, Optional
 
 from app.schemas.curso import CursoCreate, CursoUpdate, CursoOut
-from app.repositories.curso_repository import curso_repo
-from app.repositories.horario_repository import horario_repo
-from app.repositories.reserva_repository import reserva_repo
-from app.repositories.curso_categoria_repository import curso_categoria_repo
+
+# Repos con getters (NO singletons a nivel de módulo)
+from app.repositories.curso_repository import CursoRepository, get_curso_repo
+from app.repositories.horario_repository import HorarioRepository, get_horario_repo
+from app.repositories.reserva_repository import ReservaRepository, get_reserva_repo
+from app.repositories.curso_categoria_repository import (
+    CursoCategoriaRepository, get_curso_categoria_repo
+)
 
 
 class CursoService:
     """Reglas de negocio para Curso (Mongo)."""
 
+    def __init__(self,
+                 repo: Optional[CursoRepository] = None,
+                 horario_repo: Optional[HorarioRepository] = None,
+                 reserva_repo: Optional[ReservaRepository] = None,
+                 curso_categoria_repo: Optional[CursoCategoriaRepository] = None) -> None:
+        self.repo = repo or get_curso_repo()
+        self.horario_repo = horario_repo or get_horario_repo()
+        self.reserva_repo = reserva_repo or get_reserva_repo()
+        self.curso_categoria_repo = curso_categoria_repo or get_curso_categoria_repo()
+
     # Query
     def list(self, q: Optional[str] = None) -> List[CursoOut]:
-        return curso_repo.list(q=q)
+        return self.repo.list(q=q)
 
     def get(self, curso_id: str) -> CursoOut:
         try:
-            return curso_repo.get(curso_id)
+            return self.repo.get(curso_id)
         except KeyError:
             raise KeyError("curso no encontrado")
 
     # Commands
     def create(self, payload: CursoCreate) -> CursoOut:
-        # Reglas: si necesita_reserva => precio_reserva requerido (ya valida el schema),
-        # si tiene_cupo => cupo requerido lo valida el repo/service (ver repo).
-        return curso_repo.create(payload)
+        return self.repo.create(payload)
 
     def update(self, curso_id: str, payload: CursoUpdate) -> CursoOut:
         try:
-            return curso_repo.update(curso_id, payload)
+            return self.repo.update(curso_id, payload)
         except KeyError:
             raise KeyError("curso no encontrado")
         except ValueError as e:
@@ -38,14 +49,14 @@ class CursoService:
 
     def delete(self, curso_id: str) -> None:
         # Reglas: no permitir borrar si hay dependencias
-        if horario_repo.list(curso_id=curso_id):
+        if self.horario_repo.list(curso_id=curso_id):
             raise ValueError("no se puede eliminar: curso tiene horarios")
-        if reserva_repo.list(curso_id=curso_id):
+        if self.reserva_repo.list(curso_id=curso_id):
             raise ValueError("no se puede eliminar: curso tiene reservas")
-        if curso_categoria_repo.list_category_ids_of_course(curso_id):
+        if self.curso_categoria_repo.list_category_ids_of_course(curso_id):
             raise ValueError("no se puede eliminar: curso tiene categorías vinculadas")
 
         try:
-            curso_repo.delete(curso_id)
+            self.repo.delete(curso_id)
         except KeyError:
             raise KeyError("curso no encontrado")

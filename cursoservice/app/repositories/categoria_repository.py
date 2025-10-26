@@ -1,10 +1,10 @@
-# cursoservice/app/repositories/categoria_repository.py
 from __future__ import annotations
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from bson import ObjectId
 from pymongo import ReturnDocument
+from pymongo.errors import PyMongoError
 
 from app.schemas.categoria import CategoriaCreate, CategoriaUpdate, CategoriaOut
 from app.core.db import get_collection
@@ -12,12 +12,19 @@ from app.core.db import get_collection
 
 class CategoriaRepository:
     def __init__(self) -> None:
+        # NO crear índices aquí
         self.col = get_collection("categorias")
-        # Útil si quieres evitar duplicados por nombre (opcional, comenta si no aplica)
-        # self.col.create_index("nombre", unique=True)
+
+    def ensure_indexes(self) -> None:
+        try:
+            # Útil si quieres evitar duplicados por nombre (opcional)
+            # self.col.create_index("nombre", unique=True)
+            pass
+        except PyMongoError:
+            pass
 
     def list(self, q: Optional[str] = None) -> List[CategoriaOut]:
-        filtro = {}
+        filtro: Dict[str, Any] = {}
         if q:
             filtro = {
                 "$or": [
@@ -61,9 +68,17 @@ class CategoriaRepository:
 
     # helpers
     def _normalize(self, doc: dict) -> dict:
-        doc = dict(doc)
-        doc["id"] = str(doc["_id"])
-        doc.pop("_id", None)
-        return doc
+        d = dict(doc)
+        d["id"] = str(d["_id"])
+        d.pop("_id", None)
+        return d
 
-categoria_repo = CategoriaRepository()
+
+# --- Singleton perezoso ---
+_repo: Optional[CategoriaRepository] = None
+
+def get_categoria_repo() -> CategoriaRepository:
+    global _repo
+    if _repo is None:
+        _repo = CategoriaRepository()
+    return _repo
