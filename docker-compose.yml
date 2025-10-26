@@ -1,6 +1,52 @@
 version: '3.8'
 
 services:
+
+  postgres:
+    image: postgres:15
+    container_name: keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: keycloak
+    command: start-dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: password
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: 8180
+      KC_HTTP_ENABLED: true
+      KC_HOSTNAME_STRICT_HTTPS: false
+    ports:
+      - "8180:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper
@@ -135,23 +181,27 @@ services:
     build: ./gateway  
     container_name: gateway-service  
     ports:
-      - "8080:8080"
+      - "8443:8443"
     environment:
-      - SPRING_APPLICATION_NAME=gateway-service  
+      - SPRING_APPLICATION_NAME=gateway-service
+      - SERVER_PORT=8443
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - EUREKA_INSTANCE_HOSTNAME=gateway-service  
+      - EUREKA_INSTANCE_HOSTNAME=gateway-service
       - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
-      - SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_ENABLED=true
-      - SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_LOWER_CASE_SERVICE_ID=true
+      - EUREKA_INSTANCE_SECURE_PORT_ENABLED=true
+      - EUREKA_INSTANCE_SECURE_PORT=8443
+      - EUREKA_INSTANCE_NON_SECURE_PORT_ENABLED=false
     depends_on:
       eureka-server:
         condition: service_healthy
       usuarios:
         condition: service_healthy
+      keycloak:
+        condition: service_healthy
     networks:
       - microservices-net
     healthcheck:
-      test: curl -f http://localhost:8080/actuator/health || exit 1
+      test: curl -k https://localhost:8443/actuator/health || exit 1
       interval: 15s
       timeout: 5s
       retries: 5
@@ -166,3 +216,4 @@ volumes:
   zookeeper-logs:
   kafka-data:
   rabbitmq-data:
+  postgres-data:

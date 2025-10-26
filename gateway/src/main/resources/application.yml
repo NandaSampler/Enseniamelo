@@ -1,9 +1,15 @@
 server:
-  port: 8080
+  port: 8443
+  ssl:
+    enabled: true
+    key-store: classpath:keystore/keystore.p12
+    key-store-password: changeit
+    key-store-type: PKCS12
+    key-alias: gateway
 
 spring:
   application:
-    name: gateway-service  
+    name: gateway-service
   
   cloud:
     gateway:
@@ -12,7 +18,30 @@ spring:
           enabled: true
           lower-case-service-id: true
       
+      # ============ FILTRO GLOBAL: Solo propagar token ============
+      default-filters:
+        - TokenRelay
+      
       routes:
+        # ============ RUTAS PÚBLICAS (SIN AUTENTICACIÓN) ============
+        - id: auth-public
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/v1/auth/login,/v1/auth/register
+          filters:
+            - RemoveRequestHeader=Authorization  # No necesita token
+          order: 0
+        
+        - id: auth-api-public
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - RewritePath=/api(?<segment>.*), $\{segment}
+            - RemoveRequestHeader=Authorization
+          order: 0
+        
+        # ============ RUTAS PROTEGIDAS ============
         - id: usuarios-v1-direct
           uri: lb://usuarios-service
           predicates:
@@ -27,26 +56,41 @@ spring:
             - RewritePath=/api(?<segment>.*), $\{segment}
           order: 1
         
+        - id: tutores-v1-direct
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/v1/tutores,/v1/tutores/**
+          order: 1
+        
+        - id: tutores-v1-api
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/api/v1/tutores,/api/v1/tutores/**
+          filters:
+            - RewritePath=/api(?<segment>.*), $\{segment}
+          order: 1
+        
+        - id: verificacion-v1-direct
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/v1/verificacion,/v1/verificacion/**
+          order: 1
+        
+        # ============ SWAGGER (PÚBLICO) ============
         - id: usuarios-openapi-swagger-ui
           uri: lb://usuarios-service
           predicates:
-            - Path=/openapi/swagger-ui.html,/openapi/swagger-ui/**
-          order: 1
+            - Path=/openapi/**
+          filters:
+            - RemoveRequestHeader=Authorization
         
-        - id: usuarios-openapi-docs
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/openapi/v3/api-docs,/openapi/v3/api-docs/**
-          order: 1
-        
-        # ============ SWAGGER/OPENAPI (Alias sin /openapi/) ============
         - id: usuarios-swagger-ui-alias
           uri: lb://usuarios-service
           predicates:
             - Path=/swagger-ui.html,/swagger-ui/**
           filters:
             - RewritePath=/swagger-ui(?<segment>.*), /openapi/swagger-ui$\{segment}
-          order: 1
+            - RemoveRequestHeader=Authorization
         
         - id: usuarios-api-docs-alias
           uri: lb://usuarios-service
@@ -54,13 +98,27 @@ spring:
             - Path=/v3/api-docs,/v3/api-docs/**
           filters:
             - RewritePath=/v3/api-docs(?<segment>.*), /openapi/v3/api-docs$\{segment}
-          order: 1
+            - RemoveRequestHeader=Authorization
         
         - id: usuarios-webjars
           uri: lb://usuarios-service
           predicates:
             - Path=/webjars/**
-          order: 1
+          filters:
+            - RemoveRequestHeader=Authorization
+        
+        # ============ EUREKA (OPCIONAL) ============
+        - id: eureka-web-start
+          uri: http://eureka-server:8761
+          predicates:
+            - Path=/eureka/web
+          filters:
+            - SetPath=/
+        
+        - id: eureka-web-other
+          uri: http://eureka-server:8761
+          predicates:
+            - Path=/eureka/**
 
       globalcors:
         corsConfigurations:
@@ -69,6 +127,7 @@ spring:
               - "http://localhost:3000"
               - "http://localhost:4200"
               - "http://localhost:5173"
+              - "https://localhost:8443"
             allowedMethods:
               - GET
               - POST
@@ -77,36 +136,48 @@ spring:
               - PATCH
               - OPTIONS
             allowedHeaders: "*"
+            exposedHeaders:
+              - Authorization
             allowCredentials: true
             maxAge: 3600
+  
+  # ============ SOLO VALIDACIÓN JWT (Resource Server) ============
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8080/realms/enseniamelo
+          jwk-set-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/certs
 
 eureka:
   client:
     serviceUrl:
       defaultZone: http://eureka-server:8761/eureka/
-    fetch-registry: true
-    register-with-eureka: true
+    initialInstanceInfoReplicationIntervalSeconds: 5
+    registryFetchIntervalSeconds: 5
   instance:
     preferIpAddress: true
     hostname: gateway-service
-    lease-renewal-interval-in-seconds: 10
-    lease-expiration-duration-in-seconds: 30
+    leaseRenewalIntervalInSeconds: 5
+    leaseExpirationDurationInSeconds: 5
+    non-secure-port-enabled: false
+    secure-port-enabled: true
+    secure-port: 8443
 
 management:
+  endpoint:
+    gateway:
+      enabled: true
+    health:
+      show-details: ALWAYS
   endpoints:
     web:
       exposure:
-        include: health,info,gateway,routes
-  endpoint:
-    health:
-      show-details: always
-    gateway:
-      enabled: true
+        include: "*"
 
 logging:
   level:
     root: INFO
-    org.springframework.cloud.gateway: DEBUG
-    org.springframework.cloud.gateway.handler.RoutePredicateHandlerMapping: TRACE
-    org.springframework.web: DEBUG
-    reactor.netty: INFO
+    '[org.springframework.cloud.gateway.route.RouteDefinitionRouteLocator]': INFO
+    '[org.springframework.cloud.gateway]': TRACE
+    '[org.springframework.security]': DEBUG
