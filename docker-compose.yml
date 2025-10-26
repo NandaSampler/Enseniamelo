@@ -15,10 +15,12 @@ services:
     networks:
       - microservices-net
     healthcheck:
-      test: nc -z localhost 2181 || exit 1
+      # Anterior: test: nc -z localhost 2181 || exit 1
+      test: ["CMD-SHELL", "echo srvr | nc -w 2 127.0.0.1 2181 | grep 'Mode:'"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 20
+      start_period: 30s
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -32,6 +34,7 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
@@ -39,15 +42,18 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_DELETE_TOPIC_ENABLE: "true"
       KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx512m"
     volumes:
       - kafka-data:/var/lib/kafka/data
     networks:
       - microservices-net
     healthcheck:
-      test: kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1
+      # Anterior: test: kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 10s
-      retries: 5
+      retries: 20
+      start_period: 40s
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -126,6 +132,25 @@ services:
       - microservices-net
     healthcheck:
       test: curl -f http://localhost:8081/actuator/health || exit 1
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
+
+    # Servicio de pagos
+  payments-service:
+    build: ./pagos-service-fastapi
+    container_name: payments-service
+    env_file: ./pagos-service-fastapi/.env
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - microservices-net
+    ports:
+      - "8002:8002"
+    healthcheck:
+      test: curl -f http://localhost:8002/health || exit 1
       interval: 15s
       timeout: 5s
       retries: 5

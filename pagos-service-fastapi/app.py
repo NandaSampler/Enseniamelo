@@ -10,20 +10,26 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from api.routers import plans, subscriptions, payments
 
-@asynccontextmanager
 async def lifespan(app: FastAPI):
     await connect_mongo()
     await ensure_indexes()
+
+    host = settings.eureka_instance_host  # "payments-service"
+    port = settings.eureka_instance_port  # 8002
+
     await eureka_client.init_async(
         eureka_server=f"http://{settings.eureka_host}:{settings.eureka_port}/eureka/",
-        app_name=settings.eureka_app_name,                 # <- "payments-service"
-        instance_host=settings.eureka_instance_host,       # <- "payments-service"
-        instance_port=settings.eureka_instance_port,       # <- 8002
-        instance_secure=settings.eureka_secure,
-        health_check_url=f"http://{settings.eureka_instance_host}:{settings.eureka_instance_port}/health",
-        renewal_interval_in_secs=settings.eureka_heartbeat,
-        registry_fetch_interval=settings.eureka_refresh,
+        app_name=settings.eureka_app_name,   # "PAYMENTS-SERVICE"
+        instance_host=host,
+        instance_port=port,
+        status_page_url=f"http://{host}:{port}/health",
+        health_check_url=f"http://{host}:{port}/health",
+        renewal_interval_in_secs=settings.eureka_heartbeat,  # ok
+        # ❌ NO: instance_secure
+        # ❌ NO: registry_fetch_interval
+        # (opcional) prefer_ip_address=False  # puedes dejarlo o quitarlo, es válido
     )
+
     yield
     await close_mongo()
 
