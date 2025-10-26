@@ -140,6 +140,7 @@ services:
       APP_NAME: "CURSOSERVICE"
       PORT: "8000"
       EUREKA_SERVER: "http://eureka-server:8761/eureka/"
+      ROOT_PATH: "/curso"
     ports:
       - "8000:8000"       # opcional, para debug
     depends_on:
@@ -170,6 +171,8 @@ services:
         condition: service_healthy
       #usuarios:
         #condition: service_healthy
+      cursoservice:
+        condition: service_healthy
     networks:
       - microservices-net
     healthcheck:

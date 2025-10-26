@@ -3,87 +3,125 @@ server:
 
 spring:
   application:
-    name: gateway-service  
-  
+    name: gateway-service
+
   cloud:
     gateway:
       discovery:
         locator:
           enabled: true
           lower-case-service-id: true
-      
+
       routes:
+        # ====== USUARIOS ======
         - id: usuarios-v1-direct
           uri: lb://usuarios-service
           predicates:
             - Path=/v1/usuario,/v1/usuario/**
           order: 1
-        
+
         - id: usuarios-v1-api
           uri: lb://usuarios-service
           predicates:
             - Path=/api/v1/usuario,/api/v1/usuario/**
           filters:
-            - RewritePath=/api(?<segment>.*), $\{segment}
+            - 'RewritePath=/api(?<segment>.*), ${segment}'
           order: 1
-        
+
         - id: usuarios-openapi-swagger-ui
           uri: lb://usuarios-service
           predicates:
             - Path=/openapi/swagger-ui.html,/openapi/swagger-ui/**
           order: 1
-        
+
         - id: usuarios-openapi-docs
           uri: lb://usuarios-service
           predicates:
             - Path=/openapi/v3/api-docs,/openapi/v3/api-docs/**
           order: 1
 
-
-        - id: cursoservice
-          uri: lb://cursoservice     # con locator lower-case, vale así
-          predicates:
-            - Path=/curso/**         # prefijo externo
-          filters:
-            - StripPrefix=1          # /curso/api -> /api en FastAPI
-        
-        # ============ SWAGGER/OPENAPI (Alias sin /openapi/) ============
+        # Alias (sin /openapi)
         - id: usuarios-swagger-ui-alias
           uri: lb://usuarios-service
           predicates:
             - Path=/swagger-ui.html,/swagger-ui/**
           filters:
-            - RewritePath=/swagger-ui(?<segment>.*), /openapi/swagger-ui$\{segment}
+            - 'RewritePath=/swagger-ui(?<segment>.*), /openapi/swagger-ui${segment}'
           order: 1
-        
+
         - id: usuarios-api-docs-alias
           uri: lb://usuarios-service
           predicates:
             - Path=/v3/api-docs,/v3/api-docs/**
           filters:
-            - RewritePath=/v3/api-docs(?<segment>.*), /openapi/v3/api-docs$\{segment}
+            - 'RewritePath=/v3/api-docs(?<segment>.*), /openapi/v3/api-docs${segment}'
           order: 1
-        
+
         - id: usuarios-webjars
           uri: lb://usuarios-service
           predicates:
             - Path=/webjars/**
           order: 1
 
+        # ====== CURSOSERVICE (FastAPI) ======
+        # Salud
+        - id: cursos-health
+          uri: lb://cursoservice
+          predicates:
+            - Path=/curso/health
+          filters:
+            - StripPrefix=1
+            - AddRequestHeader=X-Forwarded-Prefix, /curso
+          order: 1
+
+        # OpenAPI y docs
+        - id: cursos-openapi
+          uri: lb://cursoservice
+          predicates:
+            - Path=/curso/openapi.json,/curso/docs,/curso/redoc
+          filters:
+            - StripPrefix=1
+            - AddRequestHeader=X-Forwarded-Prefix, /curso
+          order: 1
+
+        # ⚠️ Necesario porque ReDoc pide /curso/openapi.json (ruta absoluta con prefijo)
+        - id: cursos-openapi-abs
+          uri: lb://cursoservice
+          predicates:
+            - Path=/curso/openapi.json
+          filters:
+            - StripPrefix=1
+            - AddRequestHeader=X-Forwarded-Prefix, /curso
+          order: 1
+
+        # API principal (tu FastAPI usa /api/v1/cursos/**)
+        - id: cursos-api-v1
+          uri: lb://cursoservice
+          predicates:
+            - Path=/curso/api/v1/**
+          filters:
+            - StripPrefix=1
+            - AddRequestHeader=X-Forwarded-Prefix, /curso
+          order: 1
+
+        # (Opcional) catch-all
+        - id: cursos-direct
+          uri: lb://cursoservice
+          predicates:
+            - Path=/curso/**
+          filters:
+            - StripPrefix=1
+            - AddRequestHeader=X-Forwarded-Prefix, /curso
+          order: 10
+
       globalcors:
         corsConfigurations:
           '[/**]':
-            allowedOrigins: 
+            allowedOrigins:
               - "http://localhost:3000"
               - "http://localhost:4200"
               - "http://localhost:5173"
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - PATCH
-              - OPTIONS
+            allowedMethods: [GET, POST, PUT, DELETE, PATCH, OPTIONS]
             allowedHeaders: "*"
             allowCredentials: true
             maxAge: 3600

@@ -21,20 +21,21 @@ from app.repositories.curso_categoria_repository import CursoCategoriaRepository
 
 
 APP_DESCRIPTION = "API para gestionar Cursos, Categorías, Horarios y Reservas."
-
+root_path = os.getenv("ROOT_PATH", "") 
 
 def create_app() -> FastAPI:
     setup_logging()
     logger = get_logger(__name__)
 
     app = FastAPI(
-        title=settings.APP_NAME,
-        version="0.1.0",
-        description=APP_DESCRIPTION,
-        openapi_url="/openapi.json",
-        docs_url="/docs",
-        redoc_url="/redoc",
-    )
+    title=settings.APP_NAME,
+    version="0.1.0",
+    description=APP_DESCRIPTION,
+    openapi_url="/openapi.json",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    root_path=root_path,   # <-- clave
+)
 
     # Routers
     app.include_router(curso_router.router)
