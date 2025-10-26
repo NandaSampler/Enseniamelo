@@ -1,39 +1,45 @@
 {
-    "configurations": [
-        {
-            "type": "java",
-            "name": "MensajesServiceApplication",
-            "request": "launch",
-            "mainClass": "com.enseniamelo.mensajeservice.MensajesServiceApplication",
-            "projectName": "mensajes_service"
-        },
-        {
-            "type": "java",
-            "name": "MensajesServiceApplication",
-            "request": "launch",
-            "mainClass": "com.enseniamelo.mensajeservice.mensajes_service.MensajesServiceApplication",
-            "projectName": ""
-        },
-        {
-            "type": "java",
-            "name": "Spring Boot-TutorServiceApplication<tutor-service>",
-            "request": "launch",
-            "cwd": "${workspaceFolder}",
-            "mainClass": "com.enseniamelo.tutorservice.TutorServiceApplication",
-            "projectName": "tutor-service",
-            "args": "",
-            "envFile": "${workspaceFolder}/.env",
-            "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=49963 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=tutor-service"
-        },
-        {
-            "type": "java",
-            "name": "Spring Boot-MensajesServiceApplication<mensajes_service>",
-            "request": "launch",
-            "cwd": "${workspaceFolder}",
-            "mainClass": "com.enseniamelo.mensajeservice.mensajes_service.MensajesServiceApplication",
-            "projectName": "mensajes_service",
-            "args": "",
-            "envFile": "${workspaceFolder}/.env"
-        }
-    ]
+  "configurations": [
+    {
+      "type": "java",
+      "name": "EurekaServerApplication",
+      "request": "launch",
+      "mainClass": "com.example.eureka.eureka_server.EurekaServerApplication"
+    },
+    {
+      "type": "java",
+      "name": "MensajesServiceApplication",
+      "request": "launch",
+      "mainClass": "com.enseniamelo.mensajeservice.MensajesServiceApplication",
+      "projectName": "mensajes_service"
+    },
+    {
+      "type": "java",
+      "name": "MensajesServiceApplication",
+      "request": "launch",
+      "mainClass": "com.enseniamelo.mensajeservice.mensajes_service.MensajesServiceApplication",
+      "projectName": ""
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-TutorServiceApplication<tutor-service>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.enseniamelo.tutorservice.TutorServiceApplication",
+      "projectName": "tutor-service",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env",
+      "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=49963 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=tutor-service"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-MensajesServiceApplication<mensajes_service>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.enseniamelo.mensajeservice.mensajes_service.MensajesServiceApplication",
+      "projectName": "mensajes_service",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
 }
