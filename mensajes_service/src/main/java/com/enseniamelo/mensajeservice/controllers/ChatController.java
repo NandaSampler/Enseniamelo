@@ -21,7 +21,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -60,7 +60,7 @@ public class ChatController {
             ) @Valid @RequestBody ChatDTO chatDTO) {
         log.info("POST /api/chats - Crear chat: {}", chatDTO);
         return service.crearChat(chatDTO)
-        .doOnSuccess(creado -> log.info("Chat creado exitosamente: {}", creado.getChatId()))
+        .doOnSuccess(creado -> log.info("Chat creado exitosamente: {}", creado.getId()))
         .doOnError(error -> log.error("Error al crear el chat: {}", error.getMessage()));
     }
 
@@ -94,7 +94,7 @@ public class ChatController {
     @GetMapping("/{id}")
     public Mono<ChatDTO> getChatsById(
             @Parameter(description = "${api.chat.get-chat-by-id.parameters.id}", required = true)
-            @PathVariable @Min(1) String id) {
+            @PathVariable @NotBlank String id) {
         return service.obtenerPorId(id)
         .doOnSuccess(chat -> log.info("Chat obtenido exitosamente: {}", chat))
         .doOnError(error -> log.error("Error al obtener el chat: {}", error.getMessage()));
@@ -113,7 +113,7 @@ public class ChatController {
     @ResponseStatus(code = org.springframework.http.HttpStatus.NO_CONTENT)
     public Mono<ChatDTO> updateChat(
         @Parameter(description = "${api.chat.update-chat.parameters.id}", required = true)
-        @PathVariable @Min(1) String id, @Valid @RequestBody ChatDTO chatDTO) {
+        @PathVariable @NotBlank String id, @Valid @RequestBody ChatDTO chatDTO) {
         return service.actualizarChat(id, chatDTO)
                 .doOnSuccess(actualizado -> log.info("Chat actualizado exitosamente: {}", actualizado))
                 .doOnError(error -> log.error("Error al actualizar el chat: {}", error.getMessage()));
@@ -132,7 +132,7 @@ public class ChatController {
     @ResponseStatus(code = org.springframework.http.HttpStatus.NO_CONTENT)
     public Mono<Void> deleteChat(
         @Parameter(description = "${api.chat.delete-chat.parameters.id}", required = true)
-        @PathVariable @Min(1) String id) {
+        @PathVariable @NotBlank String id) {
         return service.eliminarChat(id)
                 .doOnSuccess(v -> log.info("Chat eliminado exitosamente con ID: {}", id))
                 .doOnError(error -> log.error("Error al eliminar el chat: {}", error.getMessage()));

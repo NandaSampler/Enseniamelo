@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -22,8 +23,12 @@ public class Chat {
     private String id;
 
     @Indexed(unique = true)
-    private Integer chatId;
+    @Field("fecha_creacion")
     private LocalDate fechaCreacion;
+
+    @Field("id_usuario_emisor")
     private String usuario_emisor;
+
+    @Field("id_usuario_receptor")
     private String usuario_receptor;
 }

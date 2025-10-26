@@ -11,7 +11,6 @@ import com.enseniamelo.mensajeservice.models.Chat;
 
 @Mapper(componentModel = "spring")
 public interface ChatMapper {
-    @Mapping(target = "chatId", source = "chatId")
     @Mapping(target = "fechaCreacion", source = "fechaCreacion")
     @Mapping(target = "usuario_emisor", source = "usuario_emisor")
     @Mapping(target = "usuario_receptor", source = "usuario_receptor")

@@ -21,6 +21,7 @@ public class MensajesServiceApplication {
 		if (mongoUri != null && mongoUri.contains("@")) {
 			String sanitizedUri = mongoUri.replaceAll("(?<=//)(.*)(?=@)", "****");
 			LOGGER.info("Conexion a Mongo Atlas usando URI: {}", sanitizedUri);
+			System.out.println("Conexion exitosa a Mongo Atlas usando URI: " + sanitizedUri);
 		} else if (mongoUri != null) {
 			LOGGER.info("Conexion a MongoDB en: {}", mongoUri);
 		} else {

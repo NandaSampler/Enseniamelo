@@ -1,5 +1,7 @@
 package com.enseniamelo.mensajeservice.controllers;
 
+import java.util.Map;
+
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,53 +16,29 @@ import com.enseniamelo.mensajeservice.dto.MensajeDTO;
 import com.enseniamelo.mensajeservice.services.MensajeService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("api/mensajes")
 @Tag(name = "Mensaje", description = "API para gestionar los mensajes")
+@Slf4j
 public class MensajeController {
     
     private final MensajeService service;
 
     public MensajeController(MensajeService service) {
         this.service = service;
-    }
-
-    // ----------------Obtener todos los mensajes----------------
-    // GET: http://localhost:8082/api/mensajes
-
-    @Operation(
-        summary = "${api.mensaje.get-mensajes.description}",
-        description = "${api.mensaje.get-mensajes.notes}"
-    )
-    @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
-            @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
-            @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
-    @GetMapping
-    public Flux<MensajeDTO> getMensajes() {
-        return service.findAll();
-    }
-
-    // ---------------Obtener mensaje por id----------------
-    // GET: http://localhost:8082/api/mensajes/{id}
-
-    @Operation(
-        summary = "${api.mensaje.get-mensaje-by-id.description}",
-        description = "${api.mensaje.get-mensaje-by-id.notes}"
-    )
-    @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
-            @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
-            @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
-    @GetMapping("/{id}")
-    public Mono<MensajeDTO> getMensajeById(@PathVariable @Min(1)  Long id) {
-        return service.findById(id);
     }
 
     // ---------------Crear nuevo mensaje----------------
@@ -75,8 +53,50 @@ public class MensajeController {
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @PostMapping
     @ResponseStatus(code = org.springframework.http.HttpStatus.CREATED)
-    public Mono<MensajeDTO> createMensaje(@Valid @RequestBody MensajeDTO mensajeDTO) {
-        return service.createMensaje(mensajeDTO);
+    public Mono<MensajeDTO> createMensaje(@io.swagger.v3.oas.annotations.parameters.RequestBody(
+                description = "${api.mensaje.schema.mensaje.description}",
+                required = true,
+                content = @Content(mediaType = "application/json", schema = @Schema(implementation = MensajeDTO.class))
+    ) @Valid @RequestBody MensajeDTO mensajeDTO) {
+                log.info("POST /api/mensajes - Crear mensaje: {}", mensajeDTO);
+                return service.crearMensaje(mensajeDTO)
+                        .doOnSuccess(savedMensajeDTO -> log.info("Mensaje creado exitosamente: {}", savedMensajeDTO))
+                        .doOnError(error -> log.error("Error al crear el mensaje: {}", error.getMessage()));
+    }
+
+    // ----------------Obtener todos los mensajes----------------
+    // GET: http://localhost:8082/api/mensajes
+
+    @Operation(
+        summary = "${api.mensaje.get-mensajes.description}",
+        description = "${api.mensaje.get-mensajes.notes}"
+    )
+    @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
+            @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
+            @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
+    @GetMapping
+    public Flux<MensajeDTO> getMensajes() {
+        return service.obtenerTodos()
+        .doOnComplete(() -> log.info("Todos los mensajes obtenidos exitosamente"))
+        .doOnError(error -> log.error("Error al obtener los mensajes: {}", error.getMessage()));
+    }
+
+    // ---------------Obtener mensaje por id----------------
+    // GET: http://localhost:8082/api/mensajes/{id}
+
+    @Operation(
+        summary = "${api.mensaje.get-mensaje-by-id.description}",
+        description = "${api.mensaje.get-mensaje-by-id.notes}"
+    )
+    @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
+            @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
+            @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
+    @GetMapping("/{id}")
+    public Mono<MensajeDTO> getMensajeById(@Parameter(description = "${api.mensaje.get-mensaje-by-id.parameters.id}", required = true)
+            @PathVariable @NotBlank String id) {
+        return service.obtenerPorId(id)
+                .doOnSuccess(mensajeDTO -> log.info("Mensaje obtenido exitosamente: {}", mensajeDTO))
+                .doOnError(error -> log.error("Error al obtener el mensaje: {}", error.getMessage()));
     }
 
     // ---------------Actualizar mensaje----------------
@@ -91,8 +111,11 @@ public class MensajeController {
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @PutMapping("/{id}")
     @ResponseStatus(code = org.springframework.http.HttpStatus.NO_CONTENT)
-    public Mono<MensajeDTO> updateMensaje(@Valid @RequestBody MensajeDTO mensajeDTO, @PathVariable @Min(1)  Long id) {
-        return service.updateMensaje(id, mensajeDTO);
+    public Mono<MensajeDTO> updateMensaje(@Parameter(description = "${api.mensaje.update-mensaje.parameters.id}", required = true)
+        @Valid @RequestBody Map<String, String> contenidoNuevo, @PathVariable @NotBlank String id) {
+        return service.actualizarContenido(id, contenidoNuevo.get("contenido"))
+                .doOnSuccess(updatedMensajeDTO -> log.info("Mensaje actualizado exitosamente: {}", updatedMensajeDTO))
+                .doOnError(error -> log.error("Error al actualizar el mensaje: {}", error.getMessage()));
     }
 
     // ---------------Eliminar mensaje----------------
@@ -107,7 +130,10 @@ public class MensajeController {
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @DeleteMapping("/{id}")
     @ResponseStatus(code = org.springframework.http.HttpStatus.NO_CONTENT)
-    public Mono<Void> deleteMensaje(@PathVariable @Min(1) Long id) {
-        return service.deleteMensaje(id);
+    public Mono<Void> deleteMensaje(@Parameter(description = "${api.mensaje.delete-mensaje.parameters.id}", required = true)
+        @PathVariable @NotBlank String id) {
+        return service.eliminarMensaje(id)
+                .doOnSuccess(aVoid -> log.info("Mensaje eliminado exitosamente: {}", id))
+                .doOnError(error -> log.error("Error al eliminar el mensaje: {}", error.getMessage()));
     }
 }

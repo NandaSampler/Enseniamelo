@@ -20,11 +20,7 @@ import lombok.NoArgsConstructor;
 public class ChatDTO {
     @Schema(description = "Identificador del chat", example = "1agaj21hj1h3", accessMode = Schema.AccessMode.READ_ONLY)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private Long id;
-
-    @NotNull(message = "El campo 'chatId' no puede ser nulo")
-    @Schema(description = "Identificador del chat", example = "1", accessMode = Schema.AccessMode.READ_ONLY)
-    private Integer chatId;
+    private String id;
 
     @NotNull(message = "El campo 'creado' no puede ser nulo")
     @Schema(description = "Fecha de la creación del chat", example = "2023-03-15", accessMode = Schema.AccessMode.READ_ONLY)

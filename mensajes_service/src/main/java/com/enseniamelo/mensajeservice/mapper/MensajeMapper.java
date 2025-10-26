@@ -11,7 +11,6 @@ import com.enseniamelo.mensajeservice.models.Mensaje;
 
 @Mapper(componentModel = "spring")
 public interface MensajeMapper {
-    @Mapping(target = "mensajeId", source = "mensajeId")
     @Mapping(target = "contenido", source = "contenido")
     @Mapping(target = "estado", source = "estado")
     @Mapping(target = "fecha", source = "fecha")
