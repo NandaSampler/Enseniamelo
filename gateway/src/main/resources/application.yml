@@ -27,16 +27,33 @@ spring:
             - RewritePath=/api(?<segment>.*), $\{segment}
           order: 1
         
-        - id: usuarios-swagger-ui
+        - id: usuarios-openapi-swagger-ui
           uri: lb://usuarios-service
           predicates:
-            - Path=/swagger-ui/**,/swagger-ui.html
+            - Path=/openapi/swagger-ui.html,/openapi/swagger-ui/**
           order: 1
         
-        - id: usuarios-api-docs
+        - id: usuarios-openapi-docs
           uri: lb://usuarios-service
           predicates:
-            - Path=/v3/api-docs/**
+            - Path=/openapi/v3/api-docs,/openapi/v3/api-docs/**
+          order: 1
+        
+        # ============ SWAGGER/OPENAPI (Alias sin /openapi/) ============
+        - id: usuarios-swagger-ui-alias
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/swagger-ui.html,/swagger-ui/**
+          filters:
+            - RewritePath=/swagger-ui(?<segment>.*), /openapi/swagger-ui$\{segment}
+          order: 1
+        
+        - id: usuarios-api-docs-alias
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/v3/api-docs,/v3/api-docs/**
+          filters:
+            - RewritePath=/v3/api-docs(?<segment>.*), /openapi/v3/api-docs$\{segment}
           order: 1
         
         - id: usuarios-webjars
