@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: gateway-service  # ✅ Cambiar a gateway-service para consistencia
+    name: gateway-service  
   
   cloud:
     gateway:
@@ -13,14 +13,12 @@ spring:
           lower-case-service-id: true
       
       routes:
-        # ✅ Ruta 1: Acceso directo a /v1/usuario
         - id: usuarios-v1-direct
           uri: lb://usuarios-service
           predicates:
             - Path=/v1/usuario,/v1/usuario/**
           order: 1
         
-        # ✅ Ruta 2: Con prefijo /api para frontend
         - id: usuarios-v1-api
           uri: lb://usuarios-service
           predicates:
@@ -29,21 +27,18 @@ spring:
             - RewritePath=/api(?<segment>.*), $\{segment}
           order: 1
         
-        # ✅ Ruta 3: Swagger UI
         - id: usuarios-swagger-ui
           uri: lb://usuarios-service
           predicates:
             - Path=/swagger-ui/**,/swagger-ui.html
           order: 1
         
-        # ✅ Ruta 4: API Docs
         - id: usuarios-api-docs
           uri: lb://usuarios-service
           predicates:
             - Path=/v3/api-docs/**
           order: 1
         
-        # ✅ Ruta 5: Webjars (recursos de Swagger)
         - id: usuarios-webjars
           uri: lb://usuarios-service
           predicates:
