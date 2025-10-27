@@ -3,7 +3,30 @@ server:
 
 spring:
   application:
-    name: gateway-service  
+    name: gateway-service
+  
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: enseniamelo-client
+            client-secret: Uq38gnL4Vyd5eovmnOPKXTPTMelQclRc
+            scope: openid,profile,email
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        
+        provider:
+          keycloak:
+            authorization-uri: http://localhost:8180/realms/enseniamelo-realm/protocol/openid-connect/auth
+            token-uri: http://keycloak:8080/realms/enseniamelo-realm/protocol/openid-connect/token
+            user-info-uri: http://keycloak:8080/realms/enseniamelo-realm/protocol/openid-connect/userinfo
+            jwk-set-uri: http://keycloak:8080/realms/enseniamelo-realm/protocol/openid-connect/certs
+            user-name-attribute: preferred_username
+      
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://keycloak:8080/realms/enseniamelo-realm/protocol/openid-connect/certs
   
   cloud:
     gateway:
@@ -11,8 +34,100 @@ spring:
         locator:
           enabled: true
           lower-case-service-id: true
-      
       routes:
+        # ========== RUTAS DE DOCUMENTACIÓN - USUARIOS ==========
+        - id: usuarios-openapi-swagger-ui
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/usuarios/openapi/**
+          filters:
+            - RewritePath=/usuarios/openapi(?<segment>.*), /openapi$\{segment}
+            - RemoveRequestHeader=Authorization
+          order: -1
+        
+        - id: usuarios-swagger-ui-alias
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/usuarios/swagger-ui.html,/usuarios/swagger-ui/**
+          filters:
+            - RewritePath=/usuarios/swagger-ui(?<segment>.*), /openapi/swagger-ui$\{segment}
+            - RemoveRequestHeader=Authorization
+          order: -1
+        
+        - id: usuarios-api-docs-alias
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/usuarios/v3/api-docs,/usuarios/v3/api-docs/**
+          filters:
+            - RewritePath=/usuarios/v3/api-docs(?<segment>.*), /openapi/v3/api-docs$\{segment}
+            - RemoveRequestHeader=Authorization
+          order: -1
+        
+        - id: usuarios-webjars
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/usuarios/webjars/**
+          filters:
+            - RewritePath=/usuarios/webjars(?<segment>.*), /webjars$\{segment}
+            - RemoveRequestHeader=Authorization
+          order: -1
+        
+        # ========== RUTAS DE DOCUMENTACIÓN - COMENTARIOS ==========
+        - id: comentarios-openapi-swagger-ui
+          uri: lb://comentarios-service
+          predicates:
+            - Path=/comentarios/openapi/**
+          filters:
+            - RewritePath=/comentarios/openapi(?<segment>.*), /openapi$\{segment}
+            - RemoveRequestHeader=Authorization
+          order: -1
+        
+        - id: comentarios-swagger-ui-alias
+          uri: lb://comentarios-service
+          predicates:
+            - Path=/comentarios/swagger-ui.html,/comentarios/swagger-ui/**
+          filters:
+            - RewritePath=/comentarios/swagger-ui(?<segment>.*), /openapi/swagger-ui$\{segment}
+            - RemoveRequestHeader=Authorization
+          order: -1
+        
+        - id: comentarios-api-docs-alias
+          uri: lb://comentarios-service
+          predicates:
+            - Path=/comentarios/v3/api-docs,/comentarios/v3/api-docs/**
+          filters:
+            - RewritePath=/comentarios/v3/api-docs(?<segment>.*), /openapi/v3/api-docs$\{segment}
+            - RemoveRequestHeader=Authorization
+          order: -1
+        
+        - id: comentarios-webjars
+          uri: lb://comentarios-service
+          predicates:
+            - Path=/comentarios/webjars/**
+          filters:
+            - RewritePath=/comentarios/webjars(?<segment>.*), /webjars$\{segment}
+            - RemoveRequestHeader=Authorization
+          order: -1
+        
+        # ========== RUTAS PÚBLICAS  ==========
+        - id: auth-public
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/v1/auth/login,/v1/auth/register
+          filters:
+            - RemoveRequestHeader=Authorization
+          order: 0
+        
+        - id: auth-api-public
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - RewritePath=/api(?<segment>.*), $\{segment}
+            - RemoveRequestHeader=Authorization
+          order: 0
+        
+        # ========== RUTAS DE USUARIOS  ==========
         - id: usuarios-v1-direct
           uri: lb://usuarios-service
           predicates:
@@ -27,41 +142,51 @@ spring:
             - RewritePath=/api(?<segment>.*), $\{segment}
           order: 1
         
-        - id: usuarios-openapi-swagger-ui
+        - id: tutores-v1-direct
           uri: lb://usuarios-service
           predicates:
-            - Path=/openapi/swagger-ui.html,/openapi/swagger-ui/**
+            - Path=/v1/tutores,/v1/tutores/**
           order: 1
         
-        - id: usuarios-openapi-docs
+        - id: tutores-v1-api
           uri: lb://usuarios-service
           predicates:
-            - Path=/openapi/v3/api-docs,/openapi/v3/api-docs/**
-          order: 1
-        
-        # ============ SWAGGER/OPENAPI (Alias sin /openapi/) ============
-        - id: usuarios-swagger-ui-alias
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/swagger-ui.html,/swagger-ui/**
+            - Path=/api/v1/tutores,/api/v1/tutores/**
           filters:
-            - RewritePath=/swagger-ui(?<segment>.*), /openapi/swagger-ui$\{segment}
+            - RewritePath=/api(?<segment>.*), $\{segment}
           order: 1
         
-        - id: usuarios-api-docs-alias
+        - id: verificacion-v1-direct
           uri: lb://usuarios-service
           predicates:
-            - Path=/v3/api-docs,/v3/api-docs/**
+            - Path=/v1/verificacion,/v1/verificacion/**
+          order: 1
+        
+        # ========== RUTAS COMENTARIOS - PÚBLICAS ==========
+        - id: comentarios-api-public
+          uri: lb://comentarios-service
+          predicates:
+            - Path=/api/comentario-curso,/api/comentario-curso/**
           filters:
-            - RewritePath=/v3/api-docs(?<segment>.*), /openapi/v3/api-docs$\{segment}
-          order: 1
+            - RemoveRequestHeader=Authorization
+          order: 0
         
-        - id: usuarios-webjars
-          uri: lb://usuarios-service
+        # ========== EUREKA ==========
+        - id: eureka-web-start
+          uri: http://eureka-server:8761
           predicates:
-            - Path=/webjars/**
-          order: 1
+            - Path=/eureka/web
+          filters:
+            - SetPath=/
+          order: 2
+        
+        - id: eureka-web-other
+          uri: http://eureka-server:8761
+          predicates:
+            - Path=/eureka/**
+          order: 2
 
+      # ========== CORS ==========
       globalcors:
         corsConfigurations:
           '[/**]':
@@ -69,6 +194,7 @@ spring:
               - "http://localhost:3000"
               - "http://localhost:4200"
               - "http://localhost:5173"
+              - "http://localhost:8080"
             allowedMethods:
               - GET
               - POST
@@ -77,36 +203,44 @@ spring:
               - PATCH
               - OPTIONS
             allowedHeaders: "*"
+            exposedHeaders:
+              - Authorization
             allowCredentials: true
             maxAge: 3600
 
+# ========== EUREKA ==========
 eureka:
   client:
     serviceUrl:
       defaultZone: http://eureka-server:8761/eureka/
-    fetch-registry: true
-    register-with-eureka: true
+    initialInstanceInfoReplicationIntervalSeconds: 5
+    registryFetchIntervalSeconds: 5
   instance:
     preferIpAddress: true
     hostname: gateway-service
-    lease-renewal-interval-in-seconds: 10
-    lease-expiration-duration-in-seconds: 30
+    leaseRenewalIntervalInSeconds: 5
+    leaseExpirationDurationInSeconds: 5
+    non-secure-port-enabled: true
+    non-secure-port: 8080
+    secure-port-enabled: false
 
+# ========== ACTUATOR ==========
 management:
+  endpoint:
+    gateway:
+      enabled: true
+    health:
+      show-details: ALWAYS
   endpoints:
     web:
       exposure:
-        include: health,info,gateway,routes
-  endpoint:
-    health:
-      show-details: always
-    gateway:
-      enabled: true
+        include: "*"
 
+# ========== LOGGING ==========
 logging:
   level:
     root: INFO
-    org.springframework.cloud.gateway: DEBUG
-    org.springframework.cloud.gateway.handler.RoutePredicateHandlerMapping: TRACE
-    org.springframework.web: DEBUG
-    reactor.netty: INFO
+    '[org.springframework.cloud.gateway.route.RouteDefinitionRouteLocator]': INFO
+    '[org.springframework.cloud.gateway]': DEBUG
+    '[org.springframework.security]': DEBUG
+    '[org.springframework.security.oauth2]': DEBUG
