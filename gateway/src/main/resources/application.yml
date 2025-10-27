@@ -10,11 +10,8 @@ server:
 spring:
   application:
     name: gateway-service
-  
-  # ============ CONFIGURACIÓN OAuth2 COMPLETA ============
   security:
     oauth2:
-      # Client: Para obtener tokens y hacer TokenRelay
       client:
         registration:
           keycloak:
@@ -31,8 +28,7 @@ spring:
             user-info-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/userinfo
             jwk-set-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/certs
             user-name-attribute: preferred_username
-      
-      # Resource Server: Para validar tokens JWT
+    
       resourceserver:
         jwt:
           issuer-uri: http://keycloak:8080/realms/enseniamelo
@@ -45,12 +41,10 @@ spring:
           enabled: true
           lower-case-service-id: true
       
-      # ============ FILTRO GLOBAL: Propagar token ============
       default-filters:
         - TokenRelay=
       
       routes:
-        # ============ RUTAS PÚBLICAS (SIN AUTENTICACIÓN) ============
         - id: auth-public
           uri: lb://usuarios-service
           predicates:
@@ -68,7 +62,6 @@ spring:
             - RemoveRequestHeader=Authorization
           order: 0
         
-        # ============ RUTAS PROTEGIDAS - USUARIOS ============
         - id: usuarios-v1-direct
           uri: lb://usuarios-service
           predicates:
@@ -82,8 +75,7 @@ spring:
           filters:
             - RewritePath=/api(?<segment>.*), $\{segment}
           order: 1
-        
-        # ============ RUTAS PROTEGIDAS - TUTORES ============
+      
         - id: tutores-v1-direct
           uri: lb://usuarios-service
           predicates:
@@ -97,15 +89,12 @@ spring:
           filters:
             - RewritePath=/api(?<segment>.*), $\{segment}
           order: 1
-        
-        # ============ RUTAS PROTEGIDAS - VERIFICACIÓN ============
         - id: verificacion-v1-direct
           uri: lb://usuarios-service
           predicates:
             - Path=/v1/verificacion,/v1/verificacion/**
           order: 1
         
-        # ============ SWAGGER (PÚBLICO) ============
         - id: usuarios-openapi-swagger-ui
           uri: lb://usuarios-service
           predicates:
@@ -136,7 +125,6 @@ spring:
           filters:
             - RemoveRequestHeader=Authorization
         
-        # ============ EUREKA (OPCIONAL) ============
         - id: eureka-web-start
           uri: http://eureka-server:8761
           predicates:

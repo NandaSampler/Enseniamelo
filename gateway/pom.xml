@@ -54,8 +54,6 @@
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>
         </dependency>
         
-        <!-- ============ NUEVAS DEPENDENCIAS OAuth2 ============ -->
-        
         <!-- OAuth2 Resource Server (validar JWT) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
