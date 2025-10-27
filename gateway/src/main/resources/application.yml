@@ -15,8 +15,8 @@ spring:
       client:
         registration:
           keycloak:
-            client-id: gateway-client
-            client-secret: 4b98whamzW9QJ1DpVdrQwWtEqxSMVI3J
+            client-id: enseniamelo-client
+            client-secret: Uq38gnL4Vyd5eovmnOPKXTPTMelQclRc
             scope: openid,profile,email
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"

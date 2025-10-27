@@ -180,7 +180,7 @@ services:
       interval: 20s
       timeout: 10s
       retries: 15
-      start_period: 60s  # ✅ Dar más tiempo de inicio
+      start_period: 60s 
     restart: on-failure
 
   gateway:
