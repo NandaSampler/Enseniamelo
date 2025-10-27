@@ -3,67 +3,103 @@ server:
 
 spring:
   application:
-    name: gateway-service  # ✅ Cambiar a gateway-service para consistencia
-  
+    name: gateway-service
+
   cloud:
     gateway:
       discovery:
         locator:
           enabled: true
           lower-case-service-id: true
-      
+
       routes:
-        # ✅ Ruta 1: Acceso directo a /v1/usuario
-        - id: usuarios-v1-direct
+        # === USUARIOS ===
+        - id: ms-usuarios
           uri: lb://usuarios-service
           predicates:
-            - Path=/v1/usuario,/v1/usuario/**
+            - Path=/ms-usuarios/**
+          filters:
+            - StripPrefix=1
           order: 1
-        
-        # ✅ Ruta 2: Con prefijo /api para frontend
+
         - id: usuarios-v1-api
           uri: lb://usuarios-service
           predicates:
             - Path=/api/v1/usuario,/api/v1/usuario/**
           filters:
+            # OJO: escapar ${...} para que no lo procese Spring
             - RewritePath=/api(?<segment>.*), $\{segment}
-          order: 1
-        
-        # ✅ Ruta 3: Swagger UI
+          order: 2
+
         - id: usuarios-swagger-ui
           uri: lb://usuarios-service
           predicates:
-            - Path=/swagger-ui/**,/swagger-ui.html
-          order: 1
-        
-        # ✅ Ruta 4: API Docs
+            - Path=/usuarios/swagger-ui/**,/usuarios/swagger-ui.html
+          filters:
+            - RewritePath=/usuarios/(?<path>.*), $\{path}
+          order: 3
+
         - id: usuarios-api-docs
           uri: lb://usuarios-service
           predicates:
-            - Path=/v3/api-docs/**
-          order: 1
-        
-        # ✅ Ruta 5: Webjars (recursos de Swagger)
-        - id: usuarios-webjars
-          uri: lb://usuarios-service
+            - Path=/usuarios/v3/api-docs/**,/usuarios/webjars/**
+          filters:
+            - RewritePath=/usuarios/(?<path>.*), $\{path}
+          order: 3
+
+        # === PAYMENTS (FastAPI) ===
+        - id: ms-payments
+          uri: lb://payments-service
           predicates:
-            - Path=/webjars/**
+            - Path=/ms-payments/**
+          filters:
+            - StripPrefix=1
+            # -> CLAVE: avisa a FastAPI del prefijo para que docs apunten a /ms-payments/openapi.json
+            - AddRequestHeader=X-Forwarded-Prefix, /ms-payments
+            - AddRequestHeader=X-Forwarded-Proto, http
           order: 1
 
+        # Aliases cómodos para documentación (sin prefijo)
+        - id: payments-docs
+          uri: lb://payments-service
+          predicates:
+            - Path=/payments/docs
+          filters:
+            - RewritePath=/payments/docs, /docs
+          order: 2
+
+        - id: payments-redoc
+          uri: lb://payments-service
+          predicates:
+            - Path=/payments/redoc
+          filters:
+            - RewritePath=/payments/redoc, /redoc
+          order: 2
+
+        - id: payments-openapi
+          uri: lb://payments-service
+          predicates:
+            - Path=/payments/openapi.json
+          filters:
+            - RewritePath=/payments/openapi.json, /openapi.json
+          order: 2
+
+        # fallback: si alguien pide /openapi.json en la raíz, envíalo a payments
+        - id: openapi-root-to-payments
+          uri: lb://payments-service
+          predicates:
+            - Path=/openapi.json
+          order: 0
+
+      # CORS global
       globalcors:
         corsConfigurations:
           '[/**]':
-            allowedOrigins: 
+            allowedOrigins:
               - "http://localhost:3000"
               - "http://localhost:4200"
               - "http://localhost:5173"
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - PATCH
-              - OPTIONS
+            allowedMethods: [GET, POST, PUT, DELETE, PATCH, OPTIONS]
             allowedHeaders: "*"
             allowCredentials: true
             maxAge: 3600

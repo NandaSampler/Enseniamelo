@@ -33,7 +33,7 @@ public class HealthCheckConfiguration {
         
         // Agrega aquí todos tus microservicios
         registry.put("usuarios-service", () -> getHealth("http://usuarios-service"));
-        
+        registry.put("payments-service", () -> getHealth("http://payments-service:8002/health"));
         // Cuando tengas más servicios, agrégalos aquí:
         // registry.put("pedidos-service", () -> getHealth("http://pedidos-service"));
         // registry.put("productos-service", () -> getHealth("http://productos-service"));

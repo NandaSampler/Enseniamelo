@@ -86,5 +86,5 @@ class PagoOut(BaseModel):
     suscripcion_id: str
     monto: float
     metodo: Literal["tarjeta","transferencia","stripe_simulado"]
-    estado: Literal["creado","exitoso","fallido","cancelado"]
+    estado: Literal["creado", "procesando", "exitoso", "fallido", "reembolsado", "cancelado"]
     provider_ref: str | None = None
