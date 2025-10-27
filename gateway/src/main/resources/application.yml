@@ -1,9 +1,48 @@
 server:
-  port: 8080
+  port: 8443
+  ssl:
+    enabled: true
+    key-store: classpath:keystore/keystore.p12
+    key-store-password: changeit
+    key-store-type: PKCS12
+    key-alias: gateway
 
 spring:
   application:
     name: gateway-service
+
+  # ===================== OAUTH2 / KEYCLOAK =====================
+  # ⚠️ Esta sección se trae para que tengas las configuraciones de Keycloak.
+  #    Aún no estás adaptando tu microservicio: puedes mantenerla deshabilitada
+  #    a nivel de código si no la consumes. Revisa los hosts (localhost vs keycloak).
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: enseniamelo-client
+            # ⚠️ Secreto en texto plano solo para dev. Usa variables de entorno en prod.
+            client-secret: Uq38gnL4Vyd5eovmnOPKXTPTMelQclRc
+            scope: openid,profile,email
+            authorization-grant-type: authorization_code
+            # ⚠️ La {baseUrl} debe apuntar al dominio público del gateway en 8443.
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          keycloak:
+            # ⚠️ Diferencia de hosts entre ramas:
+            #    - Aquí mezclamos ambos para que puedas alternar entorno si lo necesitas.
+            #    - Usa 'localhost:8180' si corres Keycloak local fuera de docker,
+            #      o 'keycloak:8080' si corres dentro de la red docker-compose.
+            authorization-uri: http://localhost:8180/realms/enseniamelo-realm/protocol/openid-connect/auth
+            token-uri: http://keycloak:8080/realms/enseniamelo-realm/protocol/openid-connect/token
+            user-info-uri: http://keycloak:8080/realms/enseniamelo-realm/protocol/openid-connect/userinfo
+            jwk-set-uri: http://keycloak:8080/realms/enseniamelo-realm/protocol/openid-connect/certs
+            user-name-attribute: preferred_username
+
+      resourceserver:
+        jwt:
+          # ⚠️ Debe apuntar al mismo realm. Si cambias el host arriba, cámbialo aquí también.
+          jwk-set-uri: http://keycloak:8080/realms/enseniamelo-realm/protocol/openid-connect/certs
 
   cloud:
     gateway:
@@ -13,11 +52,15 @@ spring:
           lower-case-service-id: true
 
       routes:
-        # ====== USUARIOS ======
+        # ===================== USUARIOS (PROTEGIDAS) =====================
         - id: usuarios-v1-direct
           uri: lb://usuarios-service
           predicates:
             - Path=/v1/usuario,/v1/usuario/**
+          filters:
+            # ⚠️ TokenRelay requiere que el cliente OAuth2 esté configurado
+            #    y que el resource server acepte el token reenviado.
+            - TokenRelay=
           order: 1
 
         - id: usuarios-v1-api
@@ -25,29 +68,75 @@ spring:
           predicates:
             - Path=/api/v1/usuario,/api/v1/usuario/**
           filters:
+            # ⚠️ Usa ${segment} (sin backslash) y comillas simples para evitar placeholders de Spring.
             - 'RewritePath=/api(?<segment>.*), ${segment}'
+            - TokenRelay=
           order: 1
 
+        # ===================== TUTORES (PROTEGIDAS) =====================
+        - id: tutores-v1-direct
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/v1/tutores,/v1/tutores/**
+          filters:
+            - TokenRelay=
+          order: 1
+
+        - id: tutores-v1-api
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/api/v1/tutores,/api/v1/tutores/**
+          filters:
+            - 'RewritePath=/api(?<segment>.*), ${segment}'
+            - TokenRelay=
+          order: 1
+
+        # ===================== VERIFICACIÓN (PROTEGIDAS) =====================
+        - id: verificacion-v1-direct
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/v1/verificacion,/v1/verificacion/**
+          filters:
+            - TokenRelay=
+          order: 1
+
+        # ===================== AUTENTICACIÓN (PÚBLICAS) =====================
+        - id: auth-public
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/v1/auth/login,/v1/auth/register
+          filters:
+            # ⚠️ Para endpoints públicos conviene remover Authorization si el cliente lo envía por error.
+            - RemoveRequestHeader=Authorization
+          order: 0
+
+        - id: auth-api-public
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - 'RewritePath=/api(?<segment>.*), ${segment}'
+            - RemoveRequestHeader=Authorization
+          order: 0
+
+        # ===================== OPENAPI / SWAGGER (USUARIOS) =====================
         - id: usuarios-openapi-swagger-ui
           uri: lb://usuarios-service
           predicates:
-            - Path=/openapi/swagger-ui.html,/openapi/swagger-ui/**
-          order: 1
+            - Path=/openapi/**
+          filters:
+            - RemoveRequestHeader=Authorization
+          order: -1
 
-        - id: usuarios-openapi-docs
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/openapi/v3/api-docs,/openapi/v3/api-docs/**
-          order: 1
-
-        # Alias (sin /openapi)
         - id: usuarios-swagger-ui-alias
           uri: lb://usuarios-service
           predicates:
             - Path=/swagger-ui.html,/swagger-ui/**
           filters:
+            # ⚠️ Mantener la misma convención de ${segment}.
             - 'RewritePath=/swagger-ui(?<segment>.*), /openapi/swagger-ui${segment}'
-          order: 1
+            - RemoveRequestHeader=Authorization
+          order: -1
 
         - id: usuarios-api-docs-alias
           uri: lb://usuarios-service
@@ -55,15 +144,34 @@ spring:
             - Path=/v3/api-docs,/v3/api-docs/**
           filters:
             - 'RewritePath=/v3/api-docs(?<segment>.*), /openapi/v3/api-docs${segment}'
-          order: 1
+            - RemoveRequestHeader=Authorization
+          order: -1
 
         - id: usuarios-webjars
           uri: lb://usuarios-service
           predicates:
             - Path=/webjars/**
-          order: 1
+          filters:
+            - RemoveRequestHeader=Authorization
+          order: -1
 
-        # ====== CURSOSERVICE (FastAPI) ======
+        # ===================== EUREKA =====================
+        - id: eureka-web-start
+          uri: http://eureka-server:8761
+          predicates:
+            - Path=/eureka/web
+          filters:
+            - SetPath=/
+          order: 2
+
+        - id: eureka-web-other
+          uri: http://eureka-server:8761
+          predicates:
+            - Path=/eureka/**
+          order: 2
+
+        # ===================== CURSOSERVICE (FastAPI) =====================
+        # ⚠️ PRIORIDAD: se mantienen y priorizan estas rutas.
         # Salud
         - id: cursos-health
           uri: lb://cursoservice
@@ -71,6 +179,7 @@ spring:
             - Path=/curso/health
           filters:
             - StripPrefix=1
+            # ⚠️ Necesario para que FastAPI genere URLs absolutas correctas detrás del gateway.
             - AddRequestHeader=X-Forwarded-Prefix, /curso
           order: 1
 
@@ -84,7 +193,7 @@ spring:
             - AddRequestHeader=X-Forwarded-Prefix, /curso
           order: 1
 
-        # ⚠️ Necesario porque ReDoc pide /curso/openapi.json (ruta absoluta con prefijo)
+        # (ReDoc pide /curso/openapi.json con prefijo absoluto)
         - id: cursos-openapi-abs
           uri: lb://cursoservice
           predicates:
@@ -94,7 +203,7 @@ spring:
             - AddRequestHeader=X-Forwarded-Prefix, /curso
           order: 1
 
-        # API principal (tu FastAPI usa /api/v1/cursos/**)
+        # API principal (tu FastAPI usa /api/v1/cursos/** tras el prefijo /curso)
         - id: cursos-api-v1
           uri: lb://cursoservice
           predicates:
@@ -104,7 +213,7 @@ spring:
             - AddRequestHeader=X-Forwarded-Prefix, /curso
           order: 1
 
-        # (Opcional) catch-all
+        # Catch-all opcional para contenido adicional bajo /curso
         - id: cursos-direct
           uri: lb://cursoservice
           predicates:
@@ -114,6 +223,7 @@ spring:
             - AddRequestHeader=X-Forwarded-Prefix, /curso
           order: 10
 
+      # ===================== CORS =====================
       globalcors:
         corsConfigurations:
           '[/**]':
@@ -121,38 +231,48 @@ spring:
               - "http://localhost:3000"
               - "http://localhost:4200"
               - "http://localhost:5173"
+              - "https://localhost:8443"
+            # Unificado: lista en bloque para legibilidad
             allowedMethods: [GET, POST, PUT, DELETE, PATCH, OPTIONS]
             allowedHeaders: "*"
+            exposedHeaders:
+              - Authorization
             allowCredentials: true
             maxAge: 3600
 
+# ===================== EUREKA =====================
 eureka:
   client:
     serviceUrl:
       defaultZone: http://eureka-server:8761/eureka/
-    fetch-registry: true
-    register-with-eureka: true
+    initialInstanceInfoReplicationIntervalSeconds: 5
+    registryFetchIntervalSeconds: 5
   instance:
     preferIpAddress: true
     hostname: gateway-service
-    lease-renewal-interval-in-seconds: 10
-    lease-expiration-duration-in-seconds: 30
+    leaseRenewalIntervalInSeconds: 5
+    leaseExpirationDurationInSeconds: 5
+    non-secure-port-enabled: false
+    secure-port-enabled: true
+    secure-port: 8443
 
+# ===================== ACTUATOR =====================
 management:
+  endpoint:
+    gateway:
+      enabled: true
+    health:
+      show-details: ALWAYS
   endpoints:
     web:
       exposure:
-        include: health,info,gateway,routes
-  endpoint:
-    health:
-      show-details: always
-    gateway:
-      enabled: true
+        include: "*"
 
+# ===================== LOGGING =====================
 logging:
   level:
     root: INFO
-    org.springframework.cloud.gateway: DEBUG
-    org.springframework.cloud.gateway.handler.RoutePredicateHandlerMapping: TRACE
-    org.springframework.web: DEBUG
-    reactor.netty: INFO
+    '[org.springframework.cloud.gateway.route.RouteDefinitionRouteLocator]': INFO
+    '[org.springframework.cloud.gateway]': DEBUG
+    '[org.springframework.security]': DEBUG
+    '[org.springframework.security.oauth2]': DEBUG

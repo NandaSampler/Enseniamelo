@@ -33,12 +33,6 @@ public class HealthCheckConfiguration {
         
         // Agrega aquí todos tus microservicios
         registry.put("usuarios-service", () -> getHealth("http://usuarios-service"));
-        
-        // Cuando tengas más servicios, agrégalos aquí:
-        // registry.put("pedidos-service", () -> getHealth("http://pedidos-service"));
-        // registry.put("productos-service", () -> getHealth("http://productos-service"));
-        // registry.put("pagos-service", () -> getHealth("http://pagos-service"));
-        
         return CompositeReactiveHealthContributor.fromMap(registry);
     }
 

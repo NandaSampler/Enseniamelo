@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ public class PerfilTutorController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Lista de tutores obtenida")
     })
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping
     public Flux<PerfilTutorDTO> obtenerTodos() {
         log.info("GET /v1/tutores - Obteniendo todos los tutores");
@@ -43,6 +45,7 @@ public class PerfilTutorController {
         @ApiResponse(responseCode = "200", description = "Tutor encontrado"),
         @ApiResponse(responseCode = "404", description = "Tutor no encontrado")
     })
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/{idTutor}")
     public Mono<ResponseEntity<PerfilTutorDTO>> buscarPorId(
             @Parameter(description = "ID del tutor", required = true)
@@ -59,6 +62,7 @@ public class PerfilTutorController {
         @ApiResponse(responseCode = "200", description = "Perfil encontrado"),
         @ApiResponse(responseCode = "404", description = "Usuario no tiene perfil de tutor")
     })
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/usuario/{idUsuario}")
     public Mono<ResponseEntity<PerfilTutorDTO>> buscarPorUsuario(
             @Parameter(description = "ID del usuario", required = true)
@@ -74,6 +78,7 @@ public class PerfilTutorController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Lista de tutores verificados")
     })
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/verificados")
     public Flux<PerfilTutorDTO> obtenerVerificados() {
         log.info("GET /v1/tutores/verificados - Obteniendo tutores verificados");
@@ -84,6 +89,7 @@ public class PerfilTutorController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Lista de tutores filtrados")
     })
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/clasificacion/{minima}")
     public Flux<PerfilTutorDTO> obtenerPorClasificacion(
             @Parameter(description = "Clasificación mínima (0-5)", required = true)
@@ -98,6 +104,7 @@ public class PerfilTutorController {
         @ApiResponse(responseCode = "200", description = "Perfil actualizado"),
         @ApiResponse(responseCode = "404", description = "Perfil no encontrado")
     })
+    @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/{idTutor}")
     public Mono<ResponseEntity<PerfilTutorDTO>> actualizarPerfil(
             @Parameter(description = "ID del tutor", required = true)
@@ -114,6 +121,7 @@ public class PerfilTutorController {
         @ApiResponse(responseCode = "200", description = "Clasificación actualizada"),
         @ApiResponse(responseCode = "404", description = "Tutor no encontrado")
     })
+    @SecurityRequirement(name = "bearerAuth")
     @PatchMapping("/{idTutor}/clasificacion")
     public Mono<ResponseEntity<PerfilTutorDTO>> actualizarClasificacion(
             @Parameter(description = "ID del tutor", required = true)
@@ -131,6 +139,7 @@ public class PerfilTutorController {
         @ApiResponse(responseCode = "204", description = "Perfil eliminado"),
         @ApiResponse(responseCode = "404", description = "Perfil no encontrado")
     })
+    @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/{idTutor}")
     public Mono<ResponseEntity<Void>> eliminarPerfil(
             @Parameter(description = "ID del tutor", required = true)

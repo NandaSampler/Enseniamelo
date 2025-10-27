@@ -1,6 +1,4 @@
 package com.enseniamelo.usuarios.controller;
-
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import com.enseniamelo.usuarios.dto.UsuarioDTO;
@@ -12,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +27,7 @@ import reactor.core.publisher.Mono;
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
+    
     @Operation(summary = "${api.usuario.get-usuario.description}", 
                description = "${api.usuario.get-usuario.notes}")
     @ApiResponses(value = {
@@ -35,6 +35,7 @@ public class UsuarioController {
         @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
         @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
     })
+    @SecurityRequirement(name = "bearerAuth") 
     @GetMapping(value = "/{idUsuario}", produces = "application/json")
     public Mono<UsuarioDTO> getUsuario(
             @Parameter(description = "${api.usuario.get-usuario.parameters.id}", required = true)
@@ -51,6 +52,7 @@ public class UsuarioController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}")
     })
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping(produces = "application/json")
     public Flux<UsuarioDTO> getUsuarios() {
         log.info("GET /v1/usuario - Obteniendo todos los usuarios");
@@ -65,8 +67,9 @@ public class UsuarioController {
         @ApiResponse(responseCode = "201", description = "${api.responseCodes.created.description}"),
         @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}")
     })
+    @SecurityRequirement(name = "bearerAuth") 
     @PostMapping(consumes = "application/json", produces = "application/json")
-    @ResponseStatus(HttpStatus.CREATED)
+    @SecurityRequirement(name = "bearerAuth")
     public Mono<UsuarioDTO> createUsuario(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                 description = "${api.usuario.schema.usuario.description}",
@@ -87,6 +90,7 @@ public class UsuarioController {
         @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
         @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
     })
+    @SecurityRequirement(name = "bearerAuth") 
     @PutMapping(value = "/{idUsuario}", consumes = "application/json", produces = "application/json")
     public Mono<UsuarioDTO> updateUsuario(
             @Parameter(description = "${api.usuario.update-usuario.parameters.id}", required = true)
@@ -105,8 +109,9 @@ public class UsuarioController {
         @ApiResponse(responseCode = "204", description = "${api.responseCodes.noContent.description}"),
         @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
     })
+    @SecurityRequirement(name = "bearerAuth") 
     @DeleteMapping(value = "/{idUsuario}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @SecurityRequirement(name = "bearerAuth")
     public Mono<Void> deleteUsuario(
             @Parameter(description = "${api.usuario.delete-usuario.parameters.id}", required = true)
             @PathVariable Integer idUsuario) {
