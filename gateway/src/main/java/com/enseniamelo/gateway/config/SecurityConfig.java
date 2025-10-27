@@ -15,17 +15,14 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeExchange(exchange -> exchange
-                // Endpoints públicos
                 .pathMatchers("/v1/auth/login", "/v1/auth/register").permitAll()
                 .pathMatchers("/api/v1/auth/**").permitAll()
                 .pathMatchers("/actuator/**").permitAll()
                 .pathMatchers("/eureka/**").permitAll()
                 .pathMatchers("/openapi/**", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**").permitAll()
                 
-                // Todo lo demás requiere autenticación
                 .anyExchange().authenticated()
             )
-            // Solo validar JWT (Resource Server)
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {}));
         
         return http.build();
