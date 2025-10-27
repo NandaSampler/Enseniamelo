@@ -71,66 +71,24 @@ spring:
           predicates:
             - Path=/eureka/**
 
-        - id: usuarios-openapi-swagger-ui
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/openapi/swagger-ui.html,/openapi/swagger-ui/**
-          order: 1
+        # ===================== SWAGGER MENSAJES SERVICE =====================
 
-        - id: usuarios-openapi-docs
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/openapi/v3/api-docs,/openapi/v3/api-docs/**
-          order: 1
-
-        # ============ SWAGGER/OPENAPI MENSAJES============
-
-        # Mensajes Swagger UI
-        - id: mensajes-swagger-ui-alias
+        # Swagger UI HTML + recursos estáticos
+        - id: mensajes-swagger-ui
           uri: lb://mensajes-service
           predicates:
-            - Path=/swagger-ui.html,/swagger-ui/**
+            - Path=/mensajes/swagger-ui.html,/mensajes/swagger-ui/**,/mensajes/webjars/**,/mensajes/openapi/swagger-ui/**
           filters:
-            - RewritePath=/swagger-ui(?<segment>.*), /openapi/swagger-ui${segment}
+            - RewritePath=/mensajes/(?<remaining>.*), /$\{remaining}
           order: 1
 
-        # Mensajes API docs
-        - id: mensajes-api-docs-alias
+        # OpenAPI JSON docs
+        - id: mensajes-openapi-docs
           uri: lb://mensajes-service
           predicates:
-            - Path=/v3/api-docs,/v3/api-docs/**
+            - Path=/mensajes/openapi/v3/api-docs,/mensajes/openapi/v3/api-docs/**
           filters:
-            - RewritePath=/v3/api-docs(?<segment>.*), /openapi/v3/api-docs${segment}
-          order: 1
-
-        # Mensajes Webjars
-        - id: mensajes-webjars
-          uri: lb://mensajes-service
-          predicates:
-            - Path=/webjars/**
-          order: 1
-
-        # ============ SWAGGER/OPENAPI (Alias sin /openapi/) ============
-        - id: usuarios-swagger-ui-alias
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/swagger-ui.html,/swagger-ui/**
-          filters:
-            - RewritePath=/swagger-ui(?<segment>.*), /openapi/swagger-ui$\{segment}
-          order: 1
-
-        - id: usuarios-api-docs-alias
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/v3/api-docs,/v3/api-docs/**
-          filters:
-            - RewritePath=/v3/api-docs(?<segment>.*), /openapi/v3/api-docs$\{segment}
-          order: 1
-
-        - id: usuarios-webjars
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/webjars/**
+            - RewritePath=/mensajes/(?<remaining>.*), /$\{remaining}
           order: 1
 
       # Configuración global de CORS

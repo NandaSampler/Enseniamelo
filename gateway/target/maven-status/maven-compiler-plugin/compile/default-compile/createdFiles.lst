@@ -1,3 +1,2 @@
 com\enseniamelo\gateway\GatewayApplication.class
-main\java\com\enseniamelo\gateway\controller\FallbackController.class
 com\enseniamelo\gateway\config\HealthCheckConfiguration.class
