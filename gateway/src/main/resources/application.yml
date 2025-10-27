@@ -24,16 +24,15 @@ spring:
         
         provider:
           keycloak:
-            authorization-uri: http://localhost:8180/realms/enseniamelo/protocol/openid-connect/auth
-            token-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/token
-            user-info-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/userinfo
-            jwk-set-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/certs
+            authorization-uri: http://localhost:8180/realms/enseniamelo-realm/protocol/openid-connect/auth
+            token-uri: http://keycloak:8080/realms/enseniamelo-realm/protocol/openid-connect/token
+            user-info-uri: http://keycloak:8080/realms/enseniamelo-realm/protocol/openid-connect/userinfo
+            jwk-set-uri: http://keycloak:8080/realms/enseniamelo-realm/protocol/openid-connect/certs
             user-name-attribute: preferred_username
       
       resourceserver:
         jwt:
-          issuer-uri: http://keycloak:8080/realms/enseniamelo
-          jwk-set-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/certs
+          jwk-set-uri: http://keycloak:8080/realms/enseniamelo-realm/protocol/openid-connect/certs
   
   cloud:
     gateway:

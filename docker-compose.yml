@@ -40,6 +40,9 @@ services:
       KC_HTTP_ENABLED: true
       KC_HEALTH_ENABLED: true
       KC_METRICS_ENABLED: true
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: 8180
+      KC_HOSTNAME_STRICT_HTTPS: false
     command: start-dev
     networks:
       - microservices-net
@@ -154,16 +157,28 @@ services:
     ports:
       - "8081:8081"
     environment:
+      # MongoDB
       - SPRING_DATA_MONGODB_URI=mongodb+srv://jaredpimentel_db_user:DpCito170209@cluster0.cibyezm.mongodb.net/enseniamelo?retryWrites=true&w=majority
       - SPRING_DATA_MONGODB_DATABASE=enseniamelo
+      
+      # Kafka
       - SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS=kafka:29092
+      
+      # Eureka
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - SPRING_APPLICATION_NAME=usuarios-service
       - EUREKA_INSTANCE_HOSTNAME=usuarios-service
+      
+      # RabbitMQ
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_RABBITMQ_PORT=5672
       - SPRING_RABBITMQ_USERNAME=guest
       - SPRING_RABBITMQ_PASSWORD=guest
+      
+      # OAuth2 / Keycloak - IMPORTANTE: usar keycloak:8080 dentro de Docker
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/enseniamelo-realm
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/enseniamelo-realm/protocol/openid-connect/certs
+      
     depends_on:
       kafka:
         condition: service_healthy
