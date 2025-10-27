@@ -54,7 +54,7 @@
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>
         </dependency>
         
-        <!-- ⭐ OAuth2 Client (CRÍTICO - para TokenRelay) -->
+        <!-- OAuth2 Client  -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-client</artifactId>

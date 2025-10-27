@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ import reactor.core.publisher.Mono;
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
+    
     @Operation(summary = "${api.usuario.get-usuario.description}", 
                description = "${api.usuario.get-usuario.notes}")
     @ApiResponses(value = {
@@ -35,6 +37,7 @@ public class UsuarioController {
         @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
         @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
     })
+    @SecurityRequirements() 
     @GetMapping(value = "/{idUsuario}", produces = "application/json")
     public Mono<UsuarioDTO> getUsuario(
             @Parameter(description = "${api.usuario.get-usuario.parameters.id}", required = true)
@@ -51,6 +54,7 @@ public class UsuarioController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}")
     })
+    @SecurityRequirements() 
     @GetMapping(produces = "application/json")
     public Flux<UsuarioDTO> getUsuarios() {
         log.info("GET /v1/usuario - Obteniendo todos los usuarios");
@@ -65,6 +69,7 @@ public class UsuarioController {
         @ApiResponse(responseCode = "201", description = "${api.responseCodes.created.description}"),
         @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}")
     })
+    @SecurityRequirements() 
     @PostMapping(consumes = "application/json", produces = "application/json")
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<UsuarioDTO> createUsuario(
@@ -87,6 +92,7 @@ public class UsuarioController {
         @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
         @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
     })
+    @SecurityRequirements() 
     @PutMapping(value = "/{idUsuario}", consumes = "application/json", produces = "application/json")
     public Mono<UsuarioDTO> updateUsuario(
             @Parameter(description = "${api.usuario.update-usuario.parameters.id}", required = true)
@@ -105,6 +111,7 @@ public class UsuarioController {
         @ApiResponse(responseCode = "204", description = "${api.responseCodes.noContent.description}"),
         @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
     })
+    @SecurityRequirements() 
     @DeleteMapping(value = "/{idUsuario}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> deleteUsuario(

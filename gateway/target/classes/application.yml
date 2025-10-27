@@ -41,9 +41,43 @@ spring:
         locator:
           enabled: true
           lower-case-service-id: true
-      
       routes:
-        # ========== RUTAS PÚBLICAS (sin autenticación) ==========
+        # ========== RUTAS DE DOCUMENTACIÓN  ==========
+        - id: usuarios-openapi-swagger-ui
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/openapi/**
+          filters:
+            - RemoveRequestHeader=Authorization
+          order: -1
+        
+        - id: usuarios-swagger-ui-alias
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/swagger-ui.html,/swagger-ui/**
+          filters:
+            - RewritePath=/swagger-ui(?<segment>.*), /openapi/swagger-ui$\{segment}
+            - RemoveRequestHeader=Authorization
+          order: -1
+        
+        - id: usuarios-api-docs-alias
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/v3/api-docs,/v3/api-docs/**
+          filters:
+            - RewritePath=/v3/api-docs(?<segment>.*), /openapi/v3/api-docs$\{segment}
+            - RemoveRequestHeader=Authorization
+          order: -1
+        
+        - id: usuarios-webjars
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/webjars/**
+          filters:
+            - RemoveRequestHeader=Authorization
+          order: -1
+        
+        # ========== RUTAS PÚBLICAS  ==========
         - id: auth-public
           uri: lb://usuarios-service
           predicates:
@@ -61,13 +95,13 @@ spring:
             - RemoveRequestHeader=Authorization
           order: 0
         
-        # ========== RUTAS PROTEGIDAS (con TokenRelay) ==========
+        # ========== RUTAS PROTEGIDAS  ==========
         - id: usuarios-v1-direct
           uri: lb://usuarios-service
           predicates:
             - Path=/v1/usuario,/v1/usuario/**
           filters:
-            - TokenRelay=
+            - TokenRelay=  
           order: 1
         
         - id: usuarios-v1-api
@@ -76,7 +110,7 @@ spring:
             - Path=/api/v1/usuario,/api/v1/usuario/**
           filters:
             - RewritePath=/api(?<segment>.*), $\{segment}
-            - TokenRelay=
+            - TokenRelay=  
           order: 1
         
         - id: tutores-v1-direct
@@ -84,7 +118,7 @@ spring:
           predicates:
             - Path=/v1/tutores,/v1/tutores/**
           filters:
-            - TokenRelay=
+            - TokenRelay=  
           order: 1
         
         - id: tutores-v1-api
@@ -93,7 +127,7 @@ spring:
             - Path=/api/v1/tutores,/api/v1/tutores/**
           filters:
             - RewritePath=/api(?<segment>.*), $\{segment}
-            - TokenRelay=
+            - TokenRelay=  
           order: 1
         
         - id: verificacion-v1-direct
@@ -101,52 +135,8 @@ spring:
           predicates:
             - Path=/v1/verificacion,/v1/verificacion/**
           filters:
-            - TokenRelay=
+            - TokenRelay=  
           order: 1
-        
-        # ========== RUTAS DE DOCUMENTACIÓN (públicas) ==========
-        # ⭐ NUEVO: Ruta específica para el JSON de OpenAPI
-        - id: usuarios-api-docs-json
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/openapi/v3/api-docs
-          filters:
-            - RemoveRequestHeader=Authorization
-          order: 0
-        
-        - id: usuarios-openapi-swagger-ui
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/openapi/**
-          filters:
-            - RemoveRequestHeader=Authorization
-          order: 0
-        
-        - id: usuarios-swagger-ui-alias
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/swagger-ui.html,/swagger-ui/**
-          filters:
-            - RewritePath=/swagger-ui(?<segment>.*), /openapi/swagger-ui$\{segment}
-            - RemoveRequestHeader=Authorization
-          order: 0
-        
-        - id: usuarios-api-docs-alias
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/v3/api-docs,/v3/api-docs/**
-          filters:
-            - RewritePath=/v3/api-docs(?<segment>.*), /openapi/v3/api-docs$\{segment}
-            - RemoveRequestHeader=Authorization
-          order: 0
-        
-        - id: usuarios-webjars
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/webjars/**
-          filters:
-            - RemoveRequestHeader=Authorization
-          order: 0
         
         # ========== EUREKA ==========
         - id: eureka-web-start
@@ -155,13 +145,13 @@ spring:
             - Path=/eureka/web
           filters:
             - SetPath=/
-          order: 0
+          order: 2
         
         - id: eureka-web-other
           uri: http://eureka-server:8761
           predicates:
             - Path=/eureka/**
-          order: 0
+          order: 2
 
       # ========== CORS ==========
       globalcors:
@@ -172,7 +162,6 @@ spring:
               - "http://localhost:4200"
               - "http://localhost:5173"
               - "https://localhost:8443"
-              - "http://localhost:8081"
             allowedMethods:
               - GET
               - POST
