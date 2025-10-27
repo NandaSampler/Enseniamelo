@@ -4,7 +4,7 @@ server:
 spring:
   application:
     name: gateway-service  
-  
+
   cloud:
     gateway:
       discovery:
@@ -13,55 +13,50 @@ spring:
           lower-case-service-id: true
       
       routes:
-        - id: usuarios-v1-direct
+        # =============================
+        # 👤 USUARIOS-SERVICE
+        # =============================
+        - id: usuarios-service
           uri: lb://usuarios-service
           predicates:
-            - Path=/v1/usuario,/v1/usuario/**
-          order: 1
-        
-        - id: usuarios-v1-api
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/api/v1/usuario,/api/v1/usuario/**
+            - Path=/usuarios/**, /v1/usuario/**  # Coincide con tu controlador
           filters:
-            - RewritePath=/api(?<segment>.*), $\{segment}
-          order: 1
-        
-        - id: usuarios-openapi-swagger-ui
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/openapi/swagger-ui.html,/openapi/swagger-ui/**
-          order: 1
-        
-        - id: usuarios-openapi-docs
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/openapi/v3/api-docs,/openapi/v3/api-docs/**
-          order: 1
-        
-        # ============ SWAGGER/OPENAPI (Alias sin /openapi/) ============
-        - id: usuarios-swagger-ui-alias
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/swagger-ui.html,/swagger-ui/**
-          filters:
-            - RewritePath=/swagger-ui(?<segment>.*), /openapi/swagger-ui$\{segment}
-          order: 1
-        
-        - id: usuarios-api-docs-alias
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/v3/api-docs,/v3/api-docs/**
-          filters:
-            - RewritePath=/v3/api-docs(?<segment>.*), /openapi/v3/api-docs$\{segment}
-          order: 1
-        
-        - id: usuarios-webjars
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/webjars/**
+            - StripPrefix=1
           order: 1
 
+        # =============================
+        # 💬 COMENTARIOS-SERVICE
+        # =============================
+        - id: comentarios-service
+          uri: lb://comentarios-service
+          predicates:
+            - Path=/comentarios/**, /api/comentario-curso/**  # Coincide con tu controlador
+          filters:
+            - StripPrefix=1
+          order: 2
+
+        # =============================
+        # 🧭 SWAGGER/OPENAPI ROUTES
+        # =============================
+        - id: swagger-usuarios
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/usuarios/swagger-ui.html, /usuarios/swagger-ui/**, /usuarios/v3/api-docs/**
+          filters:
+            - RewritePath=/usuarios(?<segment>.*), /openapi$\{segment}
+          order: 10
+
+        - id: swagger-comentarios
+          uri: lb://comentarios-service
+          predicates:
+            - Path=/comentarios/swagger-ui.html, /comentarios/swagger-ui/**, /comentarios/v3/api-docs/**
+          filters:
+            - RewritePath=/comentarios(?<segment>.*), /openapi$\{segment}
+          order: 11
+
+      # =============================
+      # 🌐 CORS GLOBAL
+      # =============================
       globalcors:
         corsConfigurations:
           '[/**]':
@@ -80,6 +75,9 @@ spring:
             allowCredentials: true
             maxAge: 3600
 
+# =============================
+# ☁️ Eureka Client
+# =============================
 eureka:
   client:
     serviceUrl:
@@ -92,6 +90,9 @@ eureka:
     lease-renewal-interval-in-seconds: 10
     lease-expiration-duration-in-seconds: 30
 
+# =============================
+# 📊 Actuator & Logging
+# =============================
 management:
   endpoints:
     web:
@@ -108,5 +109,5 @@ logging:
     root: INFO
     org.springframework.cloud.gateway: DEBUG
     org.springframework.cloud.gateway.handler.RoutePredicateHandlerMapping: TRACE
-    org.springframework.web: DEBUG
+    org.springframework.web: INFO
     reactor.netty: INFO
