@@ -30,7 +30,7 @@ import reactor.core.publisher.Mono;
 
 
 @RestController
-@RequestMapping("api/chats")
+@RequestMapping("api/chat")
 @Tag(name = "Chat", description = "API para gestionar los chats")
 @Slf4j
 public class ChatController {

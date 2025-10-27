@@ -29,7 +29,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("api/mensajes")
+@RequestMapping("api/mensaje")
 @Tag(name = "Mensaje", description = "API para gestionar los mensajes")
 @Slf4j
 public class MensajeController {
