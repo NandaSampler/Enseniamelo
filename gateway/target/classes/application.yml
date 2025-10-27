@@ -10,6 +10,7 @@ server:
 spring:
   application:
     name: gateway-service
+  
   security:
     oauth2:
       client:
@@ -20,15 +21,15 @@ spring:
             scope: openid,profile,email
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        
         provider:
           keycloak:
-            issuer-uri: http://keycloak:8080/realms/enseniamelo
             authorization-uri: http://localhost:8180/realms/enseniamelo/protocol/openid-connect/auth
             token-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/token
             user-info-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/userinfo
             jwk-set-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/certs
             user-name-attribute: preferred_username
-    
+      
       resourceserver:
         jwt:
           issuer-uri: http://keycloak:8080/realms/enseniamelo
@@ -41,10 +42,8 @@ spring:
           enabled: true
           lower-case-service-id: true
       
-      default-filters:
-        - TokenRelay=
-      
       routes:
+        # ========== RUTAS PÚBLICAS (sin autenticación) ==========
         - id: auth-public
           uri: lb://usuarios-service
           predicates:
@@ -62,10 +61,13 @@ spring:
             - RemoveRequestHeader=Authorization
           order: 0
         
+        # ========== RUTAS PROTEGIDAS (con TokenRelay) ==========
         - id: usuarios-v1-direct
           uri: lb://usuarios-service
           predicates:
             - Path=/v1/usuario,/v1/usuario/**
+          filters:
+            - TokenRelay=
           order: 1
         
         - id: usuarios-v1-api
@@ -74,12 +76,15 @@ spring:
             - Path=/api/v1/usuario,/api/v1/usuario/**
           filters:
             - RewritePath=/api(?<segment>.*), $\{segment}
+            - TokenRelay=
           order: 1
-      
+        
         - id: tutores-v1-direct
           uri: lb://usuarios-service
           predicates:
             - Path=/v1/tutores,/v1/tutores/**
+          filters:
+            - TokenRelay=
           order: 1
         
         - id: tutores-v1-api
@@ -88,12 +93,26 @@ spring:
             - Path=/api/v1/tutores,/api/v1/tutores/**
           filters:
             - RewritePath=/api(?<segment>.*), $\{segment}
+            - TokenRelay=
           order: 1
+        
         - id: verificacion-v1-direct
           uri: lb://usuarios-service
           predicates:
             - Path=/v1/verificacion,/v1/verificacion/**
+          filters:
+            - TokenRelay=
           order: 1
+        
+        # ========== RUTAS DE DOCUMENTACIÓN (públicas) ==========
+        # ⭐ NUEVO: Ruta específica para el JSON de OpenAPI
+        - id: usuarios-api-docs-json
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/openapi/v3/api-docs
+          filters:
+            - RemoveRequestHeader=Authorization
+          order: 0
         
         - id: usuarios-openapi-swagger-ui
           uri: lb://usuarios-service
@@ -101,6 +120,7 @@ spring:
             - Path=/openapi/**
           filters:
             - RemoveRequestHeader=Authorization
+          order: 0
         
         - id: usuarios-swagger-ui-alias
           uri: lb://usuarios-service
@@ -109,6 +129,7 @@ spring:
           filters:
             - RewritePath=/swagger-ui(?<segment>.*), /openapi/swagger-ui$\{segment}
             - RemoveRequestHeader=Authorization
+          order: 0
         
         - id: usuarios-api-docs-alias
           uri: lb://usuarios-service
@@ -117,6 +138,7 @@ spring:
           filters:
             - RewritePath=/v3/api-docs(?<segment>.*), /openapi/v3/api-docs$\{segment}
             - RemoveRequestHeader=Authorization
+          order: 0
         
         - id: usuarios-webjars
           uri: lb://usuarios-service
@@ -124,19 +146,24 @@ spring:
             - Path=/webjars/**
           filters:
             - RemoveRequestHeader=Authorization
+          order: 0
         
+        # ========== EUREKA ==========
         - id: eureka-web-start
           uri: http://eureka-server:8761
           predicates:
             - Path=/eureka/web
           filters:
             - SetPath=/
+          order: 0
         
         - id: eureka-web-other
           uri: http://eureka-server:8761
           predicates:
             - Path=/eureka/**
+          order: 0
 
+      # ========== CORS ==========
       globalcors:
         corsConfigurations:
           '[/**]':
@@ -145,6 +172,7 @@ spring:
               - "http://localhost:4200"
               - "http://localhost:5173"
               - "https://localhost:8443"
+              - "http://localhost:8081"
             allowedMethods:
               - GET
               - POST
@@ -158,6 +186,7 @@ spring:
             allowCredentials: true
             maxAge: 3600
 
+# ========== EUREKA ==========
 eureka:
   client:
     serviceUrl:
@@ -173,6 +202,7 @@ eureka:
     secure-port-enabled: true
     secure-port: 8443
 
+# ========== ACTUATOR ==========
 management:
   endpoint:
     gateway:
@@ -184,10 +214,11 @@ management:
       exposure:
         include: "*"
 
+# ========== LOGGING ==========
 logging:
   level:
     root: INFO
     '[org.springframework.cloud.gateway.route.RouteDefinitionRouteLocator]': INFO
-    '[org.springframework.cloud.gateway]': TRACE
+    '[org.springframework.cloud.gateway]': DEBUG
     '[org.springframework.security]': DEBUG
     '[org.springframework.security.oauth2]': DEBUG

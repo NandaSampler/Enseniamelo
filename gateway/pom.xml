@@ -16,7 +16,7 @@
     <artifactId>gateway</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>gateway</name>
-    <description>API Gateway</description>
+    <description>API Gateway with OAuth2 Security</description>
     
     <properties>
         <java.version>17</java.version>
@@ -52,6 +52,12 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+        </dependency>
+        
+        <!-- ⭐ OAuth2 Client (CRÍTICO - para TokenRelay) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-client</artifactId>
         </dependency>
         
         <!-- OAuth2 Resource Server (validar JWT) -->

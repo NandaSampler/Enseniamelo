@@ -1,6 +1,12 @@
 springdoc:
-  swagger-ui.path: /openapi/swagger-ui.html
-  api-docs.path: /openapi/v3/api-docs
+  swagger-ui:
+    path: /openapi/swagger-ui.html
+    # ⭐ CRÍTICO: Configurar para que use URLs externas
+    urls:
+      - name: Usuarios API
+        url: https://localhost:8443/openapi/v3/api-docs
+  api-docs:
+    path: /openapi/v3/api-docs
   packagesToScan: com.enseniamelo.usuarios.controller
   pathsToMatch: /**
   override-with-generic-response: false
@@ -75,3 +81,6 @@ api:
         2. Si el id enviado es inválido se devuelve un error **400 - Bad Request**
       parameters:
         id: ID del usuario a eliminar
+    schema:
+      usuario:
+        description: Objeto Usuario completo
