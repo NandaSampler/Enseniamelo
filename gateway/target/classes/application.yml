@@ -1,0 +1,193 @@
+server:
+  port: 8443
+  ssl:
+    enabled: true
+    key-store: classpath:keystore/keystore.p12
+    key-store-password: changeit
+    key-store-type: PKCS12
+    key-alias: gateway
+
+spring:
+  application:
+    name: gateway-service
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: enseniamelo-client
+            client-secret: Uq38gnL4Vyd5eovmnOPKXTPTMelQclRc
+            scope: openid,profile,email
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          keycloak:
+            issuer-uri: http://keycloak:8080/realms/enseniamelo
+            authorization-uri: http://localhost:8180/realms/enseniamelo/protocol/openid-connect/auth
+            token-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/token
+            user-info-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/userinfo
+            jwk-set-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/certs
+            user-name-attribute: preferred_username
+    
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8080/realms/enseniamelo
+          jwk-set-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/certs
+  
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      
+      default-filters:
+        - TokenRelay=
+      
+      routes:
+        - id: auth-public
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/v1/auth/login,/v1/auth/register
+          filters:
+            - RemoveRequestHeader=Authorization
+          order: 0
+        
+        - id: auth-api-public
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - RewritePath=/api(?<segment>.*), $\{segment}
+            - RemoveRequestHeader=Authorization
+          order: 0
+        
+        - id: usuarios-v1-direct
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/v1/usuario,/v1/usuario/**
+          order: 1
+        
+        - id: usuarios-v1-api
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/api/v1/usuario,/api/v1/usuario/**
+          filters:
+            - RewritePath=/api(?<segment>.*), $\{segment}
+          order: 1
+      
+        - id: tutores-v1-direct
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/v1/tutores,/v1/tutores/**
+          order: 1
+        
+        - id: tutores-v1-api
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/api/v1/tutores,/api/v1/tutores/**
+          filters:
+            - RewritePath=/api(?<segment>.*), $\{segment}
+          order: 1
+        - id: verificacion-v1-direct
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/v1/verificacion,/v1/verificacion/**
+          order: 1
+        
+        - id: usuarios-openapi-swagger-ui
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/openapi/**
+          filters:
+            - RemoveRequestHeader=Authorization
+        
+        - id: usuarios-swagger-ui-alias
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/swagger-ui.html,/swagger-ui/**
+          filters:
+            - RewritePath=/swagger-ui(?<segment>.*), /openapi/swagger-ui$\{segment}
+            - RemoveRequestHeader=Authorization
+        
+        - id: usuarios-api-docs-alias
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/v3/api-docs,/v3/api-docs/**
+          filters:
+            - RewritePath=/v3/api-docs(?<segment>.*), /openapi/v3/api-docs$\{segment}
+            - RemoveRequestHeader=Authorization
+        
+        - id: usuarios-webjars
+          uri: lb://usuarios-service
+          predicates:
+            - Path=/webjars/**
+          filters:
+            - RemoveRequestHeader=Authorization
+        
+        - id: eureka-web-start
+          uri: http://eureka-server:8761
+          predicates:
+            - Path=/eureka/web
+          filters:
+            - SetPath=/
+        
+        - id: eureka-web-other
+          uri: http://eureka-server:8761
+          predicates:
+            - Path=/eureka/**
+
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: 
+              - "http://localhost:3000"
+              - "http://localhost:4200"
+              - "http://localhost:5173"
+              - "https://localhost:8443"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders: "*"
+            exposedHeaders:
+              - Authorization
+            allowCredentials: true
+            maxAge: 3600
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://eureka-server:8761/eureka/
+    initialInstanceInfoReplicationIntervalSeconds: 5
+    registryFetchIntervalSeconds: 5
+  instance:
+    preferIpAddress: true
+    hostname: gateway-service
+    leaseRenewalIntervalInSeconds: 5
+    leaseExpirationDurationInSeconds: 5
+    non-secure-port-enabled: false
+    secure-port-enabled: true
+    secure-port: 8443
+
+management:
+  endpoint:
+    gateway:
+      enabled: true
+    health:
+      show-details: ALWAYS
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+logging:
+  level:
+    root: INFO
+    '[org.springframework.cloud.gateway.route.RouteDefinitionRouteLocator]': INFO
+    '[org.springframework.cloud.gateway]': TRACE
+    '[org.springframework.security]': DEBUG
+    '[org.springframework.security.oauth2]': DEBUG
