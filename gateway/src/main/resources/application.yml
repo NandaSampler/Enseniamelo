@@ -11,6 +11,33 @@ spring:
   application:
     name: gateway-service
   
+  # ============ CONFIGURACIÓN OAuth2 COMPLETA ============
+  security:
+    oauth2:
+      # Client: Para obtener tokens y hacer TokenRelay
+      client:
+        registration:
+          keycloak:
+            client-id: gateway-client
+            client-secret: 4b98whamzW9QJ1DpVdrQwWtEqxSMVI3J
+            scope: openid,profile,email
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          keycloak:
+            issuer-uri: http://keycloak:8080/realms/enseniamelo
+            authorization-uri: http://localhost:8180/realms/enseniamelo/protocol/openid-connect/auth
+            token-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/token
+            user-info-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/userinfo
+            jwk-set-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/certs
+            user-name-attribute: preferred_username
+      
+      # Resource Server: Para validar tokens JWT
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8080/realms/enseniamelo
+          jwk-set-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/certs
+  
   cloud:
     gateway:
       discovery:
@@ -18,9 +45,9 @@ spring:
           enabled: true
           lower-case-service-id: true
       
-      # ============ FILTRO GLOBAL: Solo propagar token ============
+      # ============ FILTRO GLOBAL: Propagar token ============
       default-filters:
-        - TokenRelay
+        - TokenRelay=
       
       routes:
         # ============ RUTAS PÚBLICAS (SIN AUTENTICACIÓN) ============
@@ -29,7 +56,7 @@ spring:
           predicates:
             - Path=/v1/auth/login,/v1/auth/register
           filters:
-            - RemoveRequestHeader=Authorization  # No necesita token
+            - RemoveRequestHeader=Authorization
           order: 0
         
         - id: auth-api-public
@@ -41,7 +68,7 @@ spring:
             - RemoveRequestHeader=Authorization
           order: 0
         
-        # ============ RUTAS PROTEGIDAS ============
+        # ============ RUTAS PROTEGIDAS - USUARIOS ============
         - id: usuarios-v1-direct
           uri: lb://usuarios-service
           predicates:
@@ -56,6 +83,7 @@ spring:
             - RewritePath=/api(?<segment>.*), $\{segment}
           order: 1
         
+        # ============ RUTAS PROTEGIDAS - TUTORES ============
         - id: tutores-v1-direct
           uri: lb://usuarios-service
           predicates:
@@ -70,6 +98,7 @@ spring:
             - RewritePath=/api(?<segment>.*), $\{segment}
           order: 1
         
+        # ============ RUTAS PROTEGIDAS - VERIFICACIÓN ============
         - id: verificacion-v1-direct
           uri: lb://usuarios-service
           predicates:
@@ -140,14 +169,6 @@ spring:
               - Authorization
             allowCredentials: true
             maxAge: 3600
-  
-  # ============ SOLO VALIDACIÓN JWT (Resource Server) ============
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://keycloak:8080/realms/enseniamelo
-          jwk-set-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/certs
 
 eureka:
   client:
@@ -181,3 +202,4 @@ logging:
     '[org.springframework.cloud.gateway.route.RouteDefinitionRouteLocator]': INFO
     '[org.springframework.cloud.gateway]': TRACE
     '[org.springframework.security]': DEBUG
+    '[org.springframework.security.oauth2]': DEBUG
