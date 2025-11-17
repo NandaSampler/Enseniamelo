@@ -1,0 +1,127 @@
+.infocurso-page {
+  @apply min-h-screen bg-slate-100;
+}
+
+.infocurso-main {
+  @apply max-w-6xl mx-auto px-4 pb-10;
+}
+
+.infocurso-layout {
+  @apply mt-8 grid gap-6 md:grid-cols-2 items-start;
+}
+
+.infocurso-left {
+  @apply flex flex-col gap-4;
+}
+
+.infocurso-media-wrapper {
+  @apply relative w-full h-56 sm:h-64 md:h-72 bg-slate-200 rounded-2xl;
+}
+
+.infocurso-media-placeholder {
+  @apply w-full h-full rounded-2xl;
+}
+
+.infocurso-media-arrow {
+  @apply absolute top-1/2 -translate-y-1/2
+         w-8 h-8 rounded-full bg-white text-slate-700
+         flex items-center justify-center text-sm font-semibold
+         shadow hover:bg-slate-100 transition;
+}
+
+.infocurso-media-arrow-left {
+  @apply left-3;
+}
+
+.infocurso-media-arrow-right {
+  @apply right-3;
+}
+
+
+/* Tutor */
+.infocurso-tutor-row {
+  @apply flex items-center justify-between gap-3;
+}
+
+.infocurso-tutor-info {
+  @apply flex items-center gap-3;
+}
+
+.infocurso-tutor-avatar {
+  @apply w-10 h-10 rounded-full object-cover;
+}
+
+.infocurso-tutor-name {
+  @apply text-sm font-semibold text-slate-900;
+}
+
+.infocurso-tutor-desc {
+  @apply text-xs text-slate-500;
+}
+
+.infocurso-chat-btn {
+  @apply w-9 h-9 rounded-full border border-slate-300 bg-white
+         flex items-center justify-center shadow-sm
+         hover:bg-slate-100 transition;
+}
+
+/* Columna derecha: info del curso */
+.infocurso-info {
+  @apply flex flex-col gap-3;
+}
+
+.infocurso-title {
+  @apply text-xl md:text-2xl font-semibold text-slate-900;
+}
+
+.infocurso-tag {
+  @apply inline-block text-[11px] font-medium px-3 py-[3px]
+         rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300;
+}
+
+.infocurso-price-row {
+  @apply flex items-baseline gap-2 mt-1;
+}
+
+.infocurso-arrow {
+  @apply text-lg text-slate-700;
+}
+
+.infocurso-price {
+  @apply text-2xl md:text-3xl font-bold text-slate-900;
+}
+
+.infocurso-summary {
+  @apply text-sm text-slate-600;
+}
+
+/* Botón Reservar  */
+.infocurso-reserve-btn {
+  @apply mt-3 w-full bg-slate-800 text-white text-sm font-medium py-2.5
+         rounded-xl shadow transition-colors hover:bg-slate-900;
+}
+
+.infocurso-description-block {
+  @apply mt-4;
+}
+
+.infocurso-description-title {
+  @apply text-sm font-semibold text-slate-800 mb-1 uppercase tracking-wide;
+}
+
+.infocurso-description-text {
+  @apply text-sm text-slate-700 leading-relaxed;
+}
+
+/* Sección de reseñas */
+.infocurso-reviews-section {
+  @apply mt-10;
+}
+
+.infocurso-reviews-title {
+  @apply text-lg md:text-xl font-semibold text-slate-900 mb-4;
+}
+
+.infocurso-reviews-grid {
+  @apply grid gap-4 md:grid-cols-3;
+}
