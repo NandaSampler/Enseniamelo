@@ -11,5 +11,5 @@ COPY --from=build /app/target/*.jar app.jar
 
 RUN apk add --no-cache curl
 
-EXPOSE 8080
+EXPOSE 8443
 ENTRYPOINT ["java", "-jar", "app.jar"]

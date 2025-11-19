@@ -62,7 +62,7 @@ services:
       kafka:
         condition: service_healthy
     ports:
-      - "8090:8080"
+      - "8090:8443"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
@@ -160,7 +160,7 @@ services:
     build: ./gateway  # ✅ Cambié de ./gateway a ./gateway-service si tu carpeta se llama gateway-service
     container_name: gateway-service  # ✅ Cambié a gateway-service para consistencia
     ports:
-      - "8080:8080"
+      - "8443:8443"
     environment:
       - SPRING_APPLICATION_NAME=gateway-service  # ✅ Cambié a gateway-service
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
@@ -171,12 +171,12 @@ services:
     depends_on:
       eureka-server:
         condition: service_healthy
-      usuarios:
+      payments-service:
         condition: service_healthy
     networks:
       - microservices-net
     healthcheck:
-      test: curl -f http://localhost:8080/actuator/health || exit 1
+      test: curl -f http://localhost:8443/actuator/health || exit 1
       interval: 15s
       timeout: 5s
       retries: 5
