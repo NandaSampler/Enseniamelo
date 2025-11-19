@@ -66,4 +66,4 @@ services:
 
 networks:
   enseniamelo-network:
-    external: true  # 👈 Importante: marca como externa
+    external: true  
