@@ -9,24 +9,12 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    volumes:
-      - zookeeper-data:/var/lib/zookeeper/data
-      - zookeeper-logs:/var/lib/zookeeper/log
-    networks:
-      - kafka-net
-    healthcheck:
-      test: nc -z localhost 2181 || exit 1
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: kafka
     depends_on:
       zookeeper:
-        condition: service_healthy
     ports:
       - "9092:9092"
       - "29092:29092"
@@ -39,34 +27,10 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_DELETE_TOPIC_ENABLE: "true"
-    volumes:
-      - kafka-data:/var/lib/kafka/data
-    networks:
-      - kafka-net
-    healthcheck:
-      test: kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1
-      interval: 10s
-      timeout: 10s
-      retries: 5
-
-
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: kafka-ui
-    depends_on:
-      kafka:
-        condition: service_healthy
-    ports:
-      - "8090:8080"
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
-      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
-    networks:
-      - kafka-net
+      KAFKA_LOG_RETENTION_HOURS: 168
 
   usuarios:
-    build: .
+    image: local/enseniamelo-usuarios-service:latest
     container_name: usuarios-service
     ports:
       - "8081:8081"
@@ -74,20 +38,12 @@ services:
       - SPRING_DATA_MONGODB_URI=mongodb+srv://jaredpimentel_db_user:DpCito170209@cluster0.cibyezm.mongodb.net/enseniamelo?retryWrites=true&w=majority
       - SPRING_DATA_MONGODB_DATABASE=enseniamelo
       - SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS=kafka:29092
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_APPLICATION_NAME=usuarios-service
+      - EUREKA_INSTANCE_HOSTNAME=usuarios-service
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/enseniamelo-realm
 
-    depends_on:
-      kafka:
-        condition: service_healthy
-    networks:
-      - kafka-net
-    restart: on-failure
-
-
-networks:
-  kafka-net:
-    driver: bridge
-
-volumes:
-  zookeeper-data:
-  zookeeper-logs:
-  kafka-data:
