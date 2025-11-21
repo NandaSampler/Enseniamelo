@@ -43,13 +43,7 @@ public class OpenApiConfig {
     String apiContactEmail;
 
     private static final String BEARER_AUTH = "bearerAuth";
-    private static final String OAUTH2_AUTH = "oauth2";
 
-    /**
-     * Will exposed on $HOST:$PORT/swagger-ui.html
-     *
-     * @return the common OpenAPI documentation
-     */
     @Bean
     public OpenAPI getOpenApiDocumentation() {
         return new OpenAPI()
@@ -81,22 +75,10 @@ public class OpenApiConfig {
                                 .type(SecurityScheme.Type.HTTP)
                                 .scheme("bearer")
                                 .bearerFormat("JWT")
-                                .description("JWT token obtenido desde Keycloak o login directo"))
-
-                        .addSecuritySchemes(OAUTH2_AUTH, new SecurityScheme()
-                                .type(SecurityScheme.Type.OAUTH2)
-                                .description("Autenticación OAuth2 con Keycloak")
-                                .flows(new io.swagger.v3.oas.models.security.OAuthFlows()
-                                        .authorizationCode(new io.swagger.v3.oas.models.security.OAuthFlow()
-                                                .authorizationUrl("http://localhost:8180/realms/enseniamelo/protocol/openid-connect/auth")
-                                                .tokenUrl("http://localhost:8180/realms/enseniamelo/protocol/openid-connect/token")
-                                                .refreshUrl("http://localhost:8180/realms/enseniamelo/protocol/openid-connect/token")
-                                                .scopes(new io.swagger.v3.oas.models.security.Scopes()
-                                                        .addString("openid", "OpenID Connect scope")
-                                                        .addString("profile", "Perfil del usuario")
-                                                        .addString("email", "Email del usuario"))))))
+                                .in(SecurityScheme.In.HEADER)
+                                .name("Authorization")
+                                .description("Ingresa tu token JWT (sin el prefijo 'Bearer ')")))
                 .addSecurityItem(new SecurityRequirement()
-                        .addList(BEARER_AUTH)
-                        .addList(OAUTH2_AUTH));
+                        .addList(BEARER_AUTH));
     }
 }
