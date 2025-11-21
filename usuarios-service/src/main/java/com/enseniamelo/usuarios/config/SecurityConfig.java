@@ -22,12 +22,13 @@ public class SecurityConfig {
 
     @Bean
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) throws Exception {
-    	http
+        http
             .csrf(csrf -> csrf.disable())
             .authorizeExchange(auth -> auth
                 .pathMatchers("/actuator/**").permitAll()
                 .pathMatchers("/openapi/**").permitAll()
                 .pathMatchers("/swagger-ui/**").permitAll()
+                .pathMatchers("/swagger-ui.html").permitAll()
                 .pathMatchers("/v3/api-docs/**").permitAll()
                 .pathMatchers("/webjars/**").permitAll()
                 .pathMatchers("/v1/auth/**").permitAll()
