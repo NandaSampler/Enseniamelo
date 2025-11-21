@@ -1,0 +1,78 @@
+server:
+  port: 7000
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8080/realms/enseniamelo-realm
+  
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+    username: guest
+    password: guest
+
+  cloud:
+    function:
+      definition: usuarioProcessor;tutorProcessor;solicitudProcessor
+    stream:
+      default-binder: rabbit
+      bindings:
+        usuarioProcessor-in-0:
+          destination: usuarios
+          content-type: application/json
+          group: usuariosGroup
+          consumer:
+            max-attempts: 3
+            back-off-initial-interval: 1000
+            back-off-max-interval: 10000
+            back-off-multiplier: 2.0
+
+        tutorProcessor-in-0:
+          destination: tutores
+          content-type: application/json
+          group: tutoresGroup
+          consumer:
+            max-attempts: 3
+            back-off-initial-interval: 1000
+            back-off-max-interval: 10000
+            back-off-multiplier: 2.0
+
+        solicitudProcessor-in-0:
+          destination: verificar-solicitudes
+          content-type: application/json
+          group: solicitudesGroup
+          consumer:
+            max-attempts: 3
+            back-off-initial-interval: 1000
+            back-off-max-interval: 10000
+            back-off-multiplier: 2.0
+
+logging:
+  level:
+    root: INFO
+    org.springdoc: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.cloud.stream: DEBUG
+    org.springframework.security: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,bindings,env
+  endpoint:
+    health:
+      show-details: always
+  health:
+    mongo:
+      enabled: true
+
+---
+spring.config.activate.on-profile: docker
+server.port: 8081
+
+---
+spring.config.activate.on-profile: local
+server.port: 7000
+spring.rabbitmq.host: localhost
