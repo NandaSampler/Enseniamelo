@@ -11,7 +11,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - enseniamelo-network
+      - microservices-net
 
   keycloak:
     image: quay.io/keycloak/keycloak:23.0.0
@@ -33,11 +33,16 @@ services:
       KC_HEALTH_ENABLED: true
     command: start-dev
     networks:
-      - enseniamelo-network
+      - microservices-net
 
 volumes:
   postgres_data:
 
+#networks:
+ # enseniamelo-network:
+  #  external: true  
+
 networks:
-  enseniamelo-network:
-    external: true  
+  microservices-net:        
+    external: true
+    name: enseniamelo_microservices-net
