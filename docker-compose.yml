@@ -65,6 +65,10 @@ services:
       - "8443:8443"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_APPLICATION_NAME=gateway-service
+      - SERVER_PORT=8443
+      - SERVER_SSL_KEY_STORE=file:/keystore/keystore.p12
+      - SERVER_SSL_KEY_STORE_PASSWORD=password
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - EUREKA_INSTANCE_HOSTNAME=gateway-service
       - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
@@ -78,6 +82,8 @@ services:
     depends_on:
       config-server:
         condition: service_healthy
+    volumes:
+      - ${KEYSTORE_PATH:-./keystore}:/keystore
     networks:
       - enseniamelo-network
 

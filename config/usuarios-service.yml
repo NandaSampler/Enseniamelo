@@ -11,6 +11,11 @@ server:
     port: 5672
     username: guest
     password: guest
+    
+  data:
+    mongodb:
+      uri: "mongodb://jaredpimente1_db_user:DpCito170209@cluster0-shard-00-00.cibvezm.mongodb.net:27017,cluster0-shard-00-01.cibvezm.mongodb.net:27017,cluster0-shard-00-02.cibvezm.mongodb.net:27017/enseniamelo?ssl=true&replicaSet=atlas-abcdef-shard-0&authSource=admin&retryWrites=true&w=majority"
+      database: enseniamelo
 
   cloud:
     function:

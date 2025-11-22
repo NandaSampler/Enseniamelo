@@ -1,4 +1,4 @@
-spring.config.import: "configserver:"
+spring.config.import: "configserver:,optional:classpath:application-openapi.yml"
 
 spring:
   application.name: usuarios-service

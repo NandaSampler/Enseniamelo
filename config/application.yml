@@ -15,14 +15,6 @@ eureka:
   instance:
     leaseRenewalIntervalInSeconds: 5
     leaseExpirationDurationInSeconds: 5
-    
-spring:
-  config:
-    import: "configserver:, optional:classpath:application-openapi.yml"
-  data:
-    mongodb:
-      uri: "mongodb://jaredpimente1_db_user:DpCito170209@cluster0-shard-00-00.cibvezm.mongodb.net:27017,cluster0-shard-00-01.cibvezm.mongodb.net:27017,cluster0-shard-00-02.cibvezm.mongodb.net:27017/enseniamelo?ssl=true&replicaSet=atlas-abcdef-shard-0&authSource=admin&retryWrites=true&w=majority"
-      database: enseniamelo
 
 management.endpoint.health.show-details: "ALWAYS"
 management.endpoints.web.exposure.include: "*"
