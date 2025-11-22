@@ -1,5 +1,6 @@
 package com.enseniamelo.mensajeservice.controllers;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,9 +27,6 @@ import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-
-
-
 @RestController
 @RequestMapping("api/chat")
 @Tag(name = "Chat", description = "API para gestionar los chats")
@@ -52,6 +50,7 @@ public class ChatController {
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @PostMapping
     @ResponseStatus(code = org.springframework.http.HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('docente', 'estudiante')")
     public Mono<ChatDTO> createChat(
         @io.swagger.v3.oas.annotations.parameters.RequestBody(
                 description = "${api.usuario.schema.usuario.description}",
@@ -75,6 +74,7 @@ public class ChatController {
             @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @GetMapping
+    @PreAuthorize("hasAnyRole('docente', 'estudiante')")
     public Flux<ChatDTO> getChats() {
         log.info("GET /api/chats - Obtener todos los chats");
         return service.obtenerTodos()
@@ -92,6 +92,7 @@ public class ChatController {
             @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('docente', 'estudiante')")
     public Mono<ChatDTO> getChatsById(
             @Parameter(description = "${api.chat.get-chat-by-id.parameters.id}", required = true)
             @PathVariable @NotBlank String id) {

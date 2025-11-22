@@ -13,6 +13,26 @@ spring:
           lower-case-service-id: true
 
       routes:
+        # ===================== SWAGGER MENSAJES SERVICE =====================
+
+        # Swagger UI HTML + recursos estáticos
+        - id: mensajes-swagger-ui
+          uri: lb://mensajes-service
+          predicates:
+            - Path=/mensajes/swagger-ui.html,/mensajes/swagger-ui/**,/mensajes/webjars/**,/mensajes/openapi/swagger-ui/**
+          filters:
+            - RewritePath=/mensajes/(?<remaining>.*), /$\{remaining}
+          order: 1
+
+        # OpenAPI JSON docs
+        - id: mensajes-openapi-docs
+          uri: lb://mensajes-service
+          predicates:
+            - Path=/mensajes/openapi/v3/api-docs,/mensajes/openapi/v3/api-docs/**
+          filters:
+            - RewritePath=/mensajes/(?<remaining>.*), /$\{remaining}
+          order: 1
+
         - id: usuarios-v1-direct
           uri: lb://usuarios-service
           predicates:
@@ -26,6 +46,21 @@ spring:
           filters:
             - RewritePath=/api(?<segment>.*), $\{segment}
           order: 1
+
+        # ===================== EUREKA SERVER =====================
+        # Eureka Dashboard (acceso a través del gateway)
+        - id: eureka-web
+          uri: http://localhost:8761
+          predicates:
+            - Path=/eureka/web
+          filters:
+            - SetPath=/
+
+        # Eureka API
+        - id: eureka-api
+          uri: http://localhost:8761
+          predicates:
+            - Path=/eureka/**
 
         # ============ RUTAS MENSAJES SERVICE ============
 
@@ -57,40 +92,6 @@ spring:
             - RewritePath=/api/v1/(?<segment>.*), /api/${segment}
           order: 1
 
-        # Eureka Dashboard (acceso a través del gateway)
-        - id: eureka-web
-          uri: http://localhost:8761
-          predicates:
-            - Path=/eureka/web
-          filters:
-            - SetPath=/
-
-        # Eureka API
-        - id: eureka-api
-          uri: http://localhost:8761
-          predicates:
-            - Path=/eureka/**
-
-        # ===================== SWAGGER MENSAJES SERVICE =====================
-
-        # Swagger UI HTML + recursos estáticos
-        - id: mensajes-swagger-ui
-          uri: lb://mensajes-service
-          predicates:
-            - Path=/mensajes/swagger-ui.html,/mensajes/swagger-ui/**,/mensajes/webjars/**,/mensajes/openapi/swagger-ui/**
-          filters:
-            - RewritePath=/mensajes/(?<remaining>.*), /$\{remaining}
-          order: 1
-
-        # OpenAPI JSON docs
-        - id: mensajes-openapi-docs
-          uri: lb://mensajes-service
-          predicates:
-            - Path=/mensajes/openapi/v3/api-docs,/mensajes/openapi/v3/api-docs/**
-          filters:
-            - RewritePath=/mensajes/(?<remaining>.*), /$\{remaining}
-          order: 1
-
       # Configuración global de CORS
       globalcors:
         corsConfigurations:
@@ -114,6 +115,13 @@ spring:
       httpclient:
         connect-timeout: 5000
         response-timeout: 10s
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://mykeycloak:8080/realms/enseniamelo
+          jwk-set-uri: http://mykeycloak:8080/realms/enseniamelo/protocol/openid-connect/certs
 
 eureka:
   client:
@@ -141,7 +149,6 @@ management:
 logging:
   level:
     root: INFO
-    org.springframework.cloud.gateway: DEBUG
-    org.springframework.cloud.gateway.handler.RoutePredicateHandlerMapping: TRACE
-    org.springframework.web: DEBUG
-    reactor.netty: INFO
+    "[org.springframework.cloud.gateway.route.RouteDefinitionRouteLocator]": INFO
+    "[org.springframework.cloud.gateway]": DEBUG
+    "[org.springframework.security]": DEBUG

@@ -1,6 +1,8 @@
 package com.enseniamelo.mensajeservice.controllers;
 
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +13,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 import com.enseniamelo.mensajeservice.dto.MensajeDTO;
 import com.enseniamelo.mensajeservice.services.MensajeService;
@@ -51,6 +57,7 @@ public class MensajeController {
             @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @PostMapping
+    @PreAuthorize("hasAnyRole('docente', 'estudiante')")
     @ResponseStatus(code = org.springframework.http.HttpStatus.CREATED)
     public Mono<MensajeDTO> createMensaje(@io.swagger.v3.oas.annotations.parameters.RequestBody(
                 description = "${api.mensaje.schema.mensaje.description}",
@@ -74,6 +81,7 @@ public class MensajeController {
             @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @GetMapping
+    @PreAuthorize("hasAnyRole('docente', 'estudiante')")
     public Flux<MensajeDTO> getMensajes() {
         return service.obtenerTodos()
         .doOnComplete(() -> log.info("Todos los mensajes obtenidos exitosamente"))
@@ -91,6 +99,7 @@ public class MensajeController {
             @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('docente', 'estudiante')")
     public Mono<MensajeDTO> getMensajeById(@Parameter(description = "${api.mensaje.get-mensaje-by-id.parameters.id}", required = true)
             @PathVariable @NotBlank String id) {
         return service.obtenerPorId(id)
@@ -109,6 +118,7 @@ public class MensajeController {
             @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('docente', 'estudiante')")
     @ResponseStatus(code = org.springframework.http.HttpStatus.NO_CONTENT)
     public Mono<MensajeDTO> updateMensaje(@Parameter(description = "${api.mensaje.update-mensaje.parameters.id}", required = true)
         @Valid @RequestBody Map<String, String> contenidoNuevo, @PathVariable @NotBlank String id) {
@@ -128,6 +138,7 @@ public class MensajeController {
             @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
             @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('docente', 'estudiante')")
     @ResponseStatus(code = org.springframework.http.HttpStatus.NO_CONTENT)
     public Mono<Void> deleteMensaje(@Parameter(description = "${api.mensaje.delete-mensaje.parameters.id}", required = true)
         @PathVariable @NotBlank String id) {
