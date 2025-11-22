@@ -12,6 +12,8 @@ RUN java -Djarmode=layertools -jar app.jar extract
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /application
 
+RUN apk add --no-cache curl
+
 # Crear usuario no root para ejecutar la app
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring

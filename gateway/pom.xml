@@ -42,7 +42,7 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
         
-        <!-- WebFlux (para WebClient y Gateway reactivo) -->
+        <!-- WebFlux (for WebClient) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
@@ -54,13 +54,13 @@
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>
         </dependency>
         
-        <!-- OAuth2 Client (para TokenRelay, etc.) -->
+        <!-- OAuth2 Client  -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-client</artifactId>
         </dependency>
         
-        <!-- OAuth2 Resource Server (validar JWT de Keycloak) -->
+        <!-- OAuth2 Resource Server (validar JWT) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
@@ -72,19 +72,17 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
-        <!-- Spring Cloud Config (configuración centralizada) -->
-        <dependency>
+        <!--<dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-config</artifactId>
         </dependency>
 
-        <!-- Retry (para reintentar conexión a Config Server, etc.) -->
         <dependency>
             <groupId>org.springframework.retry</groupId>
             <artifactId>spring-retry</artifactId>
-        </dependency>
+        </dependency>-->
         
-        <!-- Tests -->
+        <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

@@ -128,6 +128,7 @@ services:
     ports:
       - "8081:8081"
     environment:
+      - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATA_MONGODB_URI=mongodb+srv://jaredpimentel_db_user:DpCito170209@cluster0.cibyezm.mongodb.net/enseniamelo?retryWrites=true&w=majority
       - SPRING_DATA_MONGODB_DATABASE=enseniamelo
       - SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS=kafka:29092
@@ -185,13 +186,14 @@ services:
     ports:
       - "8443:8443"
     environment:
-      - SPRING_APPLICATION_NAME=gateway-service
       - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - EUREKA_INSTANCE_HOSTNAME=gateway-service
       - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
-      - EUREKA_INSTANCE_SECURE_PORT=8443
       - EUREKA_INSTANCE_SECURE_PORT_ENABLED=true
+      - EUREKA_INSTANCE_SECURE_PORT=8443
+      - EUREKA_INSTANCE_NON_SECURE_PORT_ENABLED=false
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/enseniamelo-realm
     depends_on:
       eureka-server:
         condition: service_healthy
