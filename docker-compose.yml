@@ -1,6 +1,10 @@
 version: '3.8'
 
 services:
+
+  # ============================================
+  # ZOOKEEPER
+  # ============================================
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper
@@ -15,13 +19,15 @@ services:
     networks:
       - microservices-net
     healthcheck:
-      # Anterior: test: nc -z localhost 2181 || exit 1
       test: ["CMD-SHELL", "echo srvr | nc -w 2 127.0.0.1 2181 | grep 'Mode:'"]
       interval: 10s
       timeout: 5s
       retries: 20
       start_period: 30s
 
+  # ============================================
+  # KAFKA
+  # ============================================
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: kafka
@@ -48,13 +54,15 @@ services:
     networks:
       - microservices-net
     healthcheck:
-      # Anterior: test: kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1
       test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 20
       start_period: 40s
 
+  # ============================================
+  # KAFKA UI
+  # ============================================
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
@@ -71,6 +79,9 @@ services:
     networks:
       - microservices-net
 
+  # ============================================
+  # EUREKA SERVER
+  # ============================================
   eureka-server:
     build: ./eureka-server
     container_name: eureka-server
@@ -85,6 +96,9 @@ services:
       retries: 5
     restart: on-failure
 
+  # ============================================
+  # RABBITMQ
+  # ============================================
   rabbitmq:
     image: rabbitmq:3.12-management
     container_name: rabbitmq
@@ -105,6 +119,9 @@ services:
       timeout: 5s
       retries: 5
 
+  # ============================================
+  # USUARIOS SERVICE (Java)
+  # ============================================
   usuarios:
     build: ./usuarios-service
     container_name: usuarios-service
@@ -114,6 +131,7 @@ services:
       - SPRING_DATA_MONGODB_URI=mongodb+srv://jaredpimentel_db_user:DpCito170209@cluster0.cibyezm.mongodb.net/enseniamelo?retryWrites=true&w=majority
       - SPRING_DATA_MONGODB_DATABASE=enseniamelo
       - SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS=kafka:29092
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/enseniamelo-realm
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - SPRING_APPLICATION_NAME=usuarios-service
       - EUREKA_INSTANCE_HOSTNAME=usuarios-service
@@ -127,7 +145,7 @@ services:
       eureka-server:
         condition: service_healthy
       rabbitmq:
-        condition: service_healthy  
+        condition: service_healthy
     networks:
       - microservices-net
     healthcheck:
@@ -137,7 +155,9 @@ services:
       retries: 5
     restart: on-failure
 
-    # Servicio de pagos
+  # ============================================
+  # PAYMENTS SERVICE (Python FASTAPI)
+  # ============================================
   payments-service:
     build: ./pagos-service-fastapi
     container_name: payments-service
@@ -156,18 +176,22 @@ services:
       retries: 5
     restart: on-failure
 
+  # ============================================
+  # GATEWAY SERVICE
+  # ============================================
   gateway:
-    build: ./gateway  # ✅ Cambié de ./gateway a ./gateway-service si tu carpeta se llama gateway-service
-    container_name: gateway-service  # ✅ Cambié a gateway-service para consistencia
+    build: ./gateway
+    container_name: gateway-service
     ports:
       - "8443:8443"
     environment:
-      - SPRING_APPLICATION_NAME=gateway-service  # ✅ Cambié a gateway-service
+      - SPRING_APPLICATION_NAME=gateway-service
+      - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - EUREKA_INSTANCE_HOSTNAME=gateway-service  # ✅ Cambié a gateway-service
+      - EUREKA_INSTANCE_HOSTNAME=gateway-service
       - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
-      - SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_ENABLED=true
-      - SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_LOWER_CASE_SERVICE_ID=true
+      - EUREKA_INSTANCE_SECURE_PORT=8443
+      - EUREKA_INSTANCE_SECURE_PORT_ENABLED=true
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -182,6 +206,10 @@ services:
       retries: 5
     restart: on-failure
 
+
+# ============================================
+# NETWORKS & VOLUMES
+# ============================================
 networks:
   microservices-net:
     driver: bridge 

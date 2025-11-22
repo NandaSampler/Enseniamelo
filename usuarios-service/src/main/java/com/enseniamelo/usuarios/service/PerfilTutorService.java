@@ -6,6 +6,10 @@ import org.springframework.stereotype.Service;
 
 import com.enseniamelo.usuarios.dto.PerfilTutorDTO;
 import com.enseniamelo.usuarios.mapper.PerfilTutorMapper;
+<<<<<<< HEAD
+=======
+import com.enseniamelo.usuarios.model.PerfilTutor;
+>>>>>>> 67ea0b3c6adfa571c33f7298e5fd9fc491b7511d
 import com.enseniamelo.usuarios.repository.PerfilTutorRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -20,6 +24,55 @@ public class PerfilTutorService {
 
     private final PerfilTutorRepository perfilTutorRepository;
     private final PerfilTutorMapper perfilTutorMapper;
+<<<<<<< HEAD
+=======
+    private final SequenceGeneratorService sequenceGenerator;
+
+    public Mono<PerfilTutorDTO> crearPerfilTutor(PerfilTutorDTO perfilDTO) {
+        log.info("Creando perfil de tutor para usuario: {}", perfilDTO.getIdUsuario());
+
+        return perfilTutorRepository.existsByIdUsuario(perfilDTO.getIdUsuario())
+                .flatMap(existe -> {
+                    if (existe) {
+                        log.error("El usuario {} ya tiene perfil de tutor", perfilDTO.getIdUsuario());
+                        return Mono.error(new RuntimeException("El usuario ya tiene perfil de tutor"));
+                    }
+
+                    return sequenceGenerator.generateSequence("perfil_tutor_sequence")
+                            .flatMap(idTutor -> {
+                                PerfilTutor perfil = perfilTutorMapper.dtoToEntity(perfilDTO);
+                                perfil.setIdTutor(idTutor);
+
+                                if (perfil.getVerificado() == null) {
+                                    perfil.setVerificado(false);
+                                }
+                                if (perfil.getClasificacion() == null) {
+                                    perfil.setClasificacion(0.0f);
+                                }
+
+                                LocalDateTime ahora = LocalDateTime.now();
+                                perfil.setCreacion(ahora);
+                                perfil.setActualizado(ahora);
+
+                                return perfilTutorRepository.save(perfil);
+                            });
+                })
+                .map(guardado -> {
+                    log.info("Perfil de tutor creado con id: {}", guardado.getIdTutor());
+                    return perfilTutorMapper.entityToDto(guardado);
+                });
+    }
+
+    public Mono<PerfilTutorDTO> actualizarPerfilTutor(Integer idTutor, PerfilTutorDTO perfilDTO) {
+        log.info("Actualizando perfil de tutor: {}", idTutor);
+        return actualizarPerfil(idTutor, perfilDTO);
+    }
+
+    public Mono<Void> eliminarPerfilTutor(Integer idTutor) {
+        log.info("Eliminando perfil de tutor: {}", idTutor);
+        return eliminarPerfil(idTutor);
+    }
+>>>>>>> 67ea0b3c6adfa571c33f7298e5fd9fc491b7511d
 
     public Flux<PerfilTutorDTO> obtenerTodos() {
         log.info("Obteniendo todos los perfiles de tutores");
@@ -41,7 +94,10 @@ public class PerfilTutorService {
     public Mono<PerfilTutorDTO> buscarPorUsuario(Integer idUsuario) {
         log.info("Buscando perfil del usuario: {}", idUsuario);
 
+<<<<<<< HEAD
         // ✅ CAMBIO: Buscar directamente por idUsuario en lugar de objeto Usuario
+=======
+>>>>>>> 67ea0b3c6adfa571c33f7298e5fd9fc491b7511d
         return perfilTutorRepository.findByIdUsuario(idUsuario)
                 .map(perfilTutorMapper::entityToDto)
                 .switchIfEmpty(Mono.defer(() -> {
@@ -70,7 +126,10 @@ public class PerfilTutorService {
         return perfilTutorRepository.findByIdTutor(idTutor)
                 .switchIfEmpty(Mono.error(new RuntimeException("Perfil de tutor no encontrado")))
                 .flatMap(perfil -> {
+<<<<<<< HEAD
                     // Actualiza solo campos editables
+=======
+>>>>>>> 67ea0b3c6adfa571c33f7298e5fd9fc491b7511d
                     if (perfilDTO.getCi() != null) {
                         perfil.setCi(perfilDTO.getCi());
                     }

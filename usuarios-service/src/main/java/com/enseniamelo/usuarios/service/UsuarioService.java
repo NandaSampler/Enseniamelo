@@ -71,6 +71,14 @@ public class UsuarioService {
                 .doOnSuccess(usuario -> log.info("Usuario {} encontrado", idUsuario));
     }
 
+<<<<<<< HEAD
+=======
+    public Mono<Void> eliminarUsuario(Integer idUsuario) {
+        log.info("Eliminando usuario: {}", idUsuario);
+        return eliminarPorIdUsuario(idUsuario);
+    }
+
+>>>>>>> 67ea0b3c6adfa571c33f7298e5fd9fc491b7511d
     public Mono<Void> eliminarPorIdUsuario(Integer idUsuario) {
         log.info("Eliminando usuario con idUsuario: {}", idUsuario);
 

@@ -1,4 +1,5 @@
 package com.enseniamelo.gateway.config;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
@@ -31,9 +32,13 @@ public class HealthCheckConfiguration {
     ReactiveHealthContributor healthcheckMicroservices() {
         final Map<String, ReactiveHealthIndicator> registry = new LinkedHashMap<>();
         
-        // Agrega aquí todos tus microservicios
+        // Microservicio de usuarios (Java)
         registry.put("usuarios-service", () -> getHealth("http://usuarios-service"));
-        registry.put("payments-service", () -> getHealth("http://payments-service:8002/health"));
+
+        // Microservicio de pagos (Python)
+        // El método getHealth agrega "/actuator/health", así que aquí solo va la base
+        registry.put("payments-service", () -> getHealth("http://payments-service:8002"));
+        
         // Cuando tengas más servicios, agrégalos aquí:
         // registry.put("pedidos-service", () -> getHealth("http://pedidos-service"));
         // registry.put("productos-service", () -> getHealth("http://productos-service"));
