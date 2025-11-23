@@ -33,6 +33,10 @@ public class SecurityConfig {
                 .pathMatchers("/webjars/**").permitAll()
                 .pathMatchers("/v1/auth/**").permitAll()
                 .pathMatchers("/api/v1/auth/**").permitAll()
+                .pathMatchers(HttpMethod.GET, "/v1/usuario/**").hasRole("USUARIOS_READ")
+                .pathMatchers(HttpMethod.POST, "/v1/usuario").hasRole("USUARIOS_WRITE")
+                .pathMatchers(HttpMethod.PUT, "/v1/usuario/**").hasRole("USUARIOS_UPDATE")
+                .pathMatchers(HttpMethod.DELETE, "/v1/usuario/**").hasRole("USUARIOS_DELETE")
                 .anyExchange().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2

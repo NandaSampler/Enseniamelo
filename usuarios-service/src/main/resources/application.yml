@@ -1,3 +1,5 @@
+spring.config.import: "configserver:,optional:classpath:application-openapi.yml"
+
 spring:
   application.name: usuarios-service
   cloud.config:
@@ -10,6 +12,7 @@ spring:
     uri: http://localhost:8888
     username: ${CONFIG_SERVER_USR:config-usr}
     password: ${CONFIG_SERVER_PWD:Enseniamelo2025}
+
 ---
 spring.config.activate.on-profile: docker
 

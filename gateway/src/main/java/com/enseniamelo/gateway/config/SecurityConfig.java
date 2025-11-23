@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
@@ -35,6 +36,8 @@ public class SecurityConfig {
         .pathMatchers("/openapi/**").permitAll()
         .pathMatchers("/webjars/**").permitAll()
         .pathMatchers("/ms-payments/health").permitAll()
+        .pathMatchers("/favicon.ico", "/favicon.png", "/robots.txt", "/static/**").permitAll()
+        .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
         .anyExchange().authenticated()
         )
       .oauth2ResourceServer(oauth2 -> oauth2

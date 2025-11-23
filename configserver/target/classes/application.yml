@@ -4,9 +4,8 @@ server.port: 8888
 spring.cloud.config.server.git:
   uri: https://github.com/BleeeesJc/Enseniamelo_config.git
   default-label: main
-  basedir: /tmp/config-repo
   username: BleeeesJc
-  password: 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 #Token generado en github
+  password: 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 #Token generado en github
   timeout: 30
   force-pull: true
  
