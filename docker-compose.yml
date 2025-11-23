@@ -40,8 +40,6 @@ services:
       KC_HTTP_ENABLED: true
       KC_HEALTH_ENABLED: true
       KC_METRICS_ENABLED: true
-      KC_HOSTNAME: localhost
-      KC_HOSTNAME_PORT: 8180
       KC_HOSTNAME_STRICT_HTTPS: false
     command: start-dev
     networks:
@@ -52,7 +50,7 @@ services:
       timeout: 5s
       retries: 10
       start_period: 60s
-      
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper
@@ -169,7 +167,6 @@ services:
       - SPRING_RABBITMQ_PASSWORD=guest
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/enseniamelo-realm
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/enseniamelo-realm/protocol/openid-connect/certs
-      
     depends_on:
       kafka:
         condition: service_healthy
@@ -205,12 +202,15 @@ services:
       - SPRING_RABBITMQ_PORT=5672
       - SPRING_RABBITMQ_USERNAME=guest
       - SPRING_RABBITMQ_PASSWORD=guest
+      - KEYCLOAK_JWK_SET_URI=http://keycloak:8080/realms/enseniamelo-realm/protocol/openid-connect/certs
     depends_on:
       kafka:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      keycloak:
         condition: service_healthy
     networks:
       - microservices-net

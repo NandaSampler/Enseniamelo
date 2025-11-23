@@ -11,7 +11,7 @@ spring:
         registration:
           keycloak:
             client-id: enseniamelo-client
-            client-secret: Uq38gnL4Vyd5eovmnOPKXTPTMelQclRc
+            client-secret: Qf8ZWrnZwht27VCE7u5iyBTwPq0w1Xl9
             scope: openid,profile,email
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
@@ -163,12 +163,20 @@ spring:
           order: 1
         
         # ========== RUTAS COMENTARIOS - PÚBLICAS ==========
-        - id: comentarios-api-public
+        - id: comentarios-api-public-get
           uri: lb://comentarios-service
           predicates:
             - Path=/api/comentario-curso,/api/comentario-curso/**
+            - Method=GET
           filters:
             - RemoveRequestHeader=Authorization
+          order: 0
+
+        - id: comentarios-api-secured-mutate
+          uri: lb://comentarios-service
+          predicates:
+            - Path=/api/comentario-curso,/api/comentario-curso/**
+            - Method=POST,PUT,DELETE
           order: 0
         
         # ========== EUREKA ==========
