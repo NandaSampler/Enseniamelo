@@ -119,6 +119,46 @@
             predicates:
               - Path=/eureka/**
             order: 2
+          
+          - id: ms-payments
+            uri: lb://payments-service
+            predicates:
+              - Path=/ms-payments/**
+            filters:
+              - StripPrefix=1
+              - AddRequestHeader=X-Forwarded-Prefix, /ms-payments
+              - AddRequestHeader=X-Forwarded-Proto, http
+            order: 1
+
+          - id: payments-docs
+            uri: lb://payments-service
+            predicates:
+              - Path=/payments/docs
+            filters:
+              - RewritePath=/payments/docs, /docs
+            order: 2
+
+          - id: payments-redoc
+            uri: lb://payments-service
+            predicates:
+              - Path=/payments/redoc
+            filters:
+              - RewritePath=/payments/redoc, /redoc
+            order: 2
+
+          - id: payments-openapi
+            uri: lb://payments-service
+            predicates:
+              - Path=/payments/openapi.json
+            filters:
+              - RewritePath=/payments/openapi.json, /openapi.json
+            order: 2
+
+          - id: openapi-root-to-payments
+            uri: lb://payments-service
+            predicates:
+              - Path=/openapi.json
+            order: 0
 
   eureka:
     client:
