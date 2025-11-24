@@ -11,7 +11,6 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +35,7 @@ public class UsuarioController {
         @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
         @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
     })
-    @PreAuthorize("hasRole('USUARIOS_READ')") 
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")  
     @GetMapping(value = "/{idUsuario}", produces = "application/json")
     public Mono<UsuarioDTO> getUsuario(
             @Parameter(description = "${api.usuario.get-usuario.parameters.id}", required = true)
@@ -53,7 +52,7 @@ public class UsuarioController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}")
     })
-    @PreAuthorize("hasRole('USUARIOS_READ')")
+    @PreAuthorize("hasRole('ADMIN')") 
     @GetMapping(produces = "application/json")
     public Flux<UsuarioDTO> getUsuarios() {
         log.info("GET /v1/usuario - Obteniendo todos los usuarios");
@@ -68,7 +67,7 @@ public class UsuarioController {
         @ApiResponse(responseCode = "201", description = "${api.responseCodes.created.description}"),
         @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}")
     })
-    @PreAuthorize("hasRole('USUARIOS_WRITE')")
+    @PreAuthorize("hasRole('ADMIN')") 
     @PostMapping(consumes = "application/json", produces = "application/json")
     public Mono<UsuarioDTO> createUsuario(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
@@ -90,7 +89,7 @@ public class UsuarioController {
         @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
         @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
     })
-    @PreAuthorize("hasRole('USUARIOS_UPDATE')") 
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('USER') and #idUsuario == authentication.principal.claims['user_id'])") 
     @PutMapping(value = "/{idUsuario}", consumes = "application/json", produces = "application/json")
     public Mono<UsuarioDTO> updateUsuario(
             @Parameter(description = "${api.usuario.update-usuario.parameters.id}", required = true)
@@ -109,7 +108,7 @@ public class UsuarioController {
         @ApiResponse(responseCode = "204", description = "${api.responseCodes.noContent.description}"),
         @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
     })
-    @PreAuthorize("hasRole('USUARIOS_DELETE')") 
+    @PreAuthorize("hasRole('ADMIN')") 
     @DeleteMapping(value = "/{idUsuario}")
     public Mono<Void> deleteUsuario(
             @Parameter(description = "${api.usuario.delete-usuario.parameters.id}", required = true)
