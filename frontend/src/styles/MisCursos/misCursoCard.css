@@ -1,0 +1,23 @@
+
+.miscurso-card {
+}
+
+.miscurso-header-row {
+  @apply flex items-start justify-between gap-3;
+}
+
+.miscurso-calificar {
+  @apply inline-flex items-center justify-center px-3 py-[3px] rounded-full
+         text-[11px] font-medium bg-emerald-100 text-emerald-700
+         border border-emerald-300 hover:bg-emerald-200 transition-colors;
+}
+
+.miscurso-fecha-wrapper {
+  @apply flex flex-col items-end gap-1;
+}
+
+.miscurso-fecha-chip {
+  @apply inline-flex items-center px-3 py-[3px] rounded-full
+         text-[11px] font-medium bg-slate-100 text-slate-700
+         border border-slate-300;
+}

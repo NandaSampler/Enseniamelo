@@ -27,8 +27,10 @@ public class VerificarSolicitudService {
     private final PerfilTutorRepository perfilTutorRepository;
     private final VerificarSolicitudMapper solicitudMapper;
     private final SequenceGeneratorService sequenceGenerator;
+
     public Mono<VerificarSolicitudDTO> crearSolicitud(Integer idUsuario, VerificarSolicitudDTO solicitudDTO) {
         log.info("Creando solicitud de verificación para usuario: {}", idUsuario);
+
         return usuarioRepository.existsByIdUsuario(idUsuario)
                 .flatMap(existe -> {
                     if (!existe) {
@@ -39,7 +41,8 @@ public class VerificarSolicitudService {
                             .flatMap(tieneSolicitud -> {
                                 if (tieneSolicitud) {
                                     log.error("El usuario {} ya tiene una solicitud", idUsuario);
-                                    return Mono.error(new RuntimeException("El usuario ya tiene una solicitud de verificación"));
+                                    return Mono.error(
+                                            new RuntimeException("El usuario ya tiene una solicitud de verificación"));
                                 }
                                 return sequenceGenerator.generateSequence("verificar_solicitud_sequence")
                                         .flatMap(idVerificar -> {
@@ -47,7 +50,7 @@ public class VerificarSolicitudService {
                                             solicitud.setIdVerificar(idVerificar);
                                             solicitud.setEstado("PENDIENTE");
                                             solicitud.setFotoCi(solicitudDTO.getFotoCi());
-                                            solicitud.setIdUsuario(idUsuario);  
+                                            solicitud.setIdUsuario(idUsuario);
                                             LocalDateTime ahora = LocalDateTime.now();
                                             solicitud.setCreado(ahora);
                                             solicitud.setActualizado(ahora);
@@ -55,7 +58,8 @@ public class VerificarSolicitudService {
                                                     .flatMap(guardada -> {
                                                         return usuarioRepository.findByIdUsuario(idUsuario)
                                                                 .flatMap(usuario -> {
-                                                                    usuario.setIdVerificarSolicitud(guardada.getIdVerificar());
+                                                                    usuario.setIdVerificarSolicitud(
+                                                                            guardada.getIdVerificar());
                                                                     return usuarioRepository.save(usuario);
                                                                 })
                                                                 .thenReturn(guardada);
@@ -67,6 +71,33 @@ public class VerificarSolicitudService {
                     log.info("Solicitud creada exitosamente con id: {}", guardada.getIdVerificar());
                     return solicitudMapper.entityToDto(guardada);
                 });
+    }
+    public Mono<VerificarSolicitudDTO> crearSolicitud(VerificarSolicitudDTO solicitudDTO) {
+        log.info("Creando solicitud desde evento");
+
+        Integer idUsuario = solicitudDTO.getIdUsuario();
+
+        if (idUsuario == null) {
+            return Mono.error(new RuntimeException("El idUsuario es obligatorio en el DTO"));
+        }
+        return crearSolicitud(idUsuario, solicitudDTO);
+    }
+
+    public Mono<Void> procesarVerificacion(Integer idVerificar) {
+        log.info("Procesando verificación de solicitud: {}", idVerificar);
+
+        return solicitudRepository.findByIdVerificar(idVerificar)
+                .switchIfEmpty(Mono.error(new RuntimeException("Solicitud no encontrada con id: " + idVerificar)))
+                .flatMap(solicitud -> {
+                    if (!"PENDIENTE".equals(solicitud.getEstado())) {
+                        log.warn("La solicitud {} ya fue procesada. Estado actual: {}", idVerificar,
+                                solicitud.getEstado());
+                        return Mono.empty();
+                    }
+                    log.info("Solicitud {} lista para ser aprobada o rechazada", idVerificar);
+                    return Mono.empty();
+                })
+                .then();
     }
 
     public Flux<VerificarSolicitudDTO> obtenerTodas() {
@@ -124,8 +155,8 @@ public class VerificarSolicitudService {
                                 perfil.setIdTutor(idTutor);
                                 perfil.setVerificado(true);
                                 perfil.setClasificacion(0.0f);
-                                perfil.setIdUsuario(solicitud.getIdUsuario());  
-                                perfil.setIdVerificarSolicitud(solicitud.getIdVerificar()); 
+                                perfil.setIdUsuario(solicitud.getIdUsuario());
+                                perfil.setIdVerificarSolicitud(solicitud.getIdVerificar());
                                 perfil.setCreacion(ahora);
                                 perfil.setActualizado(ahora);
 
@@ -134,9 +165,11 @@ public class VerificarSolicitudService {
                                             solicitud.setIdPerfilTutor(perfilGuardado.getIdTutor());
                                             return solicitudRepository.save(solicitud)
                                                     .flatMap(solicitudGuardada -> {
-                                                        return usuarioRepository.findByIdUsuario(solicitud.getIdUsuario())
+                                                        return usuarioRepository
+                                                                .findByIdUsuario(solicitud.getIdUsuario())
                                                                 .flatMap(usuario -> {
-                                                                    usuario.setIdPerfilTutor(perfilGuardado.getIdTutor());
+                                                                    usuario.setIdPerfilTutor(
+                                                                            perfilGuardado.getIdTutor());
                                                                     usuario.setRol("DOCENTE");
                                                                     usuario.setActualizado(ahora);
                                                                     return usuarioRepository.save(usuario);

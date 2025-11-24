@@ -1,2 +1,3 @@
+com\enseniamelo\gateway\config\SecurityConfig.class
 com\enseniamelo\gateway\GatewayApplication.class
 com\enseniamelo\gateway\config\HealthCheckConfiguration.class

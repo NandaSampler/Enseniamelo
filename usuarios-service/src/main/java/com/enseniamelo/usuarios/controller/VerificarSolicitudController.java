@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class VerificarSolicitudController {
             @ApiResponse(responseCode = "201", description = "Solicitud creada exitosamente"),
             @ApiResponse(responseCode = "400", description = "Datos inválidos o usuario ya tiene solicitud")
     })
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/usuario/{idUsuario}")
     public Mono<ResponseEntity<VerificarSolicitudDTO>> crearSolicitud(
             @Parameter(description = "ID del usuario", required = true) @PathVariable Integer idUsuario,
@@ -48,6 +50,7 @@ public class VerificarSolicitudController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de solicitudes obtenida")
     })
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping
     public Flux<VerificarSolicitudDTO> obtenerTodas() {
         log.info("GET /v1/verificacion - Obteniendo todas las solicitudes");
@@ -59,6 +62,7 @@ public class VerificarSolicitudController {
             @ApiResponse(responseCode = "200", description = "Solicitud encontrada"),
             @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
     })
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/{idVerificar}")
     public Mono<ResponseEntity<VerificarSolicitudDTO>> buscarPorId(
             @Parameter(description = "ID de la solicitud", required = true) @PathVariable Integer idVerificar) {
@@ -74,6 +78,7 @@ public class VerificarSolicitudController {
             @ApiResponse(responseCode = "200", description = "Solicitud encontrada"),
             @ApiResponse(responseCode = "404", description = "Usuario no tiene solicitud")
     })
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/usuario/{idUsuario}")
     public Mono<ResponseEntity<VerificarSolicitudDTO>> buscarPorUsuario(
             @Parameter(description = "ID del usuario", required = true) @PathVariable Integer idUsuario) {
@@ -88,6 +93,7 @@ public class VerificarSolicitudController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de solicitudes obtenida")
     })
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/estado/{estado}")
     public Flux<VerificarSolicitudDTO> obtenerPorEstado(
             @Parameter(description = "Estado: PENDIENTE, APROBADO, RECHAZADO", required = true) @PathVariable String estado) {
@@ -102,6 +108,7 @@ public class VerificarSolicitudController {
             @ApiResponse(responseCode = "400", description = "La solicitud ya fue procesada"),
             @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
     })
+    @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/{idVerificar}/aprobar")
     public Mono<ResponseEntity<VerificarSolicitudDTO>> aprobarSolicitud(
             @Parameter(description = "ID de la solicitud", required = true) @PathVariable Integer idVerificar,
@@ -119,6 +126,7 @@ public class VerificarSolicitudController {
             @ApiResponse(responseCode = "400", description = "La solicitud ya fue procesada"),
             @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
     })
+    @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/{idVerificar}/rechazar")
     public Mono<ResponseEntity<VerificarSolicitudDTO>> rechazarSolicitud(
             @Parameter(description = "ID de la solicitud", required = true) @PathVariable Integer idVerificar,
@@ -135,6 +143,7 @@ public class VerificarSolicitudController {
             @ApiResponse(responseCode = "204", description = "Solicitud eliminada"),
             @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
     })
+    @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/{idVerificar}")
     public Mono<ResponseEntity<Void>> eliminarSolicitud(
             @Parameter(description = "ID de la solicitud", required = true) @PathVariable Integer idVerificar) {
