@@ -98,6 +98,7 @@ services:
       - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
       - SPRING_PROFILES_ACTIVE=docker
       - APP_NAME=payments-service
+      - EUREKA_SERVER_URL=http://eureka-server:8761/eureka 
     depends_on:
       config-server:
         condition: service_healthy

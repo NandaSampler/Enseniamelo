@@ -34,7 +34,7 @@ def resolve_placeholders(value: str, props: dict) -> str:
 def _fetch_config(app_name: str, profile: str) -> dict:
     """
     Llama al Config Server y devuelve todas las propiedades ya mergeadas.
-    Emula lo que hace Spring Cloud Config (mezclar propertySources en orden).
+    PERO ahora mezclamos de forma que el perfil (docker) sobreescriba al base.
     """
     base_uri = os.getenv("SPRING_CLOUD_CONFIG_URI", "http://localhost:8888").rstrip("/")
     user = os.getenv("CONFIG_SERVER_USR")
@@ -48,10 +48,12 @@ def _fetch_config(app_name: str, profile: str) -> dict:
     data = resp.json()
 
     props: dict = {}
-    for src in data.get("propertySources", []):
+    for src in reversed(data.get("propertySources", [])):
         source = src.get("source", {})
         props.update(source)
+
     return props
+
 
 
 def bootstrap_from_config_server() -> None:
@@ -81,7 +83,7 @@ def bootstrap_from_config_server() -> None:
         if mongo_db:
             os.environ.setdefault("MONGO_DB", str(mongo_db))
 
-        # ---- Eureka ----
+         # ---- Eureka ----
         raw_default_zone = global_props.get("eureka.client.serviceUrl.defaultZone")
 
         if isinstance(raw_default_zone, str):
@@ -93,8 +95,22 @@ def bootstrap_from_config_server() -> None:
             host = parsed.hostname or "eureka-server"
             port = parsed.port or 8761
 
+            if host in ("localhost", "127.0.0.1", "eureka"):
+                host = "eureka-server"
+
+            # Guardar host/port para el cliente
             os.environ.setdefault("EUREKA_HOST", host)
             os.environ.setdefault("EUREKA_PORT", str(port))
+            scheme = parsed.scheme or "http"
+            path = parsed.path or "/eureka/"
+            if not path.endswith("/"):
+                path += "/"
+
+            eureka_url = f"{scheme}://{host}:{port}{path}"
+            os.environ["EUREKA_SERVER_URL"] = eureka_url  
+
+            print(f"[ConfigServer] Eureka URL resuelta: {eureka_url}")
+
 
 
         # 2) Config específica de payments-service.yml
