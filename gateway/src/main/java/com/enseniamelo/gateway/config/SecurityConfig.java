@@ -40,8 +40,9 @@ public class SecurityConfig {
 
                 .pathMatchers("/ms-payments/v1/pagos/**").hasRole("ADMIN")
 
-                .pathMatchers("/ms-payments/v1/planes/**").authenticated()
-                .pathMatchers("/ms-payments/v1/suscripciones/**").authenticated()
+                .pathMatchers("/ms-payments/v1/planes/**").hasAnyRole("USER", "TUTOR")
+                .pathMatchers("/ms-payments/v1/suscripciones/**").hasAnyRole("USER", "TUTOR")
+
                 .anyExchange().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2

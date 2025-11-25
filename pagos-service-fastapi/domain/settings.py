@@ -34,7 +34,6 @@ def resolve_placeholders(value: str, props: dict) -> str:
 def _fetch_config(app_name: str, profile: str) -> dict:
     """
     Llama al Config Server y devuelve todas las propiedades ya mergeadas.
-    PERO ahora mezclamos de forma que el perfil (docker) sobreescriba al base.
     """
     base_uri = os.getenv("SPRING_CLOUD_CONFIG_URI", "http://localhost:8888").rstrip("/")
     user = os.getenv("CONFIG_SERVER_USR")
@@ -66,7 +65,7 @@ def bootstrap_from_config_server() -> None:
     app_name_for_config = os.getenv("APP_NAME", "payments-service")
 
     try:
-        # 1) Configuración global (application.yml)
+        # 1) Configuración global 
         global_props = _fetch_config("application", profile)
 
         # ---- Mongo DB global ----

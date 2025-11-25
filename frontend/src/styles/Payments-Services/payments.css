@@ -1,0 +1,106 @@
+/* === CONTENEDOR GENERAL === */
+.payments-dashboard {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: "Inter", sans-serif;
+}
+
+.payments-dashboard h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: #1e293b;
+}
+
+.payments-dashboard h2 {
+  margin-top: 2rem;
+  margin-bottom: 0.8rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #334155;
+  border-left: 4px solid #3b82f6;
+  padding-left: 10px;
+}
+
+/* === MENSAJES === */
+.error {
+  color: #dc2626;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.no-access {
+  padding: 1rem;
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+/* === TABLAS === */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.8rem;
+  background: #ffffff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+thead {
+  background: #e2e8f0;
+}
+
+thead th {
+  padding: 0.75rem;
+  font-weight: 600;
+  color: #334155;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+tbody tr {
+  border-top: 1px solid #f1f5f9;
+}
+
+tbody tr:hover {
+  background: #f8fafc;
+}
+
+tbody td {
+  padding: 0.7rem 0.8rem;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  table {
+    font-size: 0.8rem;
+  }
+
+  thead {
+    display: none;
+  }
+
+  tbody td {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.9rem;
+  }
+
+  tbody tr {
+    display: block;
+    border-bottom: 8px solid #f1f5f9;
+  }
+
+  tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #1e293b;
+    text-transform: capitalize;
+  }
+}
