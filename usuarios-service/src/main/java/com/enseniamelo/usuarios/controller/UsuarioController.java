@@ -1,4 +1,5 @@
 package com.enseniamelo.usuarios.controller;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.enseniamelo.usuarios.dto.UsuarioDTO;
@@ -35,7 +36,7 @@ public class UsuarioController {
         @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
         @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
     })
-    @SecurityRequirement(name = "bearerAuth") 
+    @PreAuthorize("hasRole('USUARIOS_READ')") 
     @GetMapping(value = "/{idUsuario}", produces = "application/json")
     public Mono<UsuarioDTO> getUsuario(
             @Parameter(description = "${api.usuario.get-usuario.parameters.id}", required = true)
@@ -52,7 +53,7 @@ public class UsuarioController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}")
     })
-    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('USUARIOS_READ')")
     @GetMapping(produces = "application/json")
     public Flux<UsuarioDTO> getUsuarios() {
         log.info("GET /v1/usuario - Obteniendo todos los usuarios");
@@ -67,9 +68,8 @@ public class UsuarioController {
         @ApiResponse(responseCode = "201", description = "${api.responseCodes.created.description}"),
         @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}")
     })
-    @SecurityRequirement(name = "bearerAuth") 
+    @PreAuthorize("hasRole('USUARIOS_WRITE')")
     @PostMapping(consumes = "application/json", produces = "application/json")
-    @SecurityRequirement(name = "bearerAuth")
     public Mono<UsuarioDTO> createUsuario(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                 description = "${api.usuario.schema.usuario.description}",
@@ -90,7 +90,7 @@ public class UsuarioController {
         @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
         @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
     })
-    @SecurityRequirement(name = "bearerAuth") 
+    @PreAuthorize("hasRole('USUARIOS_UPDATE')") 
     @PutMapping(value = "/{idUsuario}", consumes = "application/json", produces = "application/json")
     public Mono<UsuarioDTO> updateUsuario(
             @Parameter(description = "${api.usuario.update-usuario.parameters.id}", required = true)
@@ -109,9 +109,8 @@ public class UsuarioController {
         @ApiResponse(responseCode = "204", description = "${api.responseCodes.noContent.description}"),
         @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
     })
-    @SecurityRequirement(name = "bearerAuth") 
+    @PreAuthorize("hasRole('USUARIOS_DELETE')") 
     @DeleteMapping(value = "/{idUsuario}")
-    @SecurityRequirement(name = "bearerAuth")
     public Mono<Void> deleteUsuario(
             @Parameter(description = "${api.usuario.delete-usuario.parameters.id}", required = true)
             @PathVariable Integer idUsuario) {

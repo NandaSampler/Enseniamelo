@@ -1,0 +1,195 @@
+  server.port: 8443
+  server.ssl:
+    enabled: true
+    key-store: classpath:keystore/keystore.p12
+    key-store-password: changeit
+    key-store-type: PKCS12
+    key-alias: gateway
+  spring:
+    application:
+    security:
+      oauth2:
+        resourceserver:
+          jwt:
+            issuer-uri: http://localhost:8080/realms/enseniamelo-realm
+    
+    cloud:
+      gateway:
+        default-filters:
+          - TokenRelay
+        
+        discovery:
+          locator:
+            enabled: true
+            lower-case-service-id: true
+        
+        routes:
+          # ========== RUTAS DE DOCUMENTACIÓN  ==========
+          - id: usuarios-openapi-swagger-ui
+            uri: lb://usuarios-service
+            predicates:
+              - Path=/openapi/**
+            order: -1
+          
+          - id: usuarios-swagger-ui-alias
+            uri: lb://usuarios-service
+            predicates:
+              - Path=/swagger-ui.html,/swagger-ui/**
+            filters:
+              - RewritePath=/swagger-ui(?<segment>.*), /openapi/swagger-ui$\{segment}
+            order: -1
+          
+          - id: usuarios-api-docs-alias
+            uri: lb://usuarios-service
+            predicates:
+              - Path=/v3/api-docs,/v3/api-docs/**
+            filters:
+              - RewritePath=/v3/api-docs(?<segment>.*), /openapi/v3/api-docs$\{segment}
+            order: -1
+          
+          - id: usuarios-webjars
+            uri: lb://usuarios-service
+            predicates:
+              - Path=/webjars/**
+            order: -1
+          
+          # ========== RUTAS PÚBLICAS (sin autenticación) ==========
+          - id: auth-public
+            uri: lb://usuarios-service
+            predicates:
+              - Path=/v1/auth/login,/v1/auth/register
+            filters:
+              - RemoveRequestHeader=Authorization
+            order: 0
+          
+          - id: auth-api-public
+            uri: lb://usuarios-service
+            predicates:
+              - Path=/api/v1/auth/**
+            filters:
+              - RewritePath=/api(?<segment>.*), $\{segment}
+              - RemoveRequestHeader=Authorization
+            order: 0
+          
+          # ========== RUTAS PROTEGIDAS ==========
+          - id: usuarios-v1-direct
+            uri: lb://usuarios-service
+            predicates:
+              - Path=/v1/usuario,/v1/usuario/**
+            order: 1
+          
+          - id: usuarios-v1-api
+            uri: lb://usuarios-service
+            predicates:
+              - Path=/api/v1/usuario,/api/v1/usuario/**
+            filters:
+              - RewritePath=/api(?<segment>.*), $\{segment}
+            order: 1
+          
+          - id: tutores-v1-direct
+            uri: lb://usuarios-service
+            predicates:
+              - Path=/v1/tutores,/v1/tutores/**
+            order: 1
+          
+          - id: tutores-v1-api
+            uri: lb://usuarios-service
+            predicates:
+              - Path=/api/v1/tutores,/api/v1/tutores/**
+            filters:
+              - RewritePath=/api(?<segment>.*), $\{segment}
+            order: 1
+          
+          - id: verificacion-v1-direct
+            uri: lb://usuarios-service
+            predicates:
+              - Path=/v1/verificacion,/v1/verificacion/**
+            order: 1
+          
+          - id: eureka-web-start
+            uri: http://eureka-server:8761
+            predicates:
+              - Path=/eureka/web
+            filters:
+              - SetPath=/
+            order: 2
+          
+          - id: eureka-web-other
+            uri: http://eureka-server:8761
+            predicates:
+              - Path=/eureka/**
+            order: 2
+          
+          - id: ms-payments
+            uri: lb://payments-service
+            predicates:
+              - Path=/ms-payments/**
+            filters:
+              - StripPrefix=1
+              - AddRequestHeader=X-Forwarded-Prefix, /ms-payments
+              - AddRequestHeader=X-Forwarded-Proto, http
+            order: 1
+
+          - id: payments-docs
+            uri: lb://payments-service
+            predicates:
+              - Path=/payments/docs
+            filters:
+              - RewritePath=/payments/docs, /docs
+            order: 2
+
+          - id: payments-redoc
+            uri: lb://payments-service
+            predicates:
+              - Path=/payments/redoc
+            filters:
+              - RewritePath=/payments/redoc, /redoc
+            order: 2
+
+          - id: payments-openapi
+            uri: lb://payments-service
+            predicates:
+              - Path=/payments/openapi.json
+            filters:
+              - RewritePath=/payments/openapi.json, /openapi.json
+            order: 2
+
+          - id: openapi-root-to-payments
+            uri: lb://payments-service
+            predicates:
+              - Path=/openapi.json
+            order: 0
+
+  eureka:
+    client:
+      serviceUrl:
+        defaultZone: http://eureka-server:8761/eureka/
+      initialInstanceInfoReplicationIntervalSeconds: 5
+      registryFetchIntervalSeconds: 5
+    instance:
+      preferIpAddress: true
+      hostname: gateway-service
+      leaseRenewalIntervalInSeconds: 5
+      leaseExpirationDurationInSeconds: 5
+      non-secure-port-enabled: false
+      secure-port-enabled: true
+      secure-port: 8443
+
+  management:
+    endpoint:
+      gateway:
+        enabled: true
+      health:
+        show-details: ALWAYS
+    endpoints:
+      web:
+        exposure:
+          include: "*"
+
+  logging:
+    level:
+      root: INFO
+      '[org.springframework.cloud.gateway.route.RouteDefinitionRouteLocator]': INFO
+      '[org.springframework.cloud.gateway]': DEBUG
+      '[org.springframework.security]': DEBUG
+      '[org.springframework.security.oauth2]': DEBUG

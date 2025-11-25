@@ -5,17 +5,12 @@
             "name": "UsuariosServiceApplication",
             "request": "launch",
             "mainClass": "com.enseniamelo.usuarios.UsuariosServiceApplication",
-            "projectName": "usuarios"
-        },
-        {
-            "type": "java",
-            "name": "Spring Boot-TutorServiceApplication<tutor-service>",
-            "request": "launch",
-            "cwd": "${workspaceFolder}",
-            "mainClass": "com.enseniamelo.tutorservice.TutorServiceApplication",
-            "projectName": "tutor-service",
-            "args": "",
-            "envFile": "${workspaceFolder}/.env"
+            "projectName": "usuarios",
+            "env": {
+            "CONFIG_SERVER_USR": "config-usr",
+            "CONFIG_SERVER_PWD": "Enseniamelo2025",
+            "CONFIG_SERVER_ENCRYPT_KEY": "D3s4rr0ll0"
+            }
         }
     ]
 }
