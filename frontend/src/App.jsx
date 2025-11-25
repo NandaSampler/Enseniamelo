@@ -17,6 +17,7 @@ function App() {
         {/* Login y registro */}
         <Route path="/login" element={<LoginForm />} />
         <Route path="/register" element={<RegisterForm />} />
+        <Route path="/payments-service-panel" element={<PaymentsDashboard />} />
 
         {/* Explorar */}
         <Route path="/explorar" element={
@@ -43,15 +44,7 @@ function App() {
         }/>
 
         {/* PAYMENTS SERVICE PANEL */}
-        <Route
-          path="/payments-service-panel"
-          element={
-            <>
-              <Navbar currentSection="payments" />
-              <PaymentsDashboard />
-            </>
-          }
-        />
+        <Route path="/payments-service-panel" element={<PaymentsDashboard />} />
 
         {/* Default */}
         <Route path="*" element={<Navigate to="/payments-service-panel" replace />} />

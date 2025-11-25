@@ -15,12 +15,18 @@ export default function PaymentsDashboard() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Roles (si el token existe)
+  // Roles 
   const roles = keycloak?.realmAccess?.roles || [];
   const isAdmin = roles.includes("ADMIN");
   const canViewUserData = roles.includes("USER") || roles.includes("TUTOR");
 
-  // === USE EFFECT (SIEMPRE SE EJECUTA, NO SE CONDICIONA) ===
+  const handleLogout = () => {
+    if (!keycloak) return;
+    keycloak.logout({
+      redirectUri: window.location.origin, 
+    });
+  };
+
   useEffect(() => {
     if (!initialized || !keycloak?.authenticated || !keycloak.token) return;
 
@@ -61,7 +67,6 @@ export default function PaymentsDashboard() {
     fetchData();
   }, [initialized, keycloak?.authenticated, keycloak?.token, isAdmin, canViewUserData]);
 
-  // === RENDER ===
 
   if (!initialized) return <p className="payments-dashboard">Cargando sesión...</p>;
 
@@ -70,9 +75,18 @@ export default function PaymentsDashboard() {
 
   return (
     <div className="payments-dashboard">
-      <h1>Payments Service</h1>
-      <p>Usuario: {keycloak.tokenParsed?.preferred_username}</p>
-      <p>Roles: {roles.join(", ") || "(sin roles)"}</p>
+      {/* encabezado + logout */}
+      <div className="payments-header">
+        <div>
+          <h1>Payments Service</h1>
+          <p>Usuario: {keycloak.tokenParsed?.preferred_username}</p>
+          <p>Roles: {roles.join(", ") || "(sin roles)"}</p>
+        </div>
+
+        <button className="logout-btn" onClick={handleLogout}>
+          Cerrar sesión
+        </button>
+      </div>
 
       {loading && <p>Cargando datos del microservicio...</p>}
       {error && <p className="error">{error}</p>}
@@ -90,7 +104,7 @@ export default function PaymentsDashboard() {
               </tr>
             </thead>
             <tbody>
-              {planes.map(p => (
+              {planes.map((p) => (
                 <tr key={p.id}>
                   <td>{p.id}</td><td>{p.nombre}</td><td>{p.precio}</td>
                   <td>{p.duracion}</td><td>{p.estado}</td>
@@ -115,7 +129,7 @@ export default function PaymentsDashboard() {
               </tr>
             </thead>
             <tbody>
-              {suscripciones.map(s => (
+              {suscripciones.map((s) => (
                 <tr key={s.id}>
                   <td>{s.id}</td>
                   <td>{s.user_id}</td>
@@ -144,7 +158,7 @@ export default function PaymentsDashboard() {
               </tr>
             </thead>
             <tbody>
-              {pagos.map(p => (
+              {pagos.map((p) => (
                 <tr key={p.id}>
                   <td>{p.id}</td>
                   <td>{p.suscripcion_id}</td>
