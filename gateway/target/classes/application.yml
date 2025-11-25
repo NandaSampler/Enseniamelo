@@ -33,20 +33,6 @@ spring:
             - RewritePath=/mensajes/(?<remaining>.*), /$\{remaining}
           order: 1
 
-        - id: usuarios-v1-direct
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/v1/usuario,/v1/usuario/**
-          order: 1
-
-        - id: usuarios-v1-api
-          uri: lb://usuarios-service
-          predicates:
-            - Path=/api/v1/usuario,/api/v1/usuario/**
-          filters:
-            - RewritePath=/api(?<segment>.*), $\{segment}
-          order: 1
-
         # ===================== EUREKA SERVER =====================
         # Eureka Dashboard (acceso a través del gateway)
         - id: eureka-web
