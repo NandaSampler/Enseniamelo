@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: eureka-server
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
 
 eureka:
   client:

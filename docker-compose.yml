@@ -126,7 +126,7 @@ services:
     build: ./usuarios-service
     container_name: usuarios-service
     ports:
-      - "8081:8081"
+      - "8082:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATA_MONGODB_URI=mongodb+srv://jaredpimentel_db_user:DpCito170209@cluster0.cibyezm.mongodb.net/enseniamelo?retryWrites=true&w=majority
@@ -140,6 +140,9 @@ services:
       - SPRING_RABBITMQ_PORT=5672
       - SPRING_RABBITMQ_USERNAME=guest
       - SPRING_RABBITMQ_PASSWORD=guest
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CLOUD_CONFIG_ENABLED=false
+      - SPRING_CLOUD_CONFIG_IMPORT_CHECK_ENABLED=false
     depends_on:
       kafka:
         condition: service_healthy
@@ -223,7 +226,7 @@ services:
     depends_on:
       eureka-server:
         condition: service_healthy
-      pagos-service:
+      payments-service:
         condition: service_healthy
       cursoservice:
         condition: service_healthy
@@ -243,7 +246,8 @@ services:
 # ============================================
 networks:
   microservices-net:
-    driver: bridge 
+    external: true
+    name: enseniamelo_microservices-net
 
 volumes:
   zookeeper-data:
