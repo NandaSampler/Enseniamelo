@@ -14,6 +14,12 @@ services:
     depends_on:
       config-server:
         condition: service_healthy
+    healthcheck:                        # 👈 AÑADIDO
+      test: ["CMD-SHELL", "curl -f http://localhost:8761/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - enseniamelo-network
 
@@ -31,7 +37,7 @@ services:
       - enseniamelo-network
 
   usuarios:
-    image: enseniamelo-usuarios-service:latest
+    image: enseniamelo-usuarios:latest
     ports:
       - "8081:8081"
     environment:
@@ -60,7 +66,7 @@ services:
       - enseniamelo-network
 
   gateway:
-    image: enseniamelo-gateway-service:latest
+    image: enseniamelo-gateway:latest
     mem_limit: 512m
     ports:
       - "8443:8443"
@@ -94,20 +100,19 @@ services:
     networks:
       - enseniamelo-network
 
-    # =========================
+  # =========================
   # CURSOSERVICE (FastAPI)
   # =========================
   cursoservice:
     build: ./cursoservice
     container_name: cursoservice
-    # Ya NO usamos .env ni variables manuales de app aquí
     environment:
       - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
       - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
       - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
       - SPRING_PROFILES_ACTIVE=docker
     ports:
-      - "8000:8000"       # opcional, para debug
+      - "8000:8000"
     depends_on:
       config-server:
         condition: service_healthy
@@ -121,11 +126,12 @@ services:
     networks:
       - enseniamelo-network
 
-
-  payments-service:  
+  # =========================
+  # PAYMENTS SERVICE (FastAPI)
+  # =========================
+  payments-service:
     build: ./pagos-service-fastapi
     container_name: payments-service
-    #env_file: ./pagos-service-fastapi/.env
     environment:
       - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
       - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
@@ -148,8 +154,13 @@ services:
     networks:
       - enseniamelo-network
 
+  # =========================
+  # CONFIG SERVER (Spring Cloud Config)
+  # =========================
   config-server:
+    build: ./configserver         # ⬅️ AJUSTA ESTA RUTA SI TU PROYECTO ESTÁ EN OTRO LADO
     image: enseniamelo-configserver:latest
+    container_name: config-server
     mem_limit: 512m
     environment:
       - SPRING_PROFILES_ACTIVE=docker
@@ -169,3 +180,4 @@ services:
 networks:
   enseniamelo-network:
     external: true
+    name: enseniamelo_microservices-net

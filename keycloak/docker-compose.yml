@@ -33,7 +33,7 @@ services:
       KC_HOSTNAME_STRICT: "false"
       KC_HOSTNAME_PORT: 8080
     command: start-dev
-    networks:
+    networks:  
       - microservices-net
 
 volumes:
