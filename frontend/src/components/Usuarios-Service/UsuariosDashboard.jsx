@@ -36,10 +36,8 @@ export default function UsersDashboard() {
       try {
         const userId = keycloak.tokenParsed?.sub;
 
-        if (userId) {
-          const userRes = await fetch(`${API_BASE}/v1/auth/me/${userId}`, { headers });
-          if (userRes.ok) setCurrentUser(await userRes.json());
-        }
+        const userRes = await fetch(`${API_BASE}/v1/auth/me`, { headers });
+        if (userRes.ok) setCurrentUser(await userRes.json());
 
         if (isAdmin || isUser) {
           const usuariosRes = await fetch(`${API_BASE}/v1/usuario`, { headers });
@@ -136,8 +134,8 @@ export default function UsersDashboard() {
                   <td colSpan="5" style={{textAlign: 'center'}}>No hay usuarios disponibles</td>
                 </tr>
               ) : (
-                usuarios.map((u) => (
-                  <tr key={u.id || u.idUsuario}>
+                usuarios.map((u, idx) => (
+                  <tr key={u.id || u.idUsuario || u.email || idx}>
                     <td>{u.id || u.idUsuario}</td>
                     <td>{u.email}</td>
                     <td>{u.nombre || "N/A"}</td>
@@ -170,8 +168,8 @@ export default function UsersDashboard() {
                 <td colSpan="5" style={{textAlign: 'center'}}>No hay tutores disponibles</td>
               </tr>
             ) : (
-              tutores.map((t) => (
-                <tr key={t.id || t.idTutor}>
+              tutores.map((t, idx) => (
+                <tr key={t.id || t.idTutor || t.usuarioId || t.usuario_id || idx}>
                   <td>{t.id || t.idTutor}</td>
                   <td>{t.usuarioId || t.usuario_id}</td>
                   <td>{t.especialidad || "N/A"}</td>
@@ -216,8 +214,8 @@ export default function UsersDashboard() {
                   <td colSpan="5" style={{textAlign: 'center'}}>No hay verificaciones disponibles</td>
                 </tr>
               ) : (
-                verificaciones.map((v) => (
-                  <tr key={v.id}>
+                verificaciones.map((v, idx) => (
+                  <tr key={v.id || v.usuarioId || idx}>
                     <td>{v.id}</td>
                     <td>{v.usuarioId || v.usuario_id}</td>
                     <td>{v.tipo || "N/A"}</td>
