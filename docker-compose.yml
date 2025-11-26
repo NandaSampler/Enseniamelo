@@ -82,7 +82,7 @@ services:
       - EUREKA_INSTANCE_SECURE_PORT_ENABLED=true
       - EUREKA_INSTANCE_SECURE_PORT=8443
       - EUREKA_INSTANCE_NON_SECURE_PORT_ENABLED=false
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/enseniamelo-realm
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/enseniamelo-realm/protocol/openid-connect/certs
       - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
       - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
       - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
