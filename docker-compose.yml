@@ -129,6 +129,24 @@ services:
       retries: 5
     restart: on-failure
 
+  config-server:
+    build: ./config-server
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+      - ENCRYPT_KEY=DEV_ENCRYPT_KEY_CHANGE_ME
+      - CONFIG_GIT_URI=https://github.com/BleeeesJc/Enseniamelo_config.git
+      - CONFIG_GIT_BRANCH=dp
+      - CONFIG_GIT_USERNAME=BleeeesJc
+      - CONFIG_GIT_PASSWORD=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
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - microservices-net
+
   rabbitmq:
     image: rabbitmq:3.12-management
     container_name: rabbitmq
@@ -176,6 +194,8 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
+      config-server:
+        condition: service_started
     networks:
       - microservices-net
     healthcheck:
@@ -212,6 +232,8 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
+      config-server:
+        condition: service_started
     networks:
       - microservices-net
     healthcheck:
@@ -245,6 +267,8 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
+      config-server:
+        condition: service_started
     networks:
       - microservices-net
     healthcheck:
