@@ -1,0 +1,40 @@
+server:
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-exception: true  
+
+app.eureka-server: localhost
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://${app.eureka-server}:8761/eureka/
+    initialInstanceInfoReplicationIntervalSeconds: 5
+    registryFetchIntervalSeconds: 5
+  instance:
+    leaseRenewalIntervalInSeconds: 5
+    leaseExpirationDurationInSeconds: 5
+
+  data:
+    mongodb:
+      uri: "mongodb://jaredpimente1_db_user:DpCito170209@cluster0-shard-00-00.cibvezm.mongodb.net:27017,cluster0-shard-00-01.cibvezm.mongodb.net:27017,cluster0-shard-00-02.cibvezm.mongodb.net:27017/enseniamelo?ssl=true&replicaSet=atlas-abcdef-shard-0&authSource=admin&retryWrites=true&w=majority"
+      database: enseniamelo
+
+management.endpoint.health.show-details: "ALWAYS"
+management.endpoints.web.exposure.include: "*"
+
+---
+spring.config.activate.on-profile: docker
+app.eureka-server: eureka
+spring.rabbitmq.host: rabbitmq
+spring.cloud.stream.kafka.binder.brokers: kafka
+spring.cloud.config.uri: http://config-server:8888
+
+---
+spring.config.activate.on-profile: kafka
+
+management.health.rabbit.enabled: false
+spring.cloud.stream.defaultBinder: kafka
+spring.kafka.bootstrap-servers: kafka:9092
+spring.cloud.stream.kafka.binder.replication-factor: 1
