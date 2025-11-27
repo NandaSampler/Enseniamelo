@@ -48,6 +48,13 @@ spring:
             allowCredentials: true
 
       routes:
+        - id: config-server
+          uri: http://config-server:8888
+          predicates:
+            - Path=/config/**
+          filters:
+            - RewritePath=/config/(?<segment>.*), /$\{segment}
+          order: -1
         # ========== RUTAS DE DOCUMENTACIÓN  ==========
         - id: usuarios-openapi-swagger-ui
           uri: lb://usuarios-service
