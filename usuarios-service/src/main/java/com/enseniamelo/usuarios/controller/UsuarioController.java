@@ -67,7 +67,7 @@ public class UsuarioController {
         @ApiResponse(responseCode = "201", description = "${api.responseCodes.created.description}"),
         @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}")
     })
-    @PreAuthorize("hasRole('ADMIN')") 
+    @PreAuthorize("hasAnyRole('ADMIN',USER)") 
     @PostMapping(consumes = "application/json", produces = "application/json")
     public Mono<UsuarioDTO> createUsuario(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
