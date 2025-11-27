@@ -1,10 +1,12 @@
-import { Routes, Route, Navigate } from "react-router-dom";
-import LoginForm from "./components/LoginForm";
-import RegisterForm from "./components/RegisterForm";
+import { Navigate, Route, Routes } from "react-router-dom";
 import Explorar from "./components/Explorar/Explorar";
+import InfoCurso from "./components/InfoCurso/InfoCurso";
+import LoginForm from "./components/LoginForm";
 import MisCursos from "./components/MisCursos/MisCursos";
-import InfoCurso from "./components/InfoCurso/InfoCurso"; 
+import MisCursosAdmin from "./components/MisCursos/MisCursosAdmin";
 import Navbar from "./components/Navbar";
+import RegisterForm from "./components/RegisterForm";
+
 
 function App() {
   return (
@@ -44,6 +46,15 @@ function App() {
             <>
               <Navbar currentSection="courses" />  
               <InfoCurso />
+            </>
+          }
+        />
+        <Route
+          path="/mis-cursos-admin"
+          element={
+            <>
+              <Navbar currentSection="courses" />
+              <MisCursosAdmin />
             </>
           }
         />
