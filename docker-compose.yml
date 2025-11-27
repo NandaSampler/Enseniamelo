@@ -35,6 +35,12 @@ services:
     depends_on:
       config-server:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8761/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     networks:
       - microservices-net
 
@@ -47,15 +53,24 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATA_MONGODB_URI=mongodb+srv://jaredpimentel_db_user:DpCito170209@cluster0.cibyezm.mongodb.net/enseniamelo?retryWrites=true&w=majority
       - SPRING_DATA_MONGODB_DATABASE=enseniamelo
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:9090/realms/enseniamelo
+      - EUREKA_CLIENT_ENABLED=true
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
+      - EUREKA_CLIENT_FETCH_REGISTRY=true
+      - EUREKA_CLIENT_REGISTRY-FETCH-INTERVAL-SECONDS=5
+      - EUREKA_CLIENT_INITIAL-INSTANCE-INFO-REPLICATION-INTERVAL-SECONDS=5
+      - EUREKA_INSTANCE_LEASE-RENEWAL-INTERVAL-IN-SECONDS=5
+      - EUREKA_INSTANCE_LEASE-EXPIRATION-DURATION-IN-SECONDS=10
       - SPRING_APPLICATION_NAME=mensajes-service
       - EUREKA_INSTANCE_HOSTNAME=mensajes-service
       - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
       - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
       - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
-      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=false
+      - SERVER_PORT=8082
     depends_on:
+      config-server:
+        condition: service_healthy
       eureka-server:
         condition: service_healthy
     networks:
@@ -71,11 +86,14 @@ services:
   gateway:
     build: ./gateway
     image: enseniamelo-gateway-service:latest
+    extra_hosts:
+      - "mykeycloak:172.19.0.4"
     mem_limit: 512m
     ports:
       - "8443:8443"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_APPLICATION_NAME=gateway-service
       - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
       - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
       - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}

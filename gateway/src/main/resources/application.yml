@@ -1,17 +1,26 @@
-spring.config.import: "optional:configserver:http://configserver:8888"
 spring:
-  application.name: gateway-service
-  cloud.config:
-    failFast: true
-    retry:
-      initialInterval: 3000
-      multiplier: 1.3
-      maxInterval: 10000
-      maxAttempts: 20
-    uri: http://config-server:8888
-    username: ${CONFIG_SERVER_USR:config-usr}
-    password: ${CONFIG_SERVER_PWD:Enseniamelo2025}
----
-spring.config.activate.on-profile: docker
+  config:
+    import:
+    - "optional:configserver:http://config-server:8888"
+  application:
+    name: gateway-service
+  cloud:
+    config:
+      fail-fast: false  # Cambiar a false para que no falle si config-server no responde inmediatamente
+      retry:
+        initial-interval: 3000
+        multiplier: 1.3
+        max-interval: 10000
+        max-attempts: 20
+      uri: http://config-server:8888  # Asegúrate que sea config-server con guion
+      username: ${CONFIG_SERVER_USR:config-usr}
+      password: ${CONFIG_SERVER_PWD:Enseniamelo2025}
 
-spring.cloud.config.uri: http://config-server:8888
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  cloud:
+    config:
+      uri: http://config-server:8888
