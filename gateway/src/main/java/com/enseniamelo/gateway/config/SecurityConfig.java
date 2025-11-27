@@ -27,52 +27,55 @@ public class SecurityConfig {
     @Bean
     SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
-            .authorizeExchange(auth -> auth
-                .pathMatchers("/actuator/**").permitAll()
-                .pathMatchers("/eureka/**").permitAll()
-                .pathMatchers("/error/**").permitAll()
-                .pathMatchers("/openapi/**").permitAll()
-                .pathMatchers("/webjars/**").permitAll()
-                .pathMatchers("/favicon.ico", "/favicon.png", "/robots.txt", "/static/**").permitAll()
-                .pathMatchers("/ms-payments/health").permitAll()
-                .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .csrf(csrf -> csrf.disable())
+                .authorizeExchange(auth -> auth
+                        .pathMatchers("/actuator/**").permitAll()
+                        .pathMatchers("/eureka/**").permitAll()
+                        .pathMatchers("/error/**").permitAll()
+                        .pathMatchers("/openapi/**").permitAll()
+                        .pathMatchers("/webjars/**").permitAll()
+                        .pathMatchers("/favicon.ico", "/favicon.png", "/robots.txt", "/static/**").permitAll()
+                        .pathMatchers("/ms-payments/health").permitAll()
+                        .pathMatchers("/curso/health").permitAll()
+                        .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                .pathMatchers("/ms-payments/v1/pagos/**").hasRole("ADMIN")
+                        .pathMatchers("/ms-payments/v1/pagos/**").hasRole("ADMIN")
 
-                .pathMatchers("/ms-payments/v1/planes/**").authenticated()
-                .pathMatchers("/ms-payments/v1/suscripciones/**").authenticated()
-                .anyExchange().authenticated()
-            )
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
-            );
+                        .pathMatchers("/ms-payments/v1/planes/**").authenticated()
+                        .pathMatchers("/ms-payments/v1/suscripciones/**").authenticated()
+
+                        .pathMatchers("/curso/docs", "/curso/redoc", "/curso/openapi.json").permitAll()
+                        // API principal protegida por rol
+                        .pathMatchers("/curso/api/v1/**").hasRole("CURSO_ADMIN")
+                        .anyExchange().authenticated())
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
 
         return http.build();
     }
-  
-  @Bean
-	public ReactiveJwtAuthenticationConverter jwtAuthenticationConverter() {
-  	ReactiveJwtAuthenticationConverter converter = new ReactiveJwtAuthenticationConverter();
 
-      converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-          Map<String, Object> realmAccess = jwt.getClaim("realm_access");
+    @Bean
+    public ReactiveJwtAuthenticationConverter jwtAuthenticationConverter() {
+        ReactiveJwtAuthenticationConverter converter = new ReactiveJwtAuthenticationConverter();
 
-          if (realmAccess == null || realmAccess.get("roles") == null) {
-              return Flux.empty();
-          }
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            Map<String, Object> realmAccess = jwt.getClaim("realm_access");
 
-          @SuppressWarnings("unchecked")
-          Collection<String> roles = (Collection<String>) realmAccess.get("roles");
+            if (realmAccess == null || realmAccess.get("roles") == null) {
+                return Flux.empty();
+            }
 
-          Collection<GrantedAuthority> authorities = roles.stream()
-                  .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                  .collect(Collectors.toSet());
+            @SuppressWarnings("unchecked")
+            Collection<String> roles = (Collection<String>) realmAccess.get("roles");
 
-          return Flux.fromIterable(authorities);
-      });
+            Collection<GrantedAuthority> authorities = roles.stream()
+                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                    .collect(Collectors.toSet());
 
-      return converter;
-	}
+            return Flux.fromIterable(authorities);
+        });
+
+        return converter;
+    }
 
 }
