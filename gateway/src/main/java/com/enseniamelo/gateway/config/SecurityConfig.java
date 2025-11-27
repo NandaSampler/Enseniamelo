@@ -47,6 +47,8 @@ public class SecurityConfig {
         .pathMatchers("/webjars/**").permitAll()
         .pathMatchers("/favicon.ico", "/favicon.png", "/robots.txt", "/static/**").permitAll()
         .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+        .pathMatchers("/config/encrypt").permitAll()
+        .pathMatchers("/config/decrypt").permitAll()
         .anyExchange().authenticated()
         )
       .oauth2ResourceServer(oauth2 -> oauth2
