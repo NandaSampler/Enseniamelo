@@ -93,7 +93,7 @@ services:
       eureka-server:
         condition: service_healthy
       usuarios:
-        condition: service_healthy
+        condition: service_started
       cursoservice:
         condition: service_healthy
     volumes:
