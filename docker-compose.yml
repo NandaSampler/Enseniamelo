@@ -75,7 +75,8 @@ services:
       - SPRING_APPLICATION_NAME=gateway-service
       - SERVER_PORT=8443
       - SERVER_SSL_KEY_STORE=file:/keystore/keystore.p12
-      - SERVER_SSL_KEY_STORE_PASSWORD=password
+      - SERVER_SSL_KEY_STORE_PASSWORD=changeit
+      - SERVER_SSL_KEY_STORE_TYPE=PKCS12
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - EUREKA_INSTANCE_HOSTNAME=gateway-service
       - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
@@ -138,6 +139,7 @@ services:
       - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
       - SPRING_PROFILES_ACTIVE=docker
       - APP_NAME=payments-service
+      - EUREKA_SERVER_URL=http://eureka-server:8761/eureka
     depends_on:
       config-server:
         condition: service_healthy

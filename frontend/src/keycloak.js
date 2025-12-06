@@ -2,16 +2,16 @@
 import Keycloak from "keycloak-js";
 
 const keycloak = new Keycloak({
-  url: "http://localhost:8080",       // tu Keycloak
-  realm: "enseniamelo-realm",        // tu realm
-  clientId: "frontend-react",        // tu client en Keycloak
+  url: "http://keycloak:8080",              // URL de Keycloak dentro del docker-compose
+  realm: "enseniamelo-realm",              // tu realm
+  clientId: "react-web-client",            // client del frontend en Keycloak
 });
 
-// Promesa compartida para evitar múltiples inits
+// Promesa compartida para evitar múltiples inicializaciones
 let keycloakInitPromise = null;
 
 export function initKeycloak() {
-  // Si ya se inició (o se está iniciando), devuelve la misma promesa
+  // Si ya está inicializado (o iniciándose), retorna la misma promesa
   if (keycloakInitPromise) {
     return keycloakInitPromise;
   }
@@ -24,7 +24,7 @@ export function initKeycloak() {
       return authenticated;
     })
     .catch((err) => {
-      // Si falla, reseteamos la promesa para poder reintentar si hace falta
+      // Si falla, reseteamos la promesa para permitir reintentos
       keycloakInitPromise = null;
       throw err;
     });

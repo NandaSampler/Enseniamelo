@@ -41,12 +41,18 @@ public class SecurityConfig {
 
                         .pathMatchers("/ms-payments/v1/pagos/**").hasRole("ADMIN")
 
-                        .pathMatchers("/ms-payments/v1/planes/**").authenticated()
-                        .pathMatchers("/ms-payments/v1/suscripciones/**").authenticated()
+                        // Combina ambas versiones:
+                        // - Antes: authenticated()
+                        // - Rama: hasAnyRole("USER", "TUTOR")
+                        // -> Ahora: roles de negocio + ADMIN
+                        .pathMatchers("/ms-payments/v1/planes/**").hasAnyRole("USER", "TUTOR", "ADMIN")
+                        .pathMatchers("/ms-payments/v1/suscripciones/**").hasAnyRole("USER", "TUTOR", "ADMIN")
 
+                        // Endpoints de documentación de curso públicos
                         .pathMatchers("/curso/docs", "/curso/redoc", "/curso/openapi.json").permitAll()
                         // API principal protegida por rol
                         .pathMatchers("/curso/api/v1/**").hasRole("CURSO_ADMIN")
+
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));

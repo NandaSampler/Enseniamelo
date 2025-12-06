@@ -8,36 +8,34 @@ import Navbar from "./components/Navbar";
 import RegisterForm from "./components/RegisterForm";
 
 
+// PANEL DE PAGOS
+import PaymentsDashboard from "./components/Payments-Service/PaymentDashboard";
+
 function App() {
   return (
     <div className="min-h-screen bg-slate-100">
-
       <Routes>
+
         {/* Login y registro */}
         <Route path="/login" element={<LoginForm />} />
         <Route path="/register" element={<RegisterForm />} />
+        <Route path="/payments-service-panel" element={<PaymentsDashboard />} />
 
         {/* Explorar */}
-        <Route
-          path="/explorar"
-          element={
-            <>
-              <Navbar currentSection="explore" />
-              <Explorar />
-            </>
-          }
-        />
+        <Route path="/explorar" element={
+          <>
+            <Navbar currentSection="explore" />
+            <Explorar />
+          </>
+        }/>
 
         {/* Mis cursos */}
-        <Route
-          path="/mis-cursos"
-          element={
-            <>
-              <Navbar currentSection="courses" />
-              <MisCursos />
-            </>
-          }
-        />
+        <Route path="/mis-cursos" element={
+          <>
+            <Navbar currentSection="courses" />
+            <MisCursos />
+          </>
+        }/>
 
         {/* Info de curso */}
         <Route
@@ -58,9 +56,18 @@ function App() {
             </>
           }
         />
+        <Route path="/curso/:id" element={
+          <>
+            <Navbar currentSection="courses" />
+            <InfoCurso />
+          </>
+        }/>
 
-        {/* Redirección por defecto */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        {/* PAYMENTS SERVICE PANEL */}
+        <Route path="/payments-service-panel" element={<PaymentsDashboard />} />
+
+        {/* Default */}
+        <Route path="*" element={<Navigate to="/payments-service-panel" replace />} />
       </Routes>
     </div>
   );
