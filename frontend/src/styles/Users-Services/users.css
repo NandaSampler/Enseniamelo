@@ -185,3 +185,77 @@
     padding: 0.5rem 0.75rem;
   }
 }
+
+/* Agregar al final de src/styles/Users-Service/users.css */
+
+/* Dashboard Header con botón de logout */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.dashboard-header h1 {
+  margin-bottom: 0;
+}
+
+/* Botón de Cerrar Sesión */
+.logout-button {
+  padding: 0.625rem 1.25rem;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+}
+
+.logout-button:hover {
+  background-color: #c82333;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.logout-button:active {
+  background-color: #bd2130;
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.logout-button:focus {
+  outline: 2px solid #dc3545;
+  outline-offset: 2px;
+}
+
+/* Actualizar responsive */
+@media (max-width: 768px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .users-dashboard table {
+    font-size: 0.75rem;
+  }
+
+  .users-dashboard th,
+  .users-dashboard td {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .logout-button {
+    width: 100%;
+    text-align: center;
+  }
+}

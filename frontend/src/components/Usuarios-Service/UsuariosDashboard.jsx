@@ -20,6 +20,11 @@ export default function UsersDashboard() {
   const isUser = roles.includes("USER");
   const isTutor = roles.includes("TUTOR");
 
+  // Determinar qué mostrar según roles
+  const canViewUsuarios = isAdmin || isUser;
+  const canViewTutores = isAdmin || isTutor;
+  const canViewVerificaciones = isAdmin;
+
   // ---- EFFECTS ----
   useEffect(() => {
     if (!initialized || !keycloak?.authenticated || !keycloak.token) return;
@@ -39,15 +44,17 @@ export default function UsersDashboard() {
         const userRes = await fetch(`${API_BASE}/v1/auth/me`, { headers });
         if (userRes.ok) setCurrentUser(await userRes.json());
 
-        if (isAdmin || isUser) {
+        if (canViewUsuarios) {
           const usuariosRes = await fetch(`${API_BASE}/v1/usuario`, { headers });
           if (usuariosRes.ok) setUsuarios(await usuariosRes.json());
         }
 
-        const tutoresRes = await fetch(`${API_BASE}/v1/tutores`, { headers });
-        if (tutoresRes.ok) setTutores(await tutoresRes.json());
+        if (canViewTutores) {
+          const tutoresRes = await fetch(`${API_BASE}/v1/tutores`, { headers });
+          if (tutoresRes.ok) setTutores(await tutoresRes.json());
+        }
 
-        if (isAdmin) {
+        if (canViewVerificaciones) {
           const verificacionesRes = await fetch(`${API_BASE}/v1/verificacion`, { headers });
           if (verificacionesRes.ok) setVerificaciones(await verificacionesRes.json());
         }
@@ -60,7 +67,12 @@ export default function UsersDashboard() {
     };
 
     fetchData();
-  }, [initialized, keycloak, isAdmin, isUser, isTutor]);
+  }, [initialized, keycloak, canViewUsuarios, canViewTutores, canViewVerificaciones]);
+
+  // ---- HANDLERS ----
+  const handleLogout = () => {
+    keycloak.logout();
+  };
 
   // ---- RETURNS (después de HOOKS) ----
   if (!initialized) {
@@ -71,10 +83,14 @@ export default function UsersDashboard() {
     return <p className="users-dashboard">No autenticado...</p>;
   }
 
-
   return (
     <div className="users-dashboard">
-      <h1>Users Service</h1>
+      <div className="dashboard-header">
+        <h1>Users Service</h1>
+        <button onClick={handleLogout} className="logout-button">
+          Cerrar Sesión
+        </button>
+      </div>
       
       <div className="user-info">
         <p><strong>Usuario:</strong> {keycloak.tokenParsed?.preferred_username}</p>
@@ -112,12 +128,10 @@ export default function UsersDashboard() {
         </section>
       )}
 
-      {/* USUARIOS */}
-      <section>
-        <h2>Usuarios</h2>
-        {!isAdmin && !isUser ? (
-          <p className="no-access">No tienes permiso para ver usuarios (requiere rol ADMIN o USER)</p>
-        ) : (
+      {/* USUARIOS - Solo para ADMIN o USER */}
+      {canViewUsuarios && (
+        <section>
+          <h2>Usuarios</h2>
           <table>
             <thead>
               <tr>
@@ -146,58 +160,58 @@ export default function UsersDashboard() {
               )}
             </tbody>
           </table>
-        )}
-      </section>
+        </section>
+      )}
 
-      {/* TUTORES */}
-      <section>
-        <h2>Tutores</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Usuario ID</th>
-              <th>Especialidad</th>
-              <th>Clasificación</th>
-              <th>Disponibilidad</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tutores.length === 0 ? (
+      {/* TUTORES - Solo para ADMIN o TUTOR */}
+      {canViewTutores && (
+        <section>
+          <h2>Tutores</h2>
+          <table>
+            <thead>
               <tr>
-                <td colSpan="5" style={{textAlign: 'center'}}>No hay tutores disponibles</td>
+                <th>ID</th>
+                <th>Usuario ID</th>
+                <th>Especialidad</th>
+                <th>Clasificación</th>
+                <th>Disponibilidad</th>
               </tr>
-            ) : (
-              tutores.map((t, idx) => (
-                <tr key={t.id || t.idTutor || t.usuarioId || t.usuario_id || idx}>
-                  <td>{t.id || t.idTutor}</td>
-                  <td>{t.usuarioId || t.usuario_id}</td>
-                  <td>{t.especialidad || "N/A"}</td>
-                  <td>
-                    <span className="badge badge-blue">
-                      {t.clasificacion || "N/A"}
-                    </span>
-                  </td>
-                  <td>
-                    {t.disponibilidad ? (
-                      <span className="badge badge-green">Disponible</span>
-                    ) : (
-                      <span className="badge badge-gray">No disponible</span>
-                    )}
-                  </td>
+            </thead>
+            <tbody>
+              {tutores.length === 0 ? (
+                <tr>
+                  <td colSpan="5" style={{textAlign: 'center'}}>No hay tutores disponibles</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </section>
+              ) : (
+                tutores.map((t, idx) => (
+                  <tr key={t.id || t.idTutor || t.usuarioId || t.usuario_id || idx}>
+                    <td>{t.id || t.idTutor}</td>
+                    <td>{t.usuarioId || t.usuario_id}</td>
+                    <td>{t.especialidad || "N/A"}</td>
+                    <td>
+                      <span className="badge badge-blue">
+                        {t.clasificacion || "N/A"}
+                      </span>
+                    </td>
+                    <td>
+                      {t.disponibilidad ? (
+                        <span className="badge badge-green">Disponible</span>
+                      ) : (
+                        <span className="badge badge-gray">No disponible</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </section>
+      )}
 
-      {/* VERIFICACIONES (solo ADMIN) */}
-      <section>
-        <h2>Verificaciones</h2>
-        {!isAdmin ? (
-          <p className="no-access">Solo ADMIN puede ver el listado de verificaciones.</p>
-        ) : (
+      {/* VERIFICACIONES - Solo para ADMIN */}
+      {canViewVerificaciones && (
+        <section>
+          <h2>Verificaciones</h2>
           <table>
             <thead>
               <tr>
@@ -234,8 +248,8 @@ export default function UsersDashboard() {
               )}
             </tbody>
           </table>
-        )}
-      </section>
+        </section>
+      )}
     </div>
   );
 }

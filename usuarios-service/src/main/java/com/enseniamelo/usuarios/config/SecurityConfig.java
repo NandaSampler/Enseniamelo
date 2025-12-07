@@ -35,6 +35,7 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeExchange(auth -> auth
+                // Endpoints públicos
                 .pathMatchers("/actuator/**").permitAll()
                 .pathMatchers("/openapi/**").permitAll()
                 .pathMatchers("/swagger-ui/**").permitAll()
@@ -43,20 +44,27 @@ public class SecurityConfig {
                 .pathMatchers("/webjars/**").permitAll()
                 .pathMatchers("/v1/auth/login", "/v1/auth/register").permitAll()
                 .pathMatchers("/api/v1/auth/**").permitAll()
+                
+                // Usuario endpoints 
                 .pathMatchers(HttpMethod.GET, "/v1/usuario/**").hasAnyRole("ADMIN", "USER")
                 .pathMatchers(HttpMethod.POST, "/v1/usuario").hasRole("ADMIN")
                 .pathMatchers(HttpMethod.PUT, "/v1/usuario/**").hasAnyRole("ADMIN", "USER")
                 .pathMatchers(HttpMethod.DELETE, "/v1/usuario/**").hasRole("ADMIN")
-                .pathMatchers(HttpMethod.GET, "/v1/tutores/**").hasAnyRole("ADMIN", "TUTOR")
-                .pathMatchers(HttpMethod.POST, "/v1/tutores").hasAnyRole("ADMIN")
+                
+                // Tutor endpoints 
+                .pathMatchers(HttpMethod.GET, "/v1/tutores/**").hasAnyRole("ADMIN", "USER", "TUTOR")
+                .pathMatchers(HttpMethod.POST, "/v1/tutores").hasRole("ADMIN")
                 .pathMatchers(HttpMethod.PUT, "/v1/tutores/**").hasAnyRole("ADMIN", "TUTOR")
                 .pathMatchers(HttpMethod.PATCH, "/v1/tutores/*/clasificacion").hasRole("ADMIN")
                 .pathMatchers(HttpMethod.DELETE, "/v1/tutores/**").hasRole("ADMIN")
-                .pathMatchers(HttpMethod.POST, "/v1/verificacion/usuario/**").hasRole("ADMIN")
-                .pathMatchers(HttpMethod.GET, "/v1/verificacion/usuario/**").hasRole("ADMIN")
+                
+                // Verificacion endpoints
+                .pathMatchers(HttpMethod.POST, "/v1/verificacion/usuario/**").authenticated()
+                .pathMatchers(HttpMethod.GET, "/v1/verificacion/usuario/**").authenticated()
                 .pathMatchers(HttpMethod.GET, "/v1/verificacion/**").hasRole("ADMIN")
                 .pathMatchers(HttpMethod.PUT, "/v1/verificacion/**").hasRole("ADMIN")
                 .pathMatchers(HttpMethod.DELETE, "/v1/verificacion/**").hasRole("ADMIN")
+                
                 .anyExchange().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2

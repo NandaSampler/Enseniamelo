@@ -52,7 +52,7 @@ public class UsuarioController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}")
     })
-    @PreAuthorize("hasRole('ADMIN')") 
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')") 
     @GetMapping(produces = "application/json")
     public Flux<UsuarioDTO> getUsuarios() {
         log.info("GET /v1/usuario - Obteniendo todos los usuarios");
@@ -67,7 +67,7 @@ public class UsuarioController {
         @ApiResponse(responseCode = "201", description = "${api.responseCodes.created.description}"),
         @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}")
     })
-    @PreAuthorize("hasAnyRole('ADMIN',USER)") 
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     @PostMapping(consumes = "application/json", produces = "application/json")
     public Mono<UsuarioDTO> createUsuario(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
