@@ -1,4 +1,21 @@
 /* === CONTENEDOR GENERAL === */
+.logout-button {
+  background-color: #ef4444;
+  /* rojo */
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin: 10px 0;
+  font-weight: bold;
+}
+
+.logout-button:hover {
+  background-color: #dc2626;
+  /* rojo más oscuro */
+}
+
 .payments-dashboard {
   padding: 2rem;
   max-width: 1200px;

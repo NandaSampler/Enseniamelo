@@ -16,7 +16,7 @@
     <artifactId>gateway</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>gateway</name>
-    <description>API Gateway with OAuth2 Security</description>
+    <description>API Gateway</description>
     
     <properties>
         <java.version>17</java.version>

@@ -1,4 +1,3 @@
-# Fase de construcción
 FROM eclipse-temurin:21-jre-alpine AS builder
 WORKDIR /extracted
 ARG JAR_FILE=target/*.jar

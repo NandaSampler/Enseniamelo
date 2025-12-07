@@ -124,5 +124,4 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", config);
         return new CorsWebFilter(source);
       }
-
 }
