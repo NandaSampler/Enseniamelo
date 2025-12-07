@@ -31,8 +31,8 @@ public class HealthCheckConfiguration {
     ReactiveHealthContributor healthcheckMicroservices() {
         final Map<String, ReactiveHealthIndicator> registry = new LinkedHashMap<>();
         
-        // Agrega aquí todos tus microservicios
         registry.put("usuarios-service", () -> getHealth("http://usuarios-service"));
+        registry.put("mensajes-service", () -> getHealth("http://mensajes-service"));
         return CompositeReactiveHealthContributor.fromMap(registry);
     }
 
