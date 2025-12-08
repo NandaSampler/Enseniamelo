@@ -35,7 +35,7 @@ public class SecurityConfig {
                     "/actuator/**"
                 ).permitAll()
 
-                // Reglas de endpoints de comentarios
+                // permisos de endpoints
                 .pathMatchers(HttpMethod.GET, "/api/comentario-curso/**").permitAll()
                 .pathMatchers(HttpMethod.POST, "/api/comentario-curso/**").hasAnyRole("USER", "ADMIN")
                 .pathMatchers(HttpMethod.PUT, "/api/comentario-curso/**").hasRole("ADMIN")
