@@ -9,5 +9,5 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 ENV SPRING_PROFILES_ACTIVE=prod \
     JAVA_OPTS=""
-EXPOSE 8082
+EXPOSE 8083
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

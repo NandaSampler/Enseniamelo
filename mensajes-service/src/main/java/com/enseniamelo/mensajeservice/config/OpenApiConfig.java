@@ -1,9 +1,6 @@
-<<<<<<<< HEAD:mensajes-service/src/main/java/com/enseniamelo/mensajeservice/config/OpenApiConfig.java
+
 package com.enseniamelo.mensajeservice.config;
 
-========
-package com.enseniamelo.usuarios.config;
->>>>>>>> origin/dpDesarrollo:usuarios-service/src/main/config/OpenApiConfig.java
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
