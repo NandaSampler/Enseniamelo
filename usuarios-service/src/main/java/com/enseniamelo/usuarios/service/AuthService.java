@@ -84,7 +84,11 @@ public class AuthService {
     public Mono<AuthResponse> getUserById(String userId) {
         log.debug("Buscando usuario con id: {}", userId);
         return usuarioRepository.findById(userId)
+<<<<<<< HEAD
             .switchIfEmpty(Mono.empty())
+=======
+            .switchIfEmpty(Mono.error(new RuntimeException("Usuario no encontrado")))
+>>>>>>> origin/dpDesarrollo
             .map(usuario -> new AuthResponse(
                 usuario.getId(),
                 usuario.getIdUsuario(),
@@ -97,6 +101,7 @@ public class AuthService {
                 null
             ));
     }
+<<<<<<< HEAD
 
     public Mono<AuthResponse> getUserByEmail(String email) {
         log.debug("Buscando usuario por email: {}", email);
@@ -114,6 +119,8 @@ public class AuthService {
                         null
                 ));
     }
+=======
+>>>>>>> origin/dpDesarrollo
     private Mono<Integer> generarNuevoIdUsuario() {
         return usuarioRepository.findAll()
             .filter(u -> u.getIdUsuario() != null)

@@ -2,8 +2,11 @@ package com.enseniamelo.usuarios.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+<<<<<<< HEAD
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+=======
+>>>>>>> origin/dpDesarrollo
 
 import com.enseniamelo.usuarios.dto.AuthResponse;
 import com.enseniamelo.usuarios.dto.LoginRequest;
@@ -84,6 +87,7 @@ public class AuthController {
         @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     })
     @GetMapping(value = "/me/{userId}", produces = "application/json")
+<<<<<<< HEAD
     public Mono<ResponseEntity<AuthResponse>> getCurrentUser(
             @Parameter(description = "ID del usuario autenticado", required = true)
             @PathVariable String userId,
@@ -137,6 +141,16 @@ public class AuthController {
         // If no email in token, return fallback with sub if possible
         AuthResponse fallback = new AuthResponse(sub, null, jwt.getClaimAsString("preferred_username"), null, null, null, "Usuario temporal desde token");
         return Mono.just(ResponseEntity.ok(fallback));
+=======
+    public Mono<AuthResponse> getCurrentUser(
+            @Parameter(description = "ID del usuario autenticado", required = true)
+            @PathVariable String userId) {
+
+        log.info("GET /v1/auth/me/{} - Obteniendo datos del usuario", userId);
+        return authService.getUserById(userId)
+            .doOnSuccess(response -> log.info("Usuario {} encontrado", userId))
+            .doOnError(error -> log.error("Error obteniendo usuario {}: {}", userId, error.getMessage()));
+>>>>>>> origin/dpDesarrollo
     }
 
     @Operation(summary = "Cerrar sesión", 

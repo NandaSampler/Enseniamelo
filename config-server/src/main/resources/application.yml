@@ -1,0 +1,36 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-server
+  cloud:
+    config:
+      server:
+        git:
+          uri: ${CONFIG_GIT_URI:https://github.com/your-user/your-config-repo.git}
+          default-label: ${CONFIG_GIT_BRANCH:main}
+          clone-on-start: true
+          username: ${CONFIG_GIT_USERNAME:}
+          password: ${CONFIG_GIT_PASSWORD:}
+
+# Clave de cifrado (solo dev). También puede usarse ENCRYPT_KEY como variable de entorno
+encrypt:
+  key: ${ENCRYPT_KEY:DEV_ENCRYPT_KEY_CHANGE_ME}
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://eureka-server:8761/eureka/
+  instance:
+    preferIpAddress: true
+    hostname: config-server
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,env,encrypt,decrypt
+  endpoint:
+    health:
+      show-details: always

@@ -71,6 +71,7 @@ public class UsuarioService {
                 .doOnSuccess(usuario -> log.info("Usuario {} encontrado", idUsuario));
     }
 
+<<<<<<< HEAD
     public Mono<UsuarioDTO> buscarPorEmail(String email) {
         log.info("Buscando usuario por email: {}", email);
         return usuarioRepository.findByEmail(email)
@@ -82,6 +83,8 @@ public class UsuarioService {
         return eliminarPorIdUsuario(idUsuario);
     }
 
+=======
+>>>>>>> origin/dpDesarrollo
     public Mono<Void> eliminarPorIdUsuario(Integer idUsuario) {
         log.info("Eliminando usuario con idUsuario: {}", idUsuario);
 

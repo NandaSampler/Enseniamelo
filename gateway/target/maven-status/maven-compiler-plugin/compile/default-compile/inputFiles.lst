@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 C:\Users\valen\Desktop\Enseñamelo\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\config\HealthCheckConfiguration.java
 C:\Users\valen\Desktop\Enseñamelo\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\config\SecurityConfig.java
 C:\Users\valen\Desktop\Enseñamelo\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\GatewayApplication.java
@@ -7,3 +8,7 @@ C:\Github\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\GatewayAppli
 C:\Github\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\config\SecurityConfig.java
 C:\Github\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\config\HealthCheckConfiguration.java
 >>>>>>> origin/domBranch
+=======
+C:\Users\valen\Desktop\Enseñamelo\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\config\HealthCheckConfiguration.java
+C:\Users\valen\Desktop\Enseñamelo\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\GatewayApplication.java
+>>>>>>> origin/dpDesarrollo
