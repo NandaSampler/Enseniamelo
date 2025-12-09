@@ -7,7 +7,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.4.5</version>
+		<version>3.4.5</version>  <!-- Cambia de 3.5.5 a 3.4.5 -->
 		<relativePath />
 	</parent>
 
@@ -40,6 +40,11 @@
 			<artifactId>spring-boot-starter-data-mongodb-reactive</artifactId>
 		</dependency>
 
+		<!-- OAuth2 Resource Server -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+		</dependency>
 		<!-- Eureka Client -->
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
@@ -59,16 +64,6 @@
 			<scope>provided</scope>
 		</dependency>
 
-		<!-- Security + Resource Server (Keycloak JWT) -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-security</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
-		</dependency>
-
 		<dependency>
 			<groupId>org.mapstruct</groupId>
 			<artifactId>mapstruct</artifactId>
@@ -80,8 +75,8 @@
 		    <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
 		    <version>2.8.5</version>
 		</dependency>
-
-		<!-- ============ SPRING CLOUD STREAM ============ -->
+		
+		<!-- Spring Cloud Stream -->
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-stream</artifactId>
@@ -92,26 +87,20 @@
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-stream-binder-kafka</artifactId>
 		</dependency>
-
 		<!-- RabbitMQ Binder -->
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-stream-binder-rabbit</artifactId>
-			<exclusions>
-				<exclusion>
-					<groupId>commons-logging</groupId>
-					<artifactId>commons-logging</artifactId>
-				</exclusion>
-			</exclusions>
 		</dependency>
-
-		<!-- Bridge Commons Logging to SLF4J to avoid conflicts with spring-jcl -->
+		<!-- Configserver -->
 		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>jcl-over-slf4j</artifactId>
-			<version>2.0.7</version>
-		</dependency>
-
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-config</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.retry</groupId>
+            <artifactId>spring-retry</artifactId>
+        </dependency>
 		<!-- Test -->
 		<dependency>
 			<groupId>io.projectreactor</groupId>
@@ -129,6 +118,12 @@
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-stream-test-binder</artifactId>
 			<scope>test</scope>
+		</dependency>
+
+		<!-- BCrypt para encriptar contraseñas -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-crypto</artifactId>
 		</dependency>
 	</dependencies>
 
