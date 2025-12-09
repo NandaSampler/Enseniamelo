@@ -2,10 +2,7 @@ package com.enseniamelo.usuarios.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-<<<<<<< HEAD
 import org.springframework.security.access.prepost.PreAuthorize;
-=======
->>>>>>> origin/dpDesarrollo
 import org.springframework.web.bind.annotation.*;
 
 import com.enseniamelo.usuarios.dto.VerificarSolicitudDTO;
@@ -38,10 +35,7 @@ public class VerificarSolicitudController {
             @ApiResponse(responseCode = "201", description = "Solicitud creada exitosamente"),
             @ApiResponse(responseCode = "400", description = "Datos inválidos o usuario ya tiene solicitud")
     })
-<<<<<<< HEAD
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
-=======
->>>>>>> origin/dpDesarrollo
     @PostMapping("/usuario/{idUsuario}")
     public Mono<ResponseEntity<VerificarSolicitudDTO>> crearSolicitud(
             @Parameter(description = "ID del usuario", required = true) @PathVariable Integer idUsuario,
@@ -56,10 +50,7 @@ public class VerificarSolicitudController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de solicitudes obtenida")
     })
-<<<<<<< HEAD
     @PreAuthorize("hasRole('ADMIN')")
-=======
->>>>>>> origin/dpDesarrollo
     @GetMapping
     public Flux<VerificarSolicitudDTO> obtenerTodas() {
         log.info("GET /v1/verificacion - Obteniendo todas las solicitudes");
@@ -71,10 +62,7 @@ public class VerificarSolicitudController {
             @ApiResponse(responseCode = "200", description = "Solicitud encontrada"),
             @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
     })
-<<<<<<< HEAD
     @PreAuthorize("hasRole('ADMIN')")
-=======
->>>>>>> origin/dpDesarrollo
     @GetMapping("/{idVerificar}")
     public Mono<ResponseEntity<VerificarSolicitudDTO>> buscarPorId(
             @Parameter(description = "ID de la solicitud", required = true) @PathVariable Integer idVerificar) {
@@ -90,10 +78,7 @@ public class VerificarSolicitudController {
             @ApiResponse(responseCode = "200", description = "Solicitud encontrada"),
             @ApiResponse(responseCode = "404", description = "Usuario no tiene solicitud")
     })
-<<<<<<< HEAD
     @PreAuthorize("hasRole('ADMIN') or #idUsuario == authentication.principal.claims['user_id']")
-=======
->>>>>>> origin/dpDesarrollo
     @GetMapping("/usuario/{idUsuario}")
     public Mono<ResponseEntity<VerificarSolicitudDTO>> buscarPorUsuario(
             @Parameter(description = "ID del usuario", required = true) @PathVariable Integer idUsuario) {
@@ -108,10 +93,7 @@ public class VerificarSolicitudController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de solicitudes obtenida")
     })
-<<<<<<< HEAD
     @PreAuthorize("hasRole('ADMIN')")
-=======
->>>>>>> origin/dpDesarrollo
     @GetMapping("/estado/{estado}")
     public Flux<VerificarSolicitudDTO> obtenerPorEstado(
             @Parameter(description = "Estado: PENDIENTE, APROBADO, RECHAZADO", required = true) @PathVariable String estado) {
@@ -126,10 +108,7 @@ public class VerificarSolicitudController {
             @ApiResponse(responseCode = "400", description = "La solicitud ya fue procesada"),
             @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
     })
-<<<<<<< HEAD
     @PreAuthorize("hasRole('ADMIN')")
-=======
->>>>>>> origin/dpDesarrollo
     @PutMapping("/{idVerificar}/aprobar")
     public Mono<ResponseEntity<VerificarSolicitudDTO>> aprobarSolicitud(
             @Parameter(description = "ID de la solicitud", required = true) @PathVariable Integer idVerificar,
@@ -147,10 +126,7 @@ public class VerificarSolicitudController {
             @ApiResponse(responseCode = "400", description = "La solicitud ya fue procesada"),
             @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
     })
-<<<<<<< HEAD
     @PreAuthorize("hasRole('ADMIN')")
-=======
->>>>>>> origin/dpDesarrollo
     @PutMapping("/{idVerificar}/rechazar")
     public Mono<ResponseEntity<VerificarSolicitudDTO>> rechazarSolicitud(
             @Parameter(description = "ID de la solicitud", required = true) @PathVariable Integer idVerificar,
@@ -167,10 +143,7 @@ public class VerificarSolicitudController {
             @ApiResponse(responseCode = "204", description = "Solicitud eliminada"),
             @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
     })
-<<<<<<< HEAD
     @PreAuthorize("hasRole('ADMIN')")
-=======
->>>>>>> origin/dpDesarrollo
     @DeleteMapping("/{idVerificar}")
     public Mono<ResponseEntity<Void>> eliminarSolicitud(
             @Parameter(description = "ID de la solicitud", required = true) @PathVariable Integer idVerificar) {

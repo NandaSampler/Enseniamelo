@@ -3,11 +3,6 @@ package com.enseniamelo.usuarios.mapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
-<<<<<<< HEAD
-=======
-import org.mapstruct.NullValuePropertyMappingStrategy;
-
->>>>>>> origin/dpDesarrollo
 import com.enseniamelo.usuarios.dto.VerificarSolicitudDTO;
 import com.enseniamelo.usuarios.model.VerificarSolicitud;
 

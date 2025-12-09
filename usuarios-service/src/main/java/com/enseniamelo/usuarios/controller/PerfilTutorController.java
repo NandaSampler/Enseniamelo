@@ -1,10 +1,7 @@
 package com.enseniamelo.usuarios.controller;
 
 import org.springframework.http.ResponseEntity;
-<<<<<<< HEAD
 import org.springframework.security.access.prepost.PreAuthorize;
-=======
->>>>>>> origin/dpDesarrollo
 import org.springframework.web.bind.annotation.*;
 
 import com.enseniamelo.usuarios.dto.PerfilTutorDTO;
@@ -36,29 +33,19 @@ public class PerfilTutorController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Lista de tutores obtenida")
     })
-<<<<<<< HEAD
     @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'TUTOR')")
-=======
->>>>>>> origin/dpDesarrollo
     @GetMapping
     public Flux<PerfilTutorDTO> obtenerTodos() {
         log.info("GET /v1/tutores - Obteniendo todos los tutores");
         return perfilTutorService.obtenerTodos();
     }
-<<<<<<< HEAD
     
-=======
-
->>>>>>> origin/dpDesarrollo
     @Operation(summary = "Buscar tutor por ID")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Tutor encontrado"),
         @ApiResponse(responseCode = "404", description = "Tutor no encontrado")
     })
-<<<<<<< HEAD
     @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'TUTOR')")
-=======
->>>>>>> origin/dpDesarrollo
     @GetMapping("/{idTutor}")
     public Mono<ResponseEntity<PerfilTutorDTO>> buscarPorId(
             @Parameter(description = "ID del tutor", required = true)
@@ -75,10 +62,7 @@ public class PerfilTutorController {
         @ApiResponse(responseCode = "200", description = "Perfil encontrado"),
         @ApiResponse(responseCode = "404", description = "Usuario no tiene perfil de tutor")
     })
-<<<<<<< HEAD
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER') or hasRole('TUTOR')")
-=======
->>>>>>> origin/dpDesarrollo
     @GetMapping("/usuario/{idUsuario}")
     public Mono<ResponseEntity<PerfilTutorDTO>> buscarPorUsuario(
             @Parameter(description = "ID del usuario", required = true)
@@ -94,10 +78,7 @@ public class PerfilTutorController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Lista de tutores verificados")
     })
-<<<<<<< HEAD
     @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'TUTOR')")
-=======
->>>>>>> origin/dpDesarrollo
     @GetMapping("/verificados")
     public Flux<PerfilTutorDTO> obtenerVerificados() {
         log.info("GET /v1/tutores/verificados - Obteniendo tutores verificados");
@@ -108,10 +89,7 @@ public class PerfilTutorController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Lista de tutores filtrados")
     })
-<<<<<<< HEAD
     @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'TUTOR')")
-=======
->>>>>>> origin/dpDesarrollo
     @GetMapping("/clasificacion/{minima}")
     public Flux<PerfilTutorDTO> obtenerPorClasificacion(
             @Parameter(description = "Clasificación mínima (0-5)", required = true)
@@ -126,10 +104,7 @@ public class PerfilTutorController {
         @ApiResponse(responseCode = "200", description = "Perfil actualizado"),
         @ApiResponse(responseCode = "404", description = "Perfil no encontrado")
     })
-<<<<<<< HEAD
     @PreAuthorize("hasRole('ADMIN') or hasRole('TUTOR')")
-=======
->>>>>>> origin/dpDesarrollo
     @PutMapping("/{idTutor}")
     public Mono<ResponseEntity<PerfilTutorDTO>> actualizarPerfil(
             @Parameter(description = "ID del tutor", required = true)
@@ -146,10 +121,7 @@ public class PerfilTutorController {
         @ApiResponse(responseCode = "200", description = "Clasificación actualizada"),
         @ApiResponse(responseCode = "404", description = "Tutor no encontrado")
     })
-<<<<<<< HEAD
     @PreAuthorize("hasRole('ADMIN')")
-=======
->>>>>>> origin/dpDesarrollo
     @PatchMapping("/{idTutor}/clasificacion")
     public Mono<ResponseEntity<PerfilTutorDTO>> actualizarClasificacion(
             @Parameter(description = "ID del tutor", required = true)
@@ -167,10 +139,7 @@ public class PerfilTutorController {
         @ApiResponse(responseCode = "204", description = "Perfil eliminado"),
         @ApiResponse(responseCode = "404", description = "Perfil no encontrado")
     })
-<<<<<<< HEAD
     @PreAuthorize("hasRole('ADMIN')")
-=======
->>>>>>> origin/dpDesarrollo
     @DeleteMapping("/{idTutor}")
     public Mono<ResponseEntity<Void>> eliminarPerfil(
             @Parameter(description = "ID del tutor", required = true)

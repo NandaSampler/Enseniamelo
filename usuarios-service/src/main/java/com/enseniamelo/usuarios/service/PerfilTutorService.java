@@ -6,10 +6,7 @@ import org.springframework.stereotype.Service;
 
 import com.enseniamelo.usuarios.dto.PerfilTutorDTO;
 import com.enseniamelo.usuarios.mapper.PerfilTutorMapper;
-<<<<<<< HEAD
 import com.enseniamelo.usuarios.model.PerfilTutor;
-=======
->>>>>>> origin/dpDesarrollo
 import com.enseniamelo.usuarios.repository.PerfilTutorRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -24,7 +21,6 @@ public class PerfilTutorService {
 
     private final PerfilTutorRepository perfilTutorRepository;
     private final PerfilTutorMapper perfilTutorMapper;
-<<<<<<< HEAD
     private final SequenceGeneratorService sequenceGenerator;
 
     public Mono<PerfilTutorDTO> crearPerfilTutor(PerfilTutorDTO perfilDTO) {
@@ -71,8 +67,6 @@ public class PerfilTutorService {
         log.info("Eliminando perfil de tutor: {}", idTutor);
         return eliminarPerfil(idTutor);
     }
-=======
->>>>>>> origin/dpDesarrollo
 
     public Flux<PerfilTutorDTO> obtenerTodos() {
         log.info("Obteniendo todos los perfiles de tutores");
@@ -94,10 +88,6 @@ public class PerfilTutorService {
     public Mono<PerfilTutorDTO> buscarPorUsuario(Integer idUsuario) {
         log.info("Buscando perfil del usuario: {}", idUsuario);
 
-<<<<<<< HEAD
-=======
-        // ✅ CAMBIO: Buscar directamente por idUsuario en lugar de objeto Usuario
->>>>>>> origin/dpDesarrollo
         return perfilTutorRepository.findByIdUsuario(idUsuario)
                 .map(perfilTutorMapper::entityToDto)
                 .switchIfEmpty(Mono.defer(() -> {
@@ -126,10 +116,6 @@ public class PerfilTutorService {
         return perfilTutorRepository.findByIdTutor(idTutor)
                 .switchIfEmpty(Mono.error(new RuntimeException("Perfil de tutor no encontrado")))
                 .flatMap(perfil -> {
-<<<<<<< HEAD
-=======
-                    // Actualiza solo campos editables
->>>>>>> origin/dpDesarrollo
                     if (perfilDTO.getCi() != null) {
                         perfil.setCi(perfilDTO.getCi());
                     }
