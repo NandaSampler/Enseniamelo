@@ -14,7 +14,7 @@ services:
     depends_on:
       config-server:
         condition: service_healthy
-    healthcheck:                        # 👈 AÑADIDO
+    healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8761/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
@@ -62,6 +62,60 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
+    networks:
+      - enseniamelo-network
+
+  mensajes:
+    image: mensajes-service:latest
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATA_MONGODB_URI=mongodb+srv://jaredpimentel_db_user:DpCito170209@cluster0.cibyezm.mongodb.net/enseniamelo?retryWrites=true&w=majority
+      - SPRING_DATA_MONGODB_DATABASE=enseniamelo
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/enseniamelo-realm
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_APPLICATION_NAME=mensajes-service
+      - EUREKA_INSTANCE_HOSTNAME=mensajes-service
+      - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+      - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
+      - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - SERVER_PORT=8082
+    depends_on:
+      config-server:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8082/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - enseniamelo-network
+
+  comentarios:
+    image: comentarios-service:latest
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_DATA_MONGODB_URI=mongodb+srv://jaredpimentel_db_user:DpCito170209@cluster0.cibyezm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - SPRING_DATA_MONGODB_DATABASE=enseniamelo
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/enseniamelo-realm
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_APPLICATION_NAME=comentarios-service
+      - EUREKA_INSTANCE_HOSTNAME=comentarios-service
+      - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+      - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
+      - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - SERVER_PORT=8083
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
     networks:
       - enseniamelo-network
 
@@ -159,7 +213,7 @@ services:
   # CONFIG SERVER (Spring Cloud Config)
   # =========================
   config-server:
-    build: ./configserver         # ⬅️ AJUSTA ESTA RUTA SI TU PROYECTO ESTÁ EN OTRO LADO
+    build: ./configserver
     image: enseniamelo-configserver:latest
     container_name: config-server
     mem_limit: 512m

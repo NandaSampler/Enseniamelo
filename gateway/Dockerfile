@@ -38,7 +38,7 @@ RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring
 
 # Copiar capas generadas
-COPY --from=builder /extracted/dependencies/ ./
+COPY --from=builder /extracted/dependencies/ ./ 
 COPY --from=builder /extracted/spring-boot-loader/ ./
 COPY --from=builder /extracted/snapshot-dependencies/ ./
 COPY --from=builder /extracted/application/ ./

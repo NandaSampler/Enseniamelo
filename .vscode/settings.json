@@ -2,4 +2,8 @@
     "xml.downloadExternalResources.enabled": true,
     "java.compile.nullAnalysis.mode": "automatic",
     "java.configuration.updateBuildConfiguration": "automatic"
+<<<<<<< HEAD
 }   
+=======
+}
+>>>>>>> 3ab44bd0dbc43443ab5865f44b5861d58886c662

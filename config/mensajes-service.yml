@@ -1,0 +1,34 @@
+server:
+  port: 8082
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:9090/realms/enseniamelo
+          jwt-set-uri: http://keycloak:8080/realms/enseniamelo/protocol/openid-connect/certs
+
+  cloud:
+    function:
+      definition: mensajeProcessor;chatProcessor
+    stream:
+      default-binder: rabbit
+      bindings:
+        mensajeProcessor-in-0:
+          destination: mensajes
+          content-type: application/json
+          group: mensajesGroup
+          consumer:
+            max-attempts: 3
+            back-off-initial-interval: 1000
+            back-off-max-interval: 10000
+            back-off-multiplier: 2.0
+
+        chatProcessor-in-0:
+          destination: chats
+          content-type: application/json
+          group: chatsGroup
+          consumer:
+            max-attempts: 3
+            back-off-initial-interval: 1000
+            back-off-max-interval: 10000
+            back-off-multiplier: 2.0

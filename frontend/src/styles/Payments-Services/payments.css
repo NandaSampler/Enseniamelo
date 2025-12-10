@@ -1,4 +1,24 @@
 /* === CONTENEDOR GENERAL === */
+<<<<<<< HEAD
+=======
+.logout-button {
+  background-color: #ef4444;
+  /* rojo */
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin: 10px 0;
+  font-weight: bold;
+}
+
+.logout-button:hover {
+  background-color: #dc2626;
+  /* rojo más oscuro */
+}
+
+>>>>>>> 3ab44bd0dbc43443ab5865f44b5861d58886c662
 .payments-dashboard {
   padding: 2rem;
   max-width: 1200px;
@@ -23,6 +43,7 @@
   padding-left: 10px;
 }
 
+<<<<<<< HEAD
 /* NUEVO: contenedor header (titulo + logout) */
 .payments-header {
   display: flex;
@@ -46,6 +67,8 @@
   transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.2s ease;
 }
 
+=======
+>>>>>>> 3ab44bd0dbc43443ab5865f44b5861d58886c662
 /* === MENSAJES === */
 .error {
   color: #dc2626;

@@ -1,3 +1,20 @@
+<<<<<<< HEAD
 C:\Users\HP\Documents\tutorservice\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\config\HealthCheckConfiguration.java
 C:\Users\HP\Documents\tutorservice\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\config\SecurityConfig.java
 C:\Users\HP\Documents\tutorservice\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\GatewayApplication.java
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+C:\Users\valen\Desktop\Enseñamelo\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\config\HealthCheckConfiguration.java
+C:\Users\valen\Desktop\Enseñamelo\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\config\SecurityConfig.java
+C:\Users\valen\Desktop\Enseñamelo\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\GatewayApplication.java
+=======
+C:\Github\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\GatewayApplication.java
+C:\Github\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\config\SecurityConfig.java
+C:\Github\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\config\HealthCheckConfiguration.java
+>>>>>>> origin/domBranch
+=======
+C:\Users\valen\Desktop\Enseñamelo\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\config\HealthCheckConfiguration.java
+C:\Users\valen\Desktop\Enseñamelo\Enseniamelo\gateway\src\main\java\com\enseniamelo\gateway\GatewayApplication.java
+>>>>>>> origin/dpDesarrollo
+>>>>>>> 3ab44bd0dbc43443ab5865f44b5861d58886c662

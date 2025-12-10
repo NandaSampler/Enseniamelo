@@ -1,6 +1,8 @@
 package com.enseniamelo.gateway.config;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -13,8 +15,19 @@ import org.springframework.security.config.annotation.web.reactive.EnableWebFlux
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
+import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
+import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsWebFilter;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 import reactor.core.publisher.Flux;
 
@@ -22,66 +35,129 @@ import reactor.core.publisher.Flux;
 @EnableWebFluxSecurity
 public class SecurityConfig {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SecurityConfig.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(SecurityConfig.class);
 
-    @Bean
-    SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
-                .authorizeExchange(auth -> auth
-                        .pathMatchers("/actuator/**").permitAll()
-                        .pathMatchers("/eureka/**").permitAll()
-                        .pathMatchers("/error/**").permitAll()
-                        .pathMatchers("/openapi/**").permitAll()
-                        .pathMatchers("/webjars/**").permitAll()
-                        .pathMatchers("/favicon.ico", "/favicon.png", "/robots.txt", "/static/**").permitAll()
-                        .pathMatchers("/ms-payments/health").permitAll()
-                        .pathMatchers("/curso/health").permitAll()
-                        .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+  @Bean
+  SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) throws Exception {
+    http
+        .cors(cors -> {
+        }) // habilita CORS (se apoya en CorsWebFilter)
+        .csrf(csrf -> csrf.disable())
+        .authorizeExchange(auth -> auth
+            // Públicos generales
+            .pathMatchers("/actuator/**").permitAll()
+            .pathMatchers("/eureka/**").permitAll()
+            .pathMatchers("/error/**").permitAll()
+            .pathMatchers("/openapi/**").permitAll()
+            .pathMatchers("/webjars/**").permitAll()
+            .pathMatchers("/favicon.ico", "/favicon.png", "/robots.txt", "/static/**").permitAll()
+            .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        .pathMatchers("/ms-payments/v1/pagos/**").hasRole("ADMIN")
+            // Endpoints de config-server (si los expones vía gateway)
+            .pathMatchers("/config/encrypt").permitAll()
+            .pathMatchers("/config/decrypt").permitAll()
 
-                        // Combina ambas versiones:
-                        // - Antes: authenticated()
-                        // - Rama: hasAnyRole("USER", "TUTOR")
-                        // -> Ahora: roles de negocio + ADMIN
-                        .pathMatchers("/ms-payments/v1/planes/**").hasAnyRole("USER", "TUTOR", "ADMIN")
-                        .pathMatchers("/ms-payments/v1/suscripciones/**").hasAnyRole("USER", "TUTOR", "ADMIN")
+            // Health de microservicios FastAPI
+            .pathMatchers("/ms-payments/health").permitAll()
+            .pathMatchers("/curso/health").permitAll()
 
-                        // Endpoints de documentación de curso públicos
-                        .pathMatchers("/curso/docs", "/curso/redoc", "/curso/openapi.json").permitAll()
-                        // API principal protegida por rol
-                        .pathMatchers("/curso/api/v1/**").hasRole("CURSO_ADMIN")
+            // Autorización Payments
+            .pathMatchers("/ms-payments/v1/pagos/**").hasRole("ADMIN")
+            .pathMatchers("/ms-payments/v1/planes/**").hasAnyRole("USER", "TUTOR", "ADMIN")
+            .pathMatchers("/ms-payments/v1/suscripciones/**").hasAnyRole("USER", "TUTOR", "ADMIN")
 
-                        .anyExchange().authenticated())
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
+            // Documentación de cursos pública
+            .pathMatchers("/curso/docs", "/curso/redoc", "/curso/openapi.json").permitAll()
+            // API principal de cursos protegida por rol
+            .pathMatchers("/curso/api/v1/**").hasRole("CURSO_ADMIN")
 
-        return http.build();
-    }
+            // Todo lo demás autenticado
+            .anyExchange().authenticated())
+        .oauth2ResourceServer(oauth2 -> oauth2
+            .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
 
-    @Bean
-    public ReactiveJwtAuthenticationConverter jwtAuthenticationConverter() {
-        ReactiveJwtAuthenticationConverter converter = new ReactiveJwtAuthenticationConverter();
+    return http.build();
+  }
 
-        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            Map<String, Object> realmAccess = jwt.getClaim("realm_access");
+  /**
+   * Convierte los roles de Keycloak (realm_access.roles) en authorities de
+   * Spring:
+   * ROLE_<ROL>
+   * Ej: "CURSO_ADMIN" -> "ROLE_CURSO_ADMIN"
+   */
+  @Bean
+  public ReactiveJwtAuthenticationConverter jwtAuthenticationConverter() {
+    ReactiveJwtAuthenticationConverter converter = new ReactiveJwtAuthenticationConverter();
 
-            if (realmAccess == null || realmAccess.get("roles") == null) {
-                return Flux.empty();
-            }
+    converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+      Map<String, Object> realmAccess = jwt.getClaim("realm_access");
 
-            @SuppressWarnings("unchecked")
-            Collection<String> roles = (Collection<String>) realmAccess.get("roles");
+      if (realmAccess == null || realmAccess.get("roles") == null) {
+        return Flux.empty();
+      }
 
-            Collection<GrantedAuthority> authorities = roles.stream()
-                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                    .collect(Collectors.toSet());
+      @SuppressWarnings("unchecked")
+      Collection<String> roles = (Collection<String>) realmAccess.get("roles");
 
-            return Flux.fromIterable(authorities);
-        });
+      Collection<GrantedAuthority> authorities = roles.stream()
+          .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+          .collect(Collectors.toSet());
 
-        return converter;
-    }
+      return Flux.fromIterable(authorities);
+    });
 
+    return converter;
+  }
+
+  /**
+   * Decoder JWT explícito usando el JWKS de Keycloak, permitiendo issuer tanto
+   * con localhost como con "keycloak" (útil para local + docker).
+   */
+  @Bean
+  public ReactiveJwtDecoder reactiveJwtDecoder() {
+    String jwksUri = "http://keycloak:8080/realms/enseniamelo-realm/protocol/openid-connect/certs";
+    NimbusReactiveJwtDecoder decoder = NimbusReactiveJwtDecoder.withJwkSetUri(jwksUri).build();
+
+    // Issuers aceptados (para desarrollo/local + docker)
+    List<String> allowedIssuers = Arrays.asList(
+        "http://localhost:8080/realms/enseniamelo-realm",
+        "http://keycloak:8080/realms/enseniamelo-realm");
+
+    OAuth2TokenValidator<Jwt> timestampValidator = new JwtTimestampValidator();
+    OAuth2TokenValidator<Jwt> issuerValidator = token -> {
+      String iss = token.getIssuer() == null ? null : token.getIssuer().toString();
+      if (iss != null && allowedIssuers.contains(iss)) {
+        return OAuth2TokenValidatorResult.success();
+      }
+      return OAuth2TokenValidatorResult.failure(
+          new OAuth2Error("invalid_token", "The iss claim is not valid", null));
+    };
+
+    decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(timestampValidator, issuerValidator));
+
+    return decoder;
+  }
+
+  /**
+   * Filtro CORS adicional (complementa lo que tienes en application.yml).
+   * Aquí ponemos al menos el origin del Vite dev server.
+   */
+  @Bean
+  public CorsWebFilter corsWebFilter() {
+    CorsConfiguration config = new CorsConfiguration();
+    config.setAllowCredentials(true);
+    config.addAllowedOrigin("http://localhost:5173");
+    config.addAllowedOrigin("http://127.0.0.1:5173");
+    config.addAllowedHeader("*");
+    config.addAllowedMethod("GET");
+    config.addAllowedMethod("POST");
+    config.addAllowedMethod("PUT");
+    config.addAllowedMethod("DELETE");
+    config.addAllowedMethod("OPTIONS");
+    config.addExposedHeader("Authorization");
+
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", config);
+    return new CorsWebFilter(source);
+  }
 }

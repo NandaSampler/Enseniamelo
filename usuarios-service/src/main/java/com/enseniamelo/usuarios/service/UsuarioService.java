@@ -71,6 +71,12 @@ public class UsuarioService {
                 .doOnSuccess(usuario -> log.info("Usuario {} encontrado", idUsuario));
     }
 
+    public Mono<UsuarioDTO> buscarPorEmail(String email) {
+        log.info("Buscando usuario por email: {}", email);
+        return usuarioRepository.findByEmail(email)
+                .map(usuarioMapper::entityToDto);
+    }
+
     public Mono<Void> eliminarUsuario(Integer idUsuario) {
         log.info("Eliminando usuario: {}", idUsuario);
         return eliminarPorIdUsuario(idUsuario);

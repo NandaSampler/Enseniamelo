@@ -14,13 +14,14 @@ import org.springframework.boot.actuate.health.ReactiveHealthIndicator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
+
 import reactor.core.publisher.Mono;
 
 @Configuration
 public class HealthCheckConfiguration {
-    
+
     private static final Logger LOGGER = LoggerFactory.getLogger(HealthCheckConfiguration.class);
-    
+
     private final WebClient webClient;
 
     @Autowired
@@ -31,35 +32,37 @@ public class HealthCheckConfiguration {
     @Bean
     ReactiveHealthContributor healthcheckMicroservices() {
         final Map<String, ReactiveHealthIndicator> registry = new LinkedHashMap<>();
-        
-        // Microservicio de usuarios (Java)
-        registry.put("usuarios-service", () -> getHealth("http://usuarios-service"));
 
-        // Microservicio de pagos (Python)
-        // El método getHealth agrega "/actuator/health", así que aquí solo va la base
-        registry.put("payments-service", () -> getHealth("http://payments-service:8002"));
-        
-        // Cuando tengas más servicios, agrégalos aquí:
-        // registry.put("pedidos-service", () -> getHealth("http://pedidos-service"));
-        // registry.put("productos-service", () -> getHealth("http://productos-service"));
-        // registry.put("pagos-service", () -> getHealth("http://pagos-service"));
-        
+        // ========== SPRING BOOT (usa /actuator/health) ==========
+        registry.put("usuarios-service",
+                () -> getHealth("http://usuarios-service", "/actuator/health"));
+
+        registry.put("mensajes-service",
+                () -> getHealth("http://mensajes-service", "/actuator/health"));
+
+        // ========== FASTAPI (usa /health) ==========
+        registry.put("payments-service",
+                () -> getHealth("http://payments-service:8002", "/health"));
+
+        registry.put("cursoservice",
+                () -> getHealth("http://cursoservice:8000", "/health"));
+
         return CompositeReactiveHealthContributor.fromMap(registry);
     }
 
-    private Mono<Health> getHealth(String baseUrl) {
-        String url = baseUrl + "/actuator/health";
+    private Mono<Health> getHealth(String baseUrl, String path) {
+        String url = baseUrl + path;
         LOGGER.debug("Llamando al API Health en URL: {}", url);
-        
+
         return webClient.get()
-            .uri(url)
-            .retrieve()
-            .bodyToMono(String.class)
-            .map(s -> new Health.Builder().up().build())
-            .onErrorResume(ex -> {
-                LOGGER.error("Error al consultar health de {}: {}", baseUrl, ex.getMessage());
-                return Mono.just(new Health.Builder().down(ex).build());
-            })
-            .log(LOGGER.getName(), Level.FINE);
+                .uri(url)
+                .retrieve()
+                .bodyToMono(String.class)
+                .map(s -> new Health.Builder().up().build())
+                .onErrorResume(ex -> {
+                    LOGGER.error("Error al consultar health de {}: {}", baseUrl, ex.getMessage());
+                    return Mono.just(new Health.Builder().down(ex).build());
+                })
+                .log(LOGGER.getName(), Level.FINE);
     }
 }
