@@ -45,6 +45,10 @@ public class SecurityConfig {
         .csrf(csrf -> csrf.disable())
         .authorizeExchange(auth -> auth
             // Públicos generales
+            .pathMatchers("/*/swagger-ui/**", "/*/swagger-ui.html").permitAll()
+            .pathMatchers("/*/webjars/**").permitAll()
+            .pathMatchers("/*/v3/api-docs/**").permitAll()
+            .pathMatchers("/*/openapi/**").permitAll()
             .pathMatchers("/actuator/**").permitAll()
             .pathMatchers("/eureka/**").permitAll()
             .pathMatchers("/error/**").permitAll()
