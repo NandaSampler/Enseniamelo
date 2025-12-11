@@ -124,6 +124,7 @@ services:
 
   gateway:
     image: enseniamelo-gateway:latest
+    build: ./gateway
     mem_limit: 512m
     ports:
       - "8443:8443"

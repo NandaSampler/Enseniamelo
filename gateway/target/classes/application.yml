@@ -3,6 +3,7 @@ spring.config.import: "configserver:"
 spring:
   application:
     name: gateway-service
+
   cloud:
     config:
       fail-fast: true
@@ -14,6 +15,7 @@ spring:
       uri: http://localhost:8888
       username: ${CONFIG_SERVER_USR:config-usr}
       password: ${CONFIG_SERVER_PWD:Enseniamelo2025}
+
     gateway:
       default-filters:
         - TokenRelay
@@ -233,10 +235,7 @@ spring:
   security:
     oauth2:
       resourceserver:
-        jwt:
-          #issuer-uri: http://localhost:8080/realms/enseniamelo-realm
-          #issuer-uri: http://keycloak:8080/realms/enseniamelo-realm
-          jwk-set-uri: http://keycloak:8080/realms/enseniamelo-realm/protocol/openid-connect/certs
+        jwt: {}
 
 eureka:
   client:
@@ -277,6 +276,7 @@ spring:
   config:
     activate:
       on-profile: docker
+  
   cloud:
     config:
       uri: http://config-server:8888
