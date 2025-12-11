@@ -9,23 +9,17 @@ from pymongo.errors import PyMongoError
 
 from app.schemas.curso import CursoCreate, CursoUpdate, CursoOut
 from app.core.db import get_collection
+from decimal import Decimal
 
 
 class CursoRepository:
-    """
-    Repositorio Mongo para Curso.
-    Ver notas de compatibilidad en cupos en el docstring original.
-    """
     def __init__(self) -> None:
-        # NO crear índices aquí (esto fuerza conexión al importar).
         self.col = get_collection("cursos")
 
-    # Crear índices cuando la app ya está arriba.
     def ensure_indexes(self) -> None:
         try:
-            self.col.create_index("tutor_id")
+            self.col.create_index("id_tutor")
         except PyMongoError:
-            # si no se puede, que no tumbe la app; se puede reintentar luego
             pass
         try:
             self.col.create_index([("nombre", "text"), ("descripcion", "text")])
@@ -44,21 +38,21 @@ class CursoRepository:
         d = dict(doc)
         d["id"] = str(d["_id"])
         d.pop("_id", None)
-        if "tutor_id" in d and isinstance(d["tutor_id"], ObjectId):
-            d["tutor_id"] = str(d["tutor_id"])
+        if "id_tutor" in d and isinstance(d["id_tutor"], ObjectId):
+            d["id_tutor"] = str(d["id_tutor"])
         return d
 
     def _ensure_ref_types(self, data: Dict[str, Any]) -> Dict[str, Any]:
         out = dict(data)
-        if "tutor_id" in out and out["tutor_id"] is not None and not isinstance(out["tutor_id"], ObjectId):
-            out["tutor_id"] = ObjectId(out["tutor_id"])
+        if "id_tutor" in out and out["id_tutor"] is not None and not isinstance(out["id_tutor"], ObjectId):
+            out["id_tutor"] = ObjectId(out["id_tutor"])
         return out
 
     # ---------- CRUD ----------
-    def list(self, q: Optional[str] = None, tutor_id: Optional[str] = None) -> List[CursoOut]:
+    def list(self, q: Optional[str] = None, id_tutor: Optional[str] = None) -> List[CursoOut]:
         filtro: Dict[str, Any] = {}
-        if tutor_id:
-            filtro["tutor_id"] = ObjectId(tutor_id)
+        if id_tutor:
+            filtro["id_tutor"] = ObjectId(id_tutor)
         if q:
             filtro["$or"] = [
                 {"nombre": {"$regex": q, "$options": "i"}},
@@ -66,6 +60,14 @@ class CursoRepository:
             ]
         docs = list(self.col.find(filtro))
         return [CursoOut(**self._normalize(d)) for d in docs]
+    
+    def _clean_decimal_fields(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Convierte Decimal a float para campos numéricos que van a Mongo."""
+        out = dict(data)
+        if isinstance(out.get("precio_reserva"), Decimal):
+            out["precio_reserva"] = float(out["precio_reserva"])
+        # si en el futuro agregas más Decimals, los manejas aquí
+        return out
 
     def get(self, curso_id: str) -> CursoOut:
         doc = self.col.find_one({"_id": ObjectId(curso_id)})
@@ -76,11 +78,15 @@ class CursoRepository:
     def create(self, payload: CursoCreate) -> CursoOut:
         now = datetime.utcnow()
         data = self._ensure_ref_types(payload.model_dump())
+        data = self._clean_decimal_fields(data)  # 👈 limpiar Decimals
+
         if "cupo_ocupado" not in data:
             data["cupo_ocupado"] = 0
+
         max_cupo = self._max_cupo_from_doc(data)
         if max_cupo is not None and data.get("cupo_ocupado", 0) > max_cupo:
             raise ValueError("cupo_ocupado no puede ser mayor que el máximo permitido")
+
         data.update({"creado": now, "actualizado": now})
         res = self.col.insert_one(data)
         data["_id"] = res.inserted_id
@@ -88,14 +94,18 @@ class CursoRepository:
 
     def update(self, curso_id: str, payload: CursoUpdate) -> CursoOut:
         update_data = self._ensure_ref_types(payload.model_dump(exclude_unset=True))
+        update_data = self._clean_decimal_fields(update_data)  # 👈 limpiar Decimals
         update_data["actualizado"] = datetime.utcnow()
+
         current = self.col.find_one({"_id": ObjectId(curso_id)})
         if not current:
             raise KeyError("curso no encontrado")
+
         candidate = {**current, **update_data}
         max_cupo = self._max_cupo_from_doc(candidate)
         if max_cupo is not None and candidate.get("cupo_ocupado", 0) > max_cupo:
             raise ValueError("cupo_ocupado no puede ser mayor que el máximo permitido")
+
         doc = self.col.find_one_and_update(
             {"_id": ObjectId(curso_id)},
             {"$set": update_data},

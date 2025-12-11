@@ -68,8 +68,24 @@ public class SecurityConfig {
 
             // Documentación de cursos pública
             .pathMatchers("/curso/docs", "/curso/redoc", "/curso/openapi.json").permitAll()
-            // API principal de cursos protegida por rol
-            .pathMatchers("/curso/api/v1/**").hasRole("CURSO_ADMIN")
+            // ====== CURSO-SERVICE ======
+
+            // 1) Endpoints de cursos / categorias / horarios PUBLICOS (solo GET)
+            .pathMatchers(HttpMethod.GET, "/curso/api/v1/cursos/**").permitAll()
+            .pathMatchers(HttpMethod.GET, "/curso/api/v1/categorias/**").permitAll()
+            .pathMatchers(HttpMethod.GET, "/curso/api/v1/horarios/**").permitAll()
+
+            // 2) Reservas: requieren usuario logueado (USER/TUTOR/ADMIN)
+            .pathMatchers("/curso/api/v1/reservas/**").hasAnyRole("USER", "TUTOR", "ADMIN")
+
+            // 3) Gestión de cursos (crear/editar/borrar, asignar categorías)
+            .pathMatchers("/curso/api/v1/cursos/**").hasAnyRole("TUTOR", "ADMIN")
+
+            // 4) Gestión de horarios
+            .pathMatchers("/curso/api/v1/horarios/**").hasAnyRole("TUTOR", "ADMIN")
+
+            // 5) Gestión de categorías (crear/editar/borrar)
+            .pathMatchers("/curso/api/v1/categorias/**").hasRole("ADMIN")
 
             // Todo lo demás autenticado
             .anyExchange().authenticated())

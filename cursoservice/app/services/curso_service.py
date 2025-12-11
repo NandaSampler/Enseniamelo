@@ -3,7 +3,6 @@ from typing import List, Optional
 
 from app.schemas.curso import CursoCreate, CursoUpdate, CursoOut
 
-# Repos con getters (NO singletons a nivel de módulo)
 from app.repositories.curso_repository import CursoRepository, get_curso_repo
 from app.repositories.horario_repository import HorarioRepository, get_horario_repo
 from app.repositories.reserva_repository import ReservaRepository, get_reserva_repo
@@ -26,8 +25,8 @@ class CursoService:
         self.curso_categoria_repo = curso_categoria_repo or get_curso_categoria_repo()
 
     # Query
-    def list(self, q: Optional[str] = None) -> List[CursoOut]:
-        return self.repo.list(q=q)
+    def list(self, q: Optional[str] = None, id_tutor: Optional[str] = None) -> List[CursoOut]:
+        return self.repo.list(q=q, id_tutor=id_tutor)
 
     def get(self, curso_id: str) -> CursoOut:
         try:
@@ -49,9 +48,9 @@ class CursoService:
 
     def delete(self, curso_id: str) -> None:
         # Reglas: no permitir borrar si hay dependencias
-        if self.horario_repo.list(curso_id=curso_id):
+        if self.horario_repo.list(id_curso=curso_id):
             raise ValueError("no se puede eliminar: curso tiene horarios")
-        if self.reserva_repo.list(curso_id=curso_id):
+        if self.reserva_repo.list(id_curso=curso_id):
             raise ValueError("no se puede eliminar: curso tiene reservas")
         if self.curso_categoria_repo.list_category_ids_of_course(curso_id):
             raise ValueError("no se puede eliminar: curso tiene categorías vinculadas")
