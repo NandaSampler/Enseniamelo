@@ -9,29 +9,28 @@ svc = PaymentsService()
     "/",
     response_model=list[SubsOut],
     summary="Listar suscripciones",
-    description="Devuelve suscripciones desde MongoDB. Permite filtrar por `user_id`, `plan_id` y `estado`.",
+    description="Devuelve suscripciones desde MongoDB. Permite filtrar por `id_usuario`, `id_plan` y `estado`.",
 )
 async def list_subscriptions(
-    user_id: str | None = Query(default=None, description="Filtrar por usuario externo."),
-    plan_id: str | None = Query(default=None, description="Filtrar por ID de plan."),
+    id_usuario: str | None = Query(default=None, description="Filtrar por usuario externo."),
+    id_plan: str | None = Query(default=None, description="Filtrar por ID de plan."),
     estado: SubsEstado | None = Query(default=None, description="Filtrar por estado."),
 ):
-    return await svc.list_subs(user_id=user_id, plan_id=plan_id, estado=estado)
+    return await svc.list_subs(id_usuario=id_usuario, id_plan=id_plan, estado=estado)
 
 @router.post(
     "/",
     response_model=SubsOut,
     status_code=201,
     summary="Crear suscripción",
-    description="Crea una suscripción **pendiente** basada en un plan existente. "
-                "Calcula `fin_iso = inicio_iso + duracion(plan)`.",
+    description="Crea una suscripción **pendiente** basada en un plan existente. Calcula `fin = inicio + duracionDias(plan)`.",
     responses={
         404: {"model": ErrorResponse, "description": "Plan no encontrado."},
         422: {"model": ErrorResponse, "description": "Error de validación."},
     },
 )
 async def create_subscription(payload: SubsCreate):
-    return await svc.create_sub(payload.user_id, payload.plan_id, payload.inicio_iso)
+    return await svc.create_sub(payload.id_usuario, payload.id_plan, payload.inicio)
 
 @router.get(
     "/{sid}",

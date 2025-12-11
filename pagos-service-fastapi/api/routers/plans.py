@@ -19,7 +19,7 @@ async def list_plans():
     response_model=PlanOut,
     status_code=201,
     summary="Crear un plan",
-    description="Crea un nuevo plan con nombre, precio y duración. Persiste en MongoDB.",
+    description="Crea un nuevo plan con nombre, descripción, precio, duración en días y cantidad de cursos.",
     responses={
         409: {"model": ErrorResponse, "description": "Conflicto (plan ya existe)."},
         422: {"model": ErrorResponse, "description": "Error de validación."},
