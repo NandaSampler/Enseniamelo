@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar código
 COPY app ./app
-#COPY .env.example ./.env.example
+COPY .env.example ./.env.example
 
 # Puerto
 EXPOSE 8000
