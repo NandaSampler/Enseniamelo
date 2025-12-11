@@ -37,6 +37,7 @@ services:
       - enseniamelo-network
 
   usuarios:
+    build: ./usuarios-service
     image: enseniamelo-usuarios:latest
     ports:
       - "8081:8081"
