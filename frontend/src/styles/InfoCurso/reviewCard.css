@@ -1,6 +1,7 @@
 .review-card {
-  @apply bg-sky-300 rounded-2xl px-4 py-3 flex flex-col justify-between
-         shadow-sm hover:shadow-md transition-shadow min-h-[170px];
+  @apply bg-white rounded-2xl px-4 py-3 flex flex-col justify-between
+         shadow-sm hover:shadow-md transition-shadow min-h-[170px]
+         border border-slate-200;
 }
 
 .review-stars {

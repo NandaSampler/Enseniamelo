@@ -1,18 +1,55 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import "../styles/login.css";
+import { authAPI } from "../api/auth";
 
 const LoginForm = () => {
-
+    const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        setError("");
+        setLoading(true);
+
         const formData = new FormData(e.currentTarget);
         const email = formData.get("email");
         const password = formData.get("password");
-        console.log("Login:", { email, password });
+
+        try {
+            const { data } = await authAPI.login(email, password);
+
+            if (data?.success && data?.token) {
+                localStorage.setItem("token", data.token);
+                if (data.user) {
+                    localStorage.setItem("user", JSON.stringify(data.user));
+                }
+
+                const rolCodigo = data.user?.rolCodigo;
+                const rol = data.user?.rol;
+
+                let targetPath = "/mis-cursos";
+                if (rolCodigo === 2 || rol === "docente") {
+                    targetPath = "/panel-tutor";
+                } else if (rolCodigo === 3 || rol === "admin") {
+                    targetPath = "/admin/solicitudes-tutores";
+                }
+
+                navigate(targetPath, { replace: true });
+            } else {
+                setError("No se pudo iniciar sesión. Intenta nuevamente.");
+            }
+        } catch (err) {
+            const message =
+                err?.response?.data?.message ||
+                "Error al iniciar sesión. Verifica tus credenciales.";
+            setError(message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -77,8 +114,14 @@ const LoginForm = () => {
                         </div>
                     </div>
 
-                    <button type="submit" className="login-submit">
-                        Iniciar sesión
+                    {error && (
+                        <p className="text-sm text-red-600 mb-2 text-center">
+                            {error}
+                        </p>
+                    )}
+
+                    <button type="submit" className="login-submit" disabled={loading}>
+                        {loading ? "Ingresando..." : "Iniciar sesión"}
                     </button>
                 </form>
 

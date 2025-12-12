@@ -1,74 +1,91 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Buscador from "./Buscador";
 import CursoCard from "./CursoCard";
+import api from "../../api/config";
+import { cursosAPI } from "../../api/cursos";
 import "../../styles/Explorar/explorar.css";
 
-const cursosMock = [
-  {
-    id: 1,
-    titulo: "Python desde Cero",
-    tag: "Programación",
-    descripcion: "Aprende Python paso a paso sin experiencia previa.",
-    nivel: "Principiante",
-    duracion: "6 horas",
-  },
-  {
-    id: 2,
-    titulo: "Productividad con Notion",
-    tag: "Productividad",
-    descripcion: "Organiza tu vida y proyectos usando Notion.",
-    nivel: "Todos los niveles",
-    duracion: "3 horas",
-  },
-  {
-    id: 3,
-    titulo: "Marketing Digital para Emprendedores",
-    tag: "Marketing",
-    descripcion: "Publicidad, embudos y ventas online.",
-    nivel: "Intermedio",
-    duracion: "5 horas",
-  },
-  {
-    id: 4,
-    titulo: "HTML & CSS desde cero",
-    tag: "Programación",
-    descripcion: "Crea tus primeras páginas web de forma sencilla.",
-    nivel: "Principiante",
-    duracion: "4 horas",
-  },
-  {
-    id: 5,
-    titulo: "Introducción a JavaScript",
-    tag: "Programación",
-    descripcion: "Variables, funciones y DOM para empezar en JS.",
-    nivel: "Principiante",
-    duracion: "5 horas",
-  },
-  {
-    id: 6,
-    titulo: "Técnicas de estudio efectivas",
-    tag: "Productividad",
-    descripcion: "Aprende a estudiar mejor en menos tiempo.",
-    nivel: "Todos los niveles",
-    duracion: "2 horas",
-  },
-  {
-    id: 7,
-    titulo: "Branding para emprendedores",
-    tag: "Marketing",
-    descripcion: "Construye una marca sólida para tu proyecto.",
-    nivel: "Intermedio",
-    duracion: "4 horas",
-  },
-];
-
-const tagsMock = ["Programación", "Productividad", "Marketing"];
 const PER_PAGE = 6;
 
 const Explorar = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTags, setActiveTags] = useState([]); 
+  const [activeTags, setActiveTags] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [cursos, setCursos] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [categorias, setCategorias] = useState([]);
+
+  useEffect(() => {
+    const fetchCursos = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const { data } = await cursosAPI.getCursos();
+        if (data?.success && Array.isArray(data.cursos)) {
+          const reales = data.cursos
+            .filter((curso) => {
+              const tutor = curso.id_tutor;
+              const verificacionCurso = curso.verificacion_estado;
+
+              if (!tutor || tutor.verificado !== "verificado") {
+                return false;
+              }
+
+              // Caso nuevo: cursos con verificacion_estado deben estar aceptados
+              if (typeof verificacionCurso === "string") {
+                return verificacionCurso === "aceptado";
+              }
+
+              // Compatibilidad hacia atrás: si no hay campo, mostramos igual
+              return true;
+            })
+            .map((curso) => ({
+              id: curso._id,
+              titulo: curso.nombre,
+              descripcion: curso.descripcion,
+              tag:
+                (Array.isArray(curso.tags) && curso.tags[0]) ||
+                (Array.isArray(curso.categorias) &&
+                  curso.categorias[0]?.nombre) ||
+                "General",
+              categorias: Array.isArray(curso.categorias)
+                ? curso.categorias
+                : [],
+              modalidad: curso.modalidad,
+              precio: curso.precio_reserva,
+              portada: curso.portada_url,
+            }));
+
+          setCursos(reales);
+        } else {
+          setError("No se pudieron cargar los cursos.");
+        }
+      } catch (error) {
+        console.error("Error obteniendo cursos:", error);
+        setError(
+          error?.response?.data?.message ||
+            "Error al obtener los cursos. Inténtalo de nuevo más tarde."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchCategorias = async () => {
+      try {
+        const { data } = await api.get("/categorias");
+        if (data?.success && Array.isArray(data.categorias)) {
+          setCategorias(data.categorias);
+        }
+      } catch (err) {
+        console.error("Error obteniendo categorías:", err);
+      }
+    };
+
+    fetchCursos();
+    fetchCategorias();
+  }, []);
 
   const handleToggleTag = (tag) => {
     setActiveTags((prev) =>
@@ -78,19 +95,31 @@ const Explorar = () => {
   };
 
   const cursosFiltrados = useMemo(() => {
-    return cursosMock.filter((curso) => {
+    return cursos.filter((curso) => {
       const textMatch =
         searchTerm.trim() === "" ||
         curso.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
         curso.descripcion.toLowerCase().includes(searchTerm.toLowerCase()) ||
         curso.tag.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const tagsMatch =
-        activeTags.length === 0 || activeTags.includes(curso.tag);
+      // Si no hay categorías activas o está seleccionado "Todos", no filtramos por categoría
+      const hasTodos = activeTags.includes("Todos");
+      if (activeTags.length === 0 || hasTodos) {
+        return textMatch;
+      }
 
-      return textMatch && tagsMatch;
+      // Filtrar por categorías seleccionadas (por nombre)
+      const nombresCategoriasCurso = Array.isArray(curso.categorias)
+        ? curso.categorias.map((c) => c.nombre || c)
+        : [];
+
+      const categoriaMatch = nombresCategoriasCurso.some((nombre) =>
+        activeTags.includes(nombre)
+      );
+
+      return textMatch && categoriaMatch;
     });
-  }, [searchTerm, activeTags]);
+  }, [searchTerm, activeTags, cursos]);
 
   const totalPages = Math.max(1, Math.ceil(cursosFiltrados.length / PER_PAGE));
   const safePage = Math.min(currentPage, totalPages);
@@ -116,7 +145,7 @@ const Explorar = () => {
           setSearchTerm(value);
           setCurrentPage(1); 
         }}
-        tags={tagsMock}
+        tags={["Todos", ...categorias.map((c) => c.nombre)]}
         activeTags={activeTags}
         onTagToggle={handleToggleTag}
         onClear={() => {
@@ -129,14 +158,26 @@ const Explorar = () => {
         <h2 className="explorar-title">Explora cursos</h2>
 
         <section className="explorar-grid">
-          {cursosPagina.length > 0 ? (
-            cursosPagina.map((curso) => (
-              <CursoCard key={curso.id} {...curso} />
-            ))
-          ) : (
-            <p className="explorar-empty">
-              No se encontraron cursos con esos filtros.
-            </p>
+          {loading && (
+            <p className="explorar-empty">Cargando cursos...</p>
+          )}
+
+          {!loading && error && (
+            <p className="explorar-empty text-red-500">{error}</p>
+          )}
+
+          {!loading && !error && (
+            <>
+              {cursosPagina.length > 0 ? (
+                cursosPagina.map((curso) => (
+                  <CursoCard key={curso.id} {...curso} />
+                ))
+              ) : (
+                <p className="explorar-empty">
+                  No se encontraron cursos con esos filtros.
+                </p>
+              )}
+            </>
           )}
         </section>
 

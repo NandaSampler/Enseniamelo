@@ -1,0 +1,102 @@
+.tutor-curso-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+.tutor-curso-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+.tutor-curso-main {
+  flex: 1;
+}
+
+.tutor-curso-title {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.tutor-curso-categorias {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #7f8c8d;
+}
+
+.tutor-curso-descripcion {
+  margin: 0;
+  font-size: 14px;
+  color: #34495e;
+}
+
+.tutor-curso-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.tutor-curso-precio-modalidad {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  font-size: 13px;
+  color: #2c3e50;
+}
+
+.tutor-curso-precio {
+  font-weight: 600;
+}
+
+.tutor-curso-modalidad {
+  font-size: 12px;
+  color: #7f8c8d;
+}
+
+.tutor-curso-estado {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.tutor-curso-estado-pendiente {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.tutor-curso-estado-aceptado {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.tutor-curso-estado-rechazado {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.tutor-curso-estado-no_solicitado {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+@media (max-width: 768px) {
+  .tutor-curso-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tutor-curso-meta {
+    align-items: flex-start;
+  }
+}

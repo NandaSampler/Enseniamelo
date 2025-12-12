@@ -10,6 +10,7 @@ const Buscador = ({
 }) => {
   return (
     <section className="buscador-wrapper">
+      <div className="buscador-overlay" />
       <div className="buscador-inner">
         <h2 className="buscador-title">Buscar cursos</h2>
 

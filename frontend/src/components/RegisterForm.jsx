@@ -1,17 +1,62 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "../styles/register.css";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
-
+import { authAPI } from "../api/auth";
 
 const RegisterForm = () => {
+    const navigate = useNavigate();
     const [role, setRole] = useState("student");
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
-
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log("Registro:", { role });
+        setError("");
+        setLoading(true);
+
+        const formData = new FormData(e.currentTarget);
+        const email = formData.get("email");
+        const password = formData.get("password");
+        const nombre = formData.get("nombre");
+        const apellido = formData.get("apellido");
+        const telefono = formData.get("telefono");
+
+        // Si eligió rol tutor, redirigimos al flujo de registro de tutor
+        if (role === "tutor") {
+            setLoading(false);
+            navigate("/registro-tutor", { replace: false });
+            return;
+        }
+
+        // Mapear roles del formulario a código numérico para estudiante
+        // cliente/estudiante = 1, admin = 3 (admin se gestionará desde Mongo)
+        const rolCodigo = 1;
+
+        try {
+            const { data } = await authAPI.register({
+                email,
+                password,
+                rolCodigo,
+                nombre,
+                apellido,
+                telefono,
+            });
+
+            if (data?.success) {
+                navigate("/login", { replace: true });
+            } else {
+                setError("No se pudo completar el registro. Intenta nuevamente.");
+            }
+        } catch (err) {
+            const message =
+                err?.response?.data?.message ||
+                "Error al registrarse. Verifica los datos ingresados.";
+            setError(message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -34,11 +79,40 @@ const RegisterForm = () => {
 
                 <form className="register-form" onSubmit={handleSubmit}>
                     <div>
+                        <label className="register-label" htmlFor="nombre">
+                            Nombre
+                        </label>
+                        <input
+                            id="nombre"
+                            name="nombre"
+                            type="text"
+                            className="register-input"
+                            placeholder="Tu nombre"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="register-label" htmlFor="apellido">
+                            Apellido
+                        </label>
+                        <input
+                            id="apellido"
+                            name="apellido"
+                            type="text"
+                            className="register-input"
+                            placeholder="Tu apellido"
+                            required
+                        />
+                    </div>
+
+                    <div>
                         <label className="register-label" htmlFor="email">
                             Correo electrónico
                         </label>
                         <input
                             id="email"
+                            name="email"
                             type="email"
                             className="register-input"
                             placeholder="ejemplo@correo.com"
@@ -54,6 +128,7 @@ const RegisterForm = () => {
                         <div className="relative">
                             <input
                                 id="password"
+                                name="password"
                                 type={showPassword ? "text" : "password"}
                                 className="register-input pr-12"
                                 placeholder="••••••••"
@@ -72,6 +147,20 @@ const RegisterForm = () => {
                                 )}
                             </button>
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="register-label" htmlFor="telefono">
+                            Teléfono
+                        </label>
+                        <input
+                            id="telefono"
+                            name="telefono"
+                            type="tel"
+                            className="register-input"
+                            placeholder="Ej: 999999999"
+                            required
+                        />
                     </div>
 
                     <div>
@@ -95,15 +184,24 @@ const RegisterForm = () => {
                                     value="tutor"
                                     className="register-role-input"
                                     checked={role === "tutor"}
-                                    onChange={() => setRole("tutor")}
+                                    onChange={() => {
+                                        setRole("tutor");
+                                        navigate("/registro-tutor");
+                                    }}
                                 />
                                 <span className="register-role-label">Docente / Tutor</span>
                             </label>
                         </div>
                     </div>
 
-                    <button type="submit" className="register-submit">
-                        Registrarse
+                    {error && (
+                        <p className="text-sm text-red-600 mb-2 text-center">
+                            {error}
+                        </p>
+                    )}
+
+                    <button type="submit" className="register-submit" disabled={loading}>
+                        {loading ? "Creando cuenta..." : "Registrarse"}
                     </button>
                 </form>
 
