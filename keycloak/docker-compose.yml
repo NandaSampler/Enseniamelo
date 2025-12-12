@@ -23,21 +23,17 @@ services:
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
-
       KC_DB: postgres
       KC_DB_URL_HOST: postgres
       KC_DB_URL_DATABASE: keycloak
       KC_DB_USERNAME: keycloak
       KC_DB_PASSWORD: keycloak
-
-      # Hostname / modo dev
+      KC_HOSTNAME_STRICT: false
+      KC_HOSTNAME_STRICT_HTTPS: false
       KC_HTTP_ENABLED: true
-      KC_HOSTNAME: localhost
-      KC_HOSTNAME_PORT: 8080
-      KC_HOSTNAME_STRICT: "false"
-      KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_HEALTH_ENABLED: true
     command: start-dev
-    networks:  
+    networks:
       - enseniamelo-network
 
 volumes:
@@ -45,5 +41,4 @@ volumes:
 
 networks:
   enseniamelo-network:
-    external: true
-    name: enseniamelo_microservices-net
+    external: true  
