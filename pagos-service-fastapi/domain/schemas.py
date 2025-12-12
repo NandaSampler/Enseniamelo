@@ -1,10 +1,8 @@
 from typing import Literal, Optional, Any
-from pydantic import BaseModel, Field, ConfigDict, constr
+from pydantic import BaseModel, Field, ConfigDict
 
+# ----------------- ERRORES -----------------
 
-from uuid import UUID
-
-# Documentar respuestas de error
 class ErrorBody(BaseModel):
     code: str = Field(..., examples=["not_found", "validation_error"])
     message: str = Field(..., examples=["Pago no encontrado", "Payload inválido"])
@@ -13,78 +11,129 @@ class ErrorBody(BaseModel):
 class ErrorResponse(BaseModel):
     error: ErrorBody
 
-# Valores válidos/ @Schema(allowableValues=
+# ----------------- ENUMS -----------------
+
 PlanEstado = Literal["activo", "inactivo"]
 SubsEstado = Literal["pendiente", "activa", "expirada", "cancelada"]
-PagoEstado = Literal["creado", "procesando", "exitoso", "fallido", "reembolsado"]
-MetodoPago = Literal["tarjeta", "transferencia", "stripe_simulado"]
+PagoEstado = Literal["creado", "procesando", "exitoso", "fallido", "reembolsado", "cancelado"]
+MetodoPago = Literal["tarjeta", "transferencia", "stripe", "stripe_simulado"]
 
+# ---------- PLANES ----------
 
-# ---------- Planes ----------
 class PlanCreate(BaseModel):
     nombre: str = Field(..., min_length=1, description="Nombre del plan")
+    descripcion: str = Field(..., min_length=1, description="Descripción del plan")
     precio: float = Field(..., gt=0, description="Precio del plan")
-    duracion: int = Field(..., gt=0, description="Duración en días")
-    estado: Literal["activo", "inactivo"] = Field(..., description="Estado del plan")
+    duracionDias: int = Field(..., gt=0, description="Duración en días")
+    cantidadCursos: int = Field(..., gt=0, description="Cantidad de cursos que incluye")
+    estado: PlanEstado = Field(..., description="Estado del plan")
+
     model_config = ConfigDict(json_schema_extra={
-        "example": {"nombre":"Basic","precio":9.99,"duracion":30,"estado":"activo"}
+        "example": {
+            "nombre": "Plan prueba 1",
+            "descripcion": "stripe 1",
+            "precio": 5,
+            "duracionDias": 30,
+            "cantidadCursos": 4,
+            "estado": "activo"
+        }
     })
 
 class PlanUpdate(BaseModel):
     nombre: Optional[str] = Field(None, min_length=1)
+    descripcion: Optional[str] = Field(None, min_length=1)
     precio: Optional[float] = Field(None, gt=0)
-    duracion: Optional[int] = Field(None, gt=0)
-    estado: Optional[Literal["activo","inactivo"]] = None
-    model_config = ConfigDict(json_schema_extra={"example":{"precio":12.99,"estado":"activo"}})
+    duracionDias: Optional[int] = Field(None, gt=0)
+    cantidadCursos: Optional[int] = Field(None, gt=0)
+    estado: Optional[PlanEstado] = None
+
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "precio": 10,
+            "estado": "inactivo"
+        }
+    })
 
 class PlanOut(BaseModel):
     id: str
     nombre: str
+    descripcion: str
     precio: float
-    duracion: int
-    estado: Literal["activo","inactivo"]
+    duracionDias: int
+    cantidadCursos: int
+    estado: PlanEstado
+    createdAt: Optional[str] = None
+    updatedAt: Optional[str] = None
 
-# ---------- Suscripciones ----------
+# ---------- SUSCRIPCIONES ----------
+
 class SubsCreate(BaseModel):
-    user_id: str = Field(..., description="ID del usuario")
-    plan_id: str = Field(..., description="ID del plan (ObjectId en string)")
-    inicio_iso: str = Field(..., description="Fecha inicio ISO 8601 (YYYY-MM-DDTHH:MM:SS)")
+    id_usuario: str = Field(..., description="ID del usuario (ObjectId en string)")
+    id_plan: str = Field(..., description="ID del plan (ObjectId en string)")
+    inicio: str = Field(..., description="Fecha inicio ISO 8601 (YYYY-MM-DDTHH:MM:SS)")
+
     model_config = ConfigDict(json_schema_extra={
-        "example":{"user_id":"user-1","plan_id":"64f1c24dbd3a1a33e6e9a111","inicio_iso":"2025-01-01T00:00:00"}
+        "example": {
+            "id_usuario": "69273c94255856093cddb381",
+            "id_plan": "693a422519bbla8cea295ed3",
+            "inicio": "2025-12-11T04:01:41"
+        }
     })
 
 class SubsUpdate(BaseModel):
-    plan_id: Optional[str] = None
-    inicio_iso: Optional[str] = None
-    estado: Optional[Literal["cancelada"]] = None
-    model_config = ConfigDict(json_schema_extra={"example":{"estado":"cancelada"}})
+    id_plan: Optional[str] = None
+    inicio: Optional[str] = None
+    estado: Optional[SubsEstado] = None  # el servicio limitará a "cancelada"
+
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "estado": "cancelada"
+        }
+    })
 
 class SubsOut(BaseModel):
     id: str
-    user_id: str
-    plan_id: str
-    inicio_iso: str
-    fin_iso: str
-    estado: Literal["pendiente","activa","cancelada"]
+    id_usuario: str
+    id_plan: str
+    inicio: str
+    fin: str
+    estado: SubsEstado
+    createdAt: Optional[str] = None
+    updatedAt: Optional[str] = None
+    fechaCancelacion: Optional[str] = None
 
-# ---------- Pagos ----------
+# ---------- PAGOS ----------
+
 class PagoCreate(BaseModel):
-    suscripcion_id: str = Field(..., description="ID de la suscripción (ObjectId en string)")
+    id_suscripcion: str = Field(..., description="ID de la suscripción (ObjectId en string)")
     monto: float = Field(..., gt=0)
-    metodo: Literal["tarjeta","transferencia","stripe_simulado"]
+    metodo: MetodoPago
+
     model_config = ConfigDict(json_schema_extra={
-        "example":{"suscripcion_id":"64f1c24dbd3a1a33e6e9a222","monto":9.99,"metodo":"stripe_simulado"}
+        "example": {
+            "id_suscripcion": "693a428a19bbla8cea295ef1",
+            "monto": 5,
+            "metodo": "stripe"
+        }
     })
 
 class PagoUpdate(BaseModel):
-    estado: Optional[Literal["creado","exitoso","fallido","cancelado"]] = None
-    provider_ref: Optional[str] = None
-    model_config = ConfigDict(json_schema_extra={"example":{"estado":"exitoso","provider_ref":"sim_123"}})
+    estado: Optional[PagoEstado] = None
+    stripeSessionId: Optional[str] = None
+
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "estado": "exitoso",
+            "stripeSessionId": "cs_test_a1..."
+        }
+    })
 
 class PagoOut(BaseModel):
     id: str
-    suscripcion_id: str
+    id_suscripcion: str
     monto: float
-    metodo: Literal["tarjeta","transferencia","stripe_simulado"]
-    estado: Literal["creado", "procesando", "exitoso", "fallido", "reembolsado", "cancelado"]
-    provider_ref: str | None = None
+    metodo: MetodoPago
+    estado: PagoEstado
+    stripeSessionId: Optional[str] = None
+    createdAt: Optional[str] = None
+    updatedAt: Optional[str] = None

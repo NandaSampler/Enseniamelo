@@ -4,6 +4,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.*;
 import jakarta.validation.constraints.*;
+import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -13,20 +14,26 @@ import jakarta.validation.constraints.*;
 public class ComentarioCurso {
 
     @Id
-    private String idComentario;
-
-    @NotBlank(message = "El id del curso es obligatorio")
-    private String idCurso;
+    private String idComentario; 
 
     @NotBlank(message = "El id del usuario es obligatorio")
-    private String idUsuario;
+    private String id_usuario;
+
+    @NotBlank(message = "El id del curso es obligatorio")
+    private String id_curso;
 
     @NotBlank(message = "El comentario no puede estar vacío")
-    @Size(max = 500, message = "El comentario no puede superar los 500 caracteres")
+    @Size(max = 250, message = "El comentario no puede superar los 250 caracteres")
     private String comentario;
 
     @NotNull(message = "La clasificación es obligatoria")
-    private Float clasificacion;
+    @Min(value = 1, message = "La clasificación mínima es 1")
+    @Max(value = 5, message = "La clasificación máxima es 5")
+    private Integer clasificacion;
 
-    private String fecha;
+    @Builder.Default
+    private LocalDateTime fechaCreacion = LocalDateTime.now();
+    
+    @Builder.Default
+    private Boolean activo = true;
 }

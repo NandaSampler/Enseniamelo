@@ -25,8 +25,7 @@ public class ComentarioCursoService {
     public Mono<ComentarioCurso> getComentarioById(String id) {
         return repository.findById(id)
                 .switchIfEmpty(Mono.error(
-                        new ResourceNotFoundException("No se encontró el comentario con ID: " + id)
-                ));
+                        new ResourceNotFoundException("No se encontró el comentario con ID: " + id)));
     }
 
     // === OBTENER COMENTARIOS POR ID DEL CURSO ===
@@ -36,19 +35,23 @@ public class ComentarioCursoService {
 
     // === CREAR NUEVO COMENTARIO ===
     public Mono<ComentarioCurso> createComentario(ComentarioCurso comentario) {
-        return repository.save(comentario);
+        return repository.save(comentario); 
     }
 
     // === ACTUALIZAR COMENTARIO EXISTENTE ===
     public Mono<ComentarioCurso> updateComentario(String id, ComentarioCurso updated) {
         return repository.findById(id)
                 .switchIfEmpty(Mono.error(
-                        new ResourceNotFoundException("No se encontró el comentario con ID: " + id)
-                ))
+                        new ResourceNotFoundException("No se encontró el comentario con ID: " + id)))
                 .flatMap(existing -> {
                     existing.setComentario(updated.getComentario());
                     existing.setClasificacion(updated.getClasificacion());
-                    existing.setFecha(updated.getFecha());
+
+                    if (updated.getActivo() != null) {
+                        existing.setActivo(updated.getActivo());
+                    }
+
+                    // fechaCreacion NO se cambia
                     return repository.save(existing);
                 });
     }
@@ -57,8 +60,7 @@ public class ComentarioCursoService {
     public Mono<Void> deleteComentario(String id) {
         return repository.findById(id)
                 .switchIfEmpty(Mono.error(
-                        new ResourceNotFoundException("No se encontró el comentario con ID: " + id)
-                ))
+                        new ResourceNotFoundException("No se encontró el comentario con ID: " + id)))
                 .flatMap(existing -> repository.deleteById(id));
     }
 }

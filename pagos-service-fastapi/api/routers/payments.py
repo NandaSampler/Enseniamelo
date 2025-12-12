@@ -9,14 +9,14 @@ svc = PaymentsService()
     "/",
     response_model=list[PagoOut],
     summary="Listar pagos",
-    description="Devuelve pagos desde MongoDB. Permite filtrar por `suscripcion_id`, `estado` y `metodo`.",
+    description="Devuelve pagos desde MongoDB. Permite filtrar por `id_suscripcion`, `estado` y `metodo`.",
 )
 async def list_payments(
-    suscripcion_id: str | None = Query(default=None, description="Filtrar por ID de suscripción."),
+    id_suscripcion: str | None = Query(default=None, description="Filtrar por ID de suscripción."),
     estado: PagoEstado | None = Query(default=None, description="Filtrar por estado."),
     metodo: MetodoPago | None = Query(default=None, description="Filtrar por método."),
 ):
-    return await svc.list_pagos(suscripcion_id=suscripcion_id, estado=estado, metodo=metodo)
+    return await svc.list_pagos(id_suscripcion=id_suscripcion, estado=estado, metodo=metodo)
 
 @router.post(
     "/",
@@ -37,7 +37,7 @@ async def create_payment(
         description="Clave opcional para idempotencia. Si se repite, retorna el mismo resultado previo."
     ),
 ):
-    return await svc.create_pago(payload.suscripcion_id, payload.monto, payload.metodo, x_idempotency_key)
+    return await svc.create_pago(payload.id_suscripcion, payload.monto, payload.metodo, x_idempotency_key)
 
 @router.get(
     "/{pid}",
