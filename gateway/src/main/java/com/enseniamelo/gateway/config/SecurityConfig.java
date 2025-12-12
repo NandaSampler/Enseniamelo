@@ -61,6 +61,12 @@ public class SecurityConfig {
             .pathMatchers("/ms-payments/health").permitAll()
             .pathMatchers("/curso/health").permitAll()
 
+            // Autorización Comentarios 
+            .pathMatchers(HttpMethod.GET, "/api/comentario-curso/**").permitAll()
+            .pathMatchers(HttpMethod.POST, "/api/comentario-curso/**").hasAnyRole("USER", "ADMIN")
+            .pathMatchers(HttpMethod.PUT, "/api/comentario-curso/**").hasRole("ADMIN")
+            .pathMatchers(HttpMethod.DELETE, "/api/comentario-curso/**").hasRole("ADMIN")
+
             // Autorización Payments
             .pathMatchers("/ms-payments/v1/pagos/**").hasRole("ADMIN")
             .pathMatchers("/ms-payments/v1/planes/**").hasAnyRole("USER", "TUTOR", "ADMIN")
