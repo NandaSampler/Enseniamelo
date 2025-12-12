@@ -1,5 +1,7 @@
 package com.enseniamelo.mensajeservice.dto;
 
+import java.time.LocalDateTime;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -18,28 +20,49 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class MensajeDTO {
 
-    @Schema(description = "Identificador del mensaje", example = "1asfsfwe231", accessMode = Schema.AccessMode.READ_ONLY)
+    @Schema(
+        description = "Identificador del mensaje",
+        example = "692852a8a9c1a01030b7509e",
+        accessMode = Schema.AccessMode.READ_ONLY
+    )
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private String id;
 
+    @NotNull(message = "El campo 'id_chat' es obligatorio")
+    @Schema(
+        description = "ID del chat asociado (ObjectId como string)",
+        example = "6928529a9c1a01030b7508c1"
+    )
+    private String id_chat;
+
+    @NotNull(message = "El campo 'remitente' es obligatorio")
+    @Schema(
+        description = "ID del usuario remitente (ObjectId como string)",
+        example = "69272ece5f18lbfe9f03860"
+    )
+    private String remitente;
+
     @NotBlank(message = "El contenido es obligatorio")
     @Size(min = 1, message = "El contenido debe tener por lo menos 1 caracter")
-    @Schema(description = "Contenido del mensaje", example = "Hola, este es un mensaje.", accessMode = Schema.AccessMode.READ_ONLY)
+    @Schema(
+        description = "Contenido del mensaje",
+        example = "hola quisiera reservar para mañana a las 12 pm"
+    )
     private String contenido;
 
-    @NotBlank(message = "El estado es obligatorio")
-    @Schema(description = "Estado del mensaje", example = "ENVIADO", accessMode = Schema.AccessMode.READ_ONLY)
-    private String estado;
+    @Schema(
+        description = "Fecha de creación del mensaje",
+        example = "2025-11-27T13:31:20.317",
+        accessMode = Schema.AccessMode.READ_ONLY
+    )
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private LocalDateTime creado;
 
-    @NotNull(message = "La fecha es obligatoria")
-    @Schema(description = "Fecha del mensaje", example = "2023-03-15", accessMode = Schema.AccessMode.READ_ONLY)
-    private String fecha;
-
-    @NotNull(message = "La hora es obligatoria")
-    @Schema(description = "Hora del mensaje", example = "12:30:00", accessMode = Schema.AccessMode.READ_ONLY)
-    private String hora;
-
-    @NotNull(message = "El chatId es obligatorio")
-    @Schema(description = "Identificador del chat asociado al mensaje", example = "1174had781hajks123", accessMode = Schema.AccessMode.READ_ONLY)
-    private String chatId;
+    @Schema(
+        description = "Fecha de última actualización del mensaje",
+        example = "2025-11-27T13:31:20.317",
+        accessMode = Schema.AccessMode.READ_ONLY
+    )
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private LocalDateTime actualizado;
 }

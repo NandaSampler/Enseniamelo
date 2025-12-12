@@ -1,6 +1,6 @@
 package com.enseniamelo.mensajeservice.services;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import org.springframework.stereotype.Service;
 
@@ -18,53 +18,50 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 @Slf4j
 public class ChatService {
+
     private final ChatRepository chatRepository;
     private final ChatMapper chatMapper;
 
     public Mono<ChatDTO> crearChat(ChatDTO chatDTO) {
         log.info("Creando un nuevo chat: {}", chatDTO);
+
         Chat chat = chatMapper.toEntity(chatDTO);
-        chat.setFechaCreacion(LocalDate.now());
+        chat.setCreado(LocalDateTime.now());
+        chat.setActualizado(LocalDateTime.now());
+
         return chatRepository.save(chat)
-                .map(chatMapper::toDto)
-                .doOnSuccess(savedChatDTO -> log.info("Chat creado exitosamente: {}", savedChatDTO))
-                .doOnError(error -> log.error("Error al crear el chat: {}", error.getMessage()));
+            .map(chatMapper::toDto)
+            .doOnSuccess(c -> log.info("Chat creado exitosamente: {}", c))
+            .doOnError(err -> log.error("Error al crear chat: {}", err.getMessage()));
     }
 
     public Flux<ChatDTO> obtenerTodos() {
-        log.info("Obteniendo todos los chats");
         return chatRepository.findAll()
-                .map(chatMapper::toDto)
-                .doOnError(error -> log.error("Error al obtener los chats: {}", error.getMessage()));
+            .map(chatMapper::toDto)
+            .doOnError(err -> log.error("Error al obtener chats: {}", err.getMessage()));
     }
 
     public Mono<ChatDTO> obtenerPorId(String id) {
-        log.info("Obteniendo chat con ID: {}", id);
         return chatRepository.findById(id)
-                .map(chatMapper::toDto)
-                .doOnSuccess(chatDTO -> log.info("Chat obtenido exitosamente: {}", chatDTO))
-                .doOnError(error -> log.error("Error al obtener el chat: {}", error.getMessage()));
+            .map(chatMapper::toDto)
+            .doOnError(err -> log.error("Error al obtener chat: {}", err.getMessage()));
     }
 
     public Mono<ChatDTO> actualizarChat(String id, ChatDTO chatDTO) {
-        log.info("Actualizando chat con ID: {}", id);
         return chatRepository.findById(id)
-                .flatMap(existingChat -> {
-                    Chat updatedChat = chatMapper.toEntity(chatDTO);
-                    updatedChat.setId(existingChat.getId());
-                    updatedChat.setFechaCreacion(existingChat.getFechaCreacion());
-                    return chatRepository.save(updatedChat);
-                })
-                .map(chatMapper::toDto)
-                .doOnSuccess(updatedChatDTO -> log.info("Chat actualizado exitosamente: {}", updatedChatDTO))
-                .doOnError(error -> log.error("Error al actualizar el chat: {}", error.getMessage()));
+            .flatMap(existing -> {
+                chatMapper.updateEntityFromDto(chatDTO, existing);
+                existing.setActualizado(LocalDateTime.now());
+                return chatRepository.save(existing);
+            })
+            .map(chatMapper::toDto)
+            .doOnError(err -> log.error("Error al actualizar chat: {}", err.getMessage()));
     }
 
     public Mono<Void> eliminarChat(String id) {
-        log.info("Eliminando chat con ID: {}", id);
         return chatRepository.findById(id)
-                .flatMap(existingChat -> chatRepository.delete(existingChat)
-                .doOnSuccess(v -> log.info("Chat eliminado exitosamente con ID: {}", id)))
-                .doOnError(error -> log.error("Error al eliminar el chat: {}", error.getMessage()));
+            .flatMap(chatRepository::delete)
+            .doOnSuccess(v -> log.info("Chat eliminado con ID {}", id))
+            .doOnError(err -> log.error("Error al eliminar chat: {}", err.getMessage()));
     }
 }

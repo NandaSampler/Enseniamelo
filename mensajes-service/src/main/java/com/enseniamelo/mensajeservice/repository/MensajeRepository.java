@@ -7,5 +7,4 @@ import java.util.List;
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
 
 public interface MensajeRepository extends ReactiveMongoRepository<Mensaje, String> {
-    List<Mensaje> findAllMensajesByContenido(String contenido, String idChat);
 }
