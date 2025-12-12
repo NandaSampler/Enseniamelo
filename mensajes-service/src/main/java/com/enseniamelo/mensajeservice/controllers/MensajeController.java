@@ -1,8 +1,6 @@
 package com.enseniamelo.mensajeservice.controllers;
 
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,10 +12,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.CrossOrigin;
 
 import com.enseniamelo.mensajeservice.dto.MensajeDTO;
 import com.enseniamelo.mensajeservice.services.MensajeService;
@@ -47,104 +41,61 @@ public class MensajeController {
         this.service = service;
     }
 
-    // ---------------Crear nuevo mensaje----------------
-    // POST: http://localhost:8082/api/mensajes
-
-    @Operation(
-        summary = "${api.mensaje.create-mensaje.description}",
-        description = "${api.mensaje.create-mensaje.notes}"
-    )
-    @ApiResponses(value = { @ApiResponse(responseCode = "201", description = "${api.responseCodes.created.description}"),
-            @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
-            @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
+    // ----------------Crear mensaje----------------
+    @Operation(summary = "Crear un mensaje")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Mensaje creado correctamente"),
+        @ApiResponse(responseCode = "400", description = "Datos inválidos")
+    })
     @PostMapping
-    @PreAuthorize("hasAnyRole('docente', 'estudiante')")
     @ResponseStatus(code = org.springframework.http.HttpStatus.CREATED)
-    public Mono<MensajeDTO> createMensaje(@io.swagger.v3.oas.annotations.parameters.RequestBody(
-                description = "${api.mensaje.schema.mensaje.description}",
-                required = true,
-                content = @Content(mediaType = "application/json", schema = @Schema(implementation = MensajeDTO.class))
-    ) @Valid @RequestBody MensajeDTO mensajeDTO) {
-                log.info("POST /api/mensajes - Crear mensaje: {}", mensajeDTO);
-                return service.crearMensaje(mensajeDTO)
-                        .doOnSuccess(savedMensajeDTO -> log.info("Mensaje creado exitosamente: {}", savedMensajeDTO))
-                        .doOnError(error -> log.error("Error al crear el mensaje: {}", error.getMessage()));
+    @PreAuthorize("hasAnyRole('USER', 'TUTOR')")
+    public Mono<MensajeDTO> createMensaje(
+        @Valid @RequestBody MensajeDTO mensajeDTO) {
+
+        log.info("POST /api/mensaje - Crear mensaje: {}", mensajeDTO);
+
+        return service.crearMensaje(mensajeDTO)
+            .doOnError(e -> log.error("Error al crear mensaje: {}", e.getMessage()));
     }
 
-    // ----------------Obtener todos los mensajes----------------
-    // GET: http://localhost:8082/api/mensajes
-
-    @Operation(
-        summary = "${api.mensaje.get-mensajes.description}",
-        description = "${api.mensaje.get-mensajes.notes}"
-    )
-    @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
-            @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
-            @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
+    // ----------------Obtener todos----------------
+    @Operation(summary = "Obtener todos los mensajes")
     @GetMapping
-    @PreAuthorize("hasAnyRole('docente', 'estudiante')")
+    @PreAuthorize("hasAnyRole('USER', 'TUTOR')")
     public Flux<MensajeDTO> getMensajes() {
         return service.obtenerTodos()
-        .doOnComplete(() -> log.info("Todos los mensajes obtenidos exitosamente"))
-        .doOnError(error -> log.error("Error al obtener los mensajes: {}", error.getMessage()));
+            .doOnError(e -> log.error("Error al obtener mensajes: {}", e.getMessage()));
     }
 
-    // ---------------Obtener mensaje por id----------------
-    // GET: http://localhost:8082/api/mensajes/{id}
-
-    @Operation(
-        summary = "${api.mensaje.get-mensaje-by-id.description}",
-        description = "${api.mensaje.get-mensaje-by-id.notes}"
-    )
-    @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
-            @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
-            @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
+    // ----------------Obtener mensaje por ID----------------
+    @Operation(summary = "Obtener mensaje por ID")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('docente', 'estudiante')")
-    public Mono<MensajeDTO> getMensajeById(@Parameter(description = "${api.mensaje.get-mensaje-by-id.parameters.id}", required = true)
-            @PathVariable @NotBlank String id) {
+    @PreAuthorize("hasAnyRole('USER', 'TUTOR')")
+    public Mono<MensajeDTO> getMensajeById(@PathVariable @NotBlank String id) {
         return service.obtenerPorId(id)
-                .doOnSuccess(mensajeDTO -> log.info("Mensaje obtenido exitosamente: {}", mensajeDTO))
-                .doOnError(error -> log.error("Error al obtener el mensaje: {}", error.getMessage()));
+            .doOnError(e -> log.error("Error al obtener mensaje: {}", e.getMessage()));
     }
 
-    // ---------------Actualizar mensaje----------------
-    // PUT: http://localhost:8082/api/mensajes/{id}
-
-    @Operation(
-        summary = "${api.mensaje.update-mensaje.description}",
-        description = "${api.mensaje.update-mensaje.notes}"
-    )
-    @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
-            @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
-            @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
+    // ----------------Actualizar contenido----------------
+    @Operation(summary = "Actualizar el contenido del mensaje")
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('docente', 'estudiante')")
-    @ResponseStatus(code = org.springframework.http.HttpStatus.NO_CONTENT)
-    public Mono<MensajeDTO> updateMensaje(@Parameter(description = "${api.mensaje.update-mensaje.parameters.id}", required = true)
-        @Valid @RequestBody Map<String, String> contenidoNuevo, @PathVariable @NotBlank String id) {
+    @PreAuthorize("hasAnyRole('USER', 'TUTOR')")
+    public Mono<MensajeDTO> updateMensaje(
+        @PathVariable @NotBlank String id,
+        @RequestBody Map<String, String> contenidoNuevo) {
+
         return service.actualizarContenido(id, contenidoNuevo.get("contenido"))
-                .doOnSuccess(updatedMensajeDTO -> log.info("Mensaje actualizado exitosamente: {}", updatedMensajeDTO))
-                .doOnError(error -> log.error("Error al actualizar el mensaje: {}", error.getMessage()));
+            .doOnError(e -> log.error("Error al actualizar mensaje: {}", e.getMessage()));
     }
 
-    // ---------------Eliminar mensaje----------------
-    // DELETE: http://localhost:8082/api/mensajes/{id}
-
-    @Operation(
-        summary = "${api.mensaje.delete-mensaje.description}",
-        description = "${api.mensaje.delete-mensaje.notes}"
-    )
-    @ApiResponses(value = { @ApiResponse(responseCode = "204", description = "${api.responseCodes.noContent.description}"),
-            @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
-            @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")})
+    // ----------------Eliminar mensaje----------------
+    @Operation(summary = "Eliminar un mensaje")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('docente', 'estudiante')")
     @ResponseStatus(code = org.springframework.http.HttpStatus.NO_CONTENT)
-    public Mono<Void> deleteMensaje(@Parameter(description = "${api.mensaje.delete-mensaje.parameters.id}", required = true)
-        @PathVariable @NotBlank String id) {
+    @PreAuthorize("hasAnyRole('USER', 'TUTOR')")
+    public Mono<Void> deleteMensaje(@PathVariable @NotBlank String id) {
         return service.eliminarMensaje(id)
-                .doOnSuccess(aVoid -> log.info("Mensaje eliminado exitosamente: {}", id))
-                .doOnError(error -> log.error("Error al eliminar el mensaje: {}", error.getMessage()));
+            .doOnError(e -> log.error("Error al eliminar mensaje: {}", e.getMessage()));
     }
 }

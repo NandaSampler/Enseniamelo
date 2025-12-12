@@ -1,5 +1,8 @@
 package com.enseniamelo.mensajeservice.models;
 
+import java.time.LocalDateTime;
+import org.bson.types.ObjectId;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -16,16 +19,17 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Mensaje {
+
     @Id
     @JsonIgnore
     private String id;
 
-    @Indexed(unique = true)
+    private ObjectId id_chat;
+
+    private ObjectId remitente;
+
     private String contenido;
-    private Integer estado;
-    private String fecha;
-    private String hora;
-    
-    @Field("id_chat")
-    private String chatId;
+
+    private LocalDateTime creado;
+    private LocalDateTime actualizado;
 }

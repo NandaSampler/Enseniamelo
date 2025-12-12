@@ -1,11 +1,13 @@
 package com.enseniamelo.mensajeservice.models;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
+import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
+//import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.mapping.Field;
+//import org.springframework.data.mongodb.core.mapping.Field;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -18,17 +20,17 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Chat {
+
     @Id
     @JsonIgnore
     private String id;
 
-    @Indexed(unique = true)
-    @Field("fecha_creacion")
-    private LocalDate fechaCreacion;
+    private List<ObjectId> participantes;
 
-    @Field("id_usuario_emisor")
-    private String usuario_emisor;
+    private ObjectId id_curso;
 
-    @Field("id_usuario_receptor")
-    private String usuario_receptor;
+    private String ultimoMensaje;
+
+    private LocalDateTime creado;
+    private LocalDateTime actualizado;
 }
