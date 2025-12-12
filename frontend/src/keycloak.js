@@ -4,7 +4,7 @@ import Keycloak from "keycloak-js";
 const keycloak = new Keycloak({
   url: "http://localhost:8080",              // URL de Keycloak dentro del docker-compose
   realm: "enseniamelo-realm",              // tu realm
-  clientId: "frontend-react",            // client del frontend en Keycloak
+  clientId: "react-web-client",            // client del frontend en Keycloak
 });
 
 // Promesa compartida para evitar múltiples inicializaciones

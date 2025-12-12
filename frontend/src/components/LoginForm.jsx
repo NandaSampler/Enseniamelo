@@ -1,18 +1,74 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import "../styles/login.css";
 
 const LoginForm = () => {
-
+    const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        setError("");
+        setLoading(true);
+
         const formData = new FormData(e.currentTarget);
         const email = formData.get("email");
         const password = formData.get("password");
-        console.log("Login:", { email, password });
+
+        try {
+            // 1. Login directo con Keycloak (Password Grant)
+            const params = new URLSearchParams();
+            params.append('grant_type', 'password');
+            params.append('client_id', 'react-web-client');
+            params.append('username', email);
+            params.append('password', password);
+
+            const tokenResponse = await fetch(
+                'http://localhost:8080/realms/enseniamelo-realm/protocol/openid-connect/token',
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: params,
+                }
+            );
+
+            if (!tokenResponse.ok) {
+                const errorData = await tokenResponse.json();
+                throw new Error(errorData.error_description || 'Credenciales incorrectas');
+            }
+
+            const tokenData = await tokenResponse.json();
+            
+            // Guardar tokens
+            localStorage.setItem('access_token', tokenData.access_token);
+            localStorage.setItem('refresh_token', tokenData.refresh_token);
+
+            // 2. Obtener info del usuario desde tu backend
+            const userResponse = await fetch('https://localhost:8443/v1/auth/me', {
+                headers: {
+                    'Authorization': `Bearer ${tokenData.access_token}`,
+                },
+            });
+
+            if (userResponse.ok) {
+                const userData = await userResponse.json();
+                localStorage.setItem('user', JSON.stringify(userData));
+            }
+
+            // Redirigir al dashboard
+            navigate('/explorar');
+            
+        } catch (err) {
+            console.error('Error en login:', err);
+            setError(err.message || 'Error al iniciar sesión');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -33,6 +89,12 @@ const LoginForm = () => {
                     Usa tu correo y contraseña para acceder.
                 </p>
 
+                {error && (
+                    <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+                        {error}
+                    </div>
+                )}
+
                 <form className="login-form" onSubmit={handleSubmit}>
                     <div>
                         <label className="login-label" htmlFor="email">
@@ -45,6 +107,7 @@ const LoginForm = () => {
                             className="login-input"
                             placeholder="ejemplo@correo.com"
                             required
+                            disabled={loading}
                         />
                     </div>
 
@@ -61,6 +124,7 @@ const LoginForm = () => {
                                 className="login-input pr-12"
                                 placeholder="••••••••"
                                 required
+                                disabled={loading}
                             />
 
                             <button
@@ -77,8 +141,12 @@ const LoginForm = () => {
                         </div>
                     </div>
 
-                    <button type="submit" className="login-submit">
-                        Iniciar sesión
+                    <button 
+                        type="submit" 
+                        className="login-submit"
+                        disabled={loading}
+                    >
+                        {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
                     </button>
                 </form>
 
@@ -88,7 +156,6 @@ const LoginForm = () => {
                         Regístrate
                     </Link>
                 </p>
-
             </div>
         </section>
     );

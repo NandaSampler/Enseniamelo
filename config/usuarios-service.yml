@@ -1,6 +1,13 @@
 server:
   port: 7000
 
+keycloak:
+  auth-server-url: http://keycloak:8080
+  realm: enseniamelo-realm
+  admin:
+    username: admin
+    password: admin
+    
 spring:
   security:
     oauth2:
