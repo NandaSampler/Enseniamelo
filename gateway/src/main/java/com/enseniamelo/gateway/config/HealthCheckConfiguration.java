@@ -1,0 +1,68 @@
+package com.enseniamelo.gateway.config;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.logging.Level;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.actuate.health.CompositeReactiveHealthContributor;
+import org.springframework.boot.actuate.health.Health;
+import org.springframework.boot.actuate.health.ReactiveHealthContributor;
+import org.springframework.boot.actuate.health.ReactiveHealthIndicator;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import reactor.core.publisher.Mono;
+
+@Configuration
+public class HealthCheckConfiguration {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(HealthCheckConfiguration.class);
+
+    private final WebClient webClient;
+
+    @Autowired
+    public HealthCheckConfiguration(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.build();
+    }
+
+    @Bean
+    ReactiveHealthContributor healthcheckMicroservices() {
+        final Map<String, ReactiveHealthIndicator> registry = new LinkedHashMap<>();
+
+        // ========== SPRING BOOT (usa /actuator/health) ==========
+        registry.put("usuarios-service",
+                () -> getHealth("http://usuarios-service", "/actuator/health"));
+
+        registry.put("mensajes-service",
+                () -> getHealth("http://mensajes-service", "/actuator/health"));
+
+        // ========== FASTAPI (usa /health) ==========
+        registry.put("payments-service",
+                () -> getHealth("http://payments-service:8002", "/health"));
+
+        registry.put("cursoservice",
+                () -> getHealth("http://cursoservice:8000", "/health"));
+
+        return CompositeReactiveHealthContributor.fromMap(registry);
+    }
+
+    private Mono<Health> getHealth(String baseUrl, String path) {
+        String url = baseUrl + path;
+        LOGGER.debug("Llamando al API Health en URL: {}", url);
+
+        return webClient.get()
+                .uri(url)
+                .retrieve()
+                .bodyToMono(String.class)
+                .map(s -> new Health.Builder().up().build())
+                .onErrorResume(ex -> {
+                    LOGGER.error("Error al consultar health de {}: {}", baseUrl, ex.getMessage());
+                    return Mono.just(new Health.Builder().down(ex).build());
+                })
+                .log(LOGGER.getName(), Level.FINE);
+    }
+}

@@ -1,0 +1,17 @@
+# payments-service.yml  (repositorio Enseniamelo_config)
+
+# 🔹 Configuración propia del ms de pagos
+APP_NAME: payments-service
+APP_PORT: 8002
+
+# Estos valores se usarán solo si quieres sobreescribir lo global
+EUREKA_APP_NAME: PAYMENTS-SERVICE
+
+---
+spring.config.activate.on-profile: docker
+
+# Overrides específicos para Docker
+APP_PORT: 8002
+EUREKA_APP_NAME: PAYMENTS-SERVICE
+EUREKA_INSTANCE_HOST: payments-service
+EUREKA_INSTANCE_PORT: 8002

@@ -1,0 +1,241 @@
+version: '3.8'
+
+services:
+  eureka-server:
+    image: enseniamelo-eureka-server:latest
+    ports:
+      - "8761:8761"
+    mem_limit: 512m
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+      - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
+      - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8761/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - enseniamelo-network
+
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - enseniamelo-network
+
+  usuarios:
+    build: ./usuarios-service
+    image: enseniamelo-usuarios:latest
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATA_MONGODB_URI=mongodb+srv://jaredpimentel_db_user:DpCito170209@cluster0.cibyezm.mongodb.net/enseniamelo?retryWrites=true&w=majority
+      - SPRING_DATA_MONGODB_DATABASE=enseniamelo
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8080/realms/enseniamelo-realm
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_APPLICATION_NAME=usuarios-service
+      - EUREKA_INSTANCE_HOSTNAME=usuarios-service
+      - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+      - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
+      - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+    depends_on:
+      config-server:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - enseniamelo-network
+
+  mensajes:
+    build: mensajes-service
+    image: mensajes-service:latest
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATA_MONGODB_URI=mongodb+srv://jaredpimentel_db_user:DpCito170209@cluster0.cibyezm.mongodb.net/enseniamelo?retryWrites=true&w=majority
+      - SPRING_DATA_MONGODB_DATABASE=enseniamelo
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8080/realms/enseniamelo-realm
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_APPLICATION_NAME=mensajes-service
+      - EUREKA_INSTANCE_HOSTNAME=mensajes-service
+      - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+      - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
+      - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - SERVER_PORT=8082
+    depends_on:
+      config-server:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8082/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - enseniamelo-network
+
+  comentarios:
+    build: ./comentarios-service
+    image: comentarios-service:latest
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_DATA_MONGODB_URI=mongodb+srv://jaredpimentel_db_user:DpCito170209@cluster0.cibyezm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - SPRING_DATA_MONGODB_DATABASE=enseniamelo
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8080/realms/enseniamelo-realm
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_APPLICATION_NAME=comentarios-service
+      - EUREKA_INSTANCE_HOSTNAME=comentarios-service
+      - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+      - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
+      - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - SERVER_PORT=8083
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    networks:
+      - enseniamelo-network
+
+  gateway:
+    image: enseniamelo-gateway:latest
+    mem_limit: 512m
+    ports:
+      - "8443:8443"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_APPLICATION_NAME=gateway-service
+      - SERVER_PORT=8443
+      - SERVER_SSL_KEY_STORE=file:/keystore/keystore.p12
+      - SERVER_SSL_KEY_STORE_PASSWORD=changeit
+      - SERVER_SSL_KEY_STORE_TYPE=PKCS12
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_INSTANCE_HOSTNAME=gateway-service
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - EUREKA_INSTANCE_SECURE_PORT_ENABLED=true
+      - EUREKA_INSTANCE_SECURE_PORT=8443
+      - EUREKA_INSTANCE_NON_SECURE_PORT_ENABLED=false
+      - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+      - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
+      - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      usuarios:
+        condition: service_started
+      cursoservice:
+        condition: service_healthy
+    volumes:
+      - ${KEYSTORE_PATH:-./keystore}:/keystore
+    networks:
+      - enseniamelo-network
+
+  # =========================
+  # CURSOSERVICE (FastAPI)
+  # =========================
+  cursoservice:
+    build: ./cursoservice
+    container_name: cursoservice
+    environment:
+      - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+      - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
+      - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
+      - SPRING_PROFILES_ACTIVE=docker
+    ports:
+      - "8000:8000"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - enseniamelo-network
+
+  # =========================
+  # PAYMENTS SERVICE (FastAPI)
+  # =========================
+  payments-service:
+    build: ./pagos-service-fastapi
+    container_name: payments-service
+    environment:
+      - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+      - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
+      - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
+      - SPRING_PROFILES_ACTIVE=docker
+      - APP_NAME=payments-service
+      - EUREKA_SERVER_URL=http://eureka-server:8761/eureka
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    ports:
+      - "8002:8002"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8002/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
+    networks:
+      - enseniamelo-network
+
+  # =========================
+  # CONFIG SERVER (Spring Cloud Config)
+  # =========================
+  config-server:
+    build: ./configserver
+    image: enseniamelo-configserver:latest
+    container_name: config-server
+    mem_limit: 512m
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - ENCRYPT_KEY=${CONFIG_SERVER_ENCRYPT_KEY}
+      - SPRING_SECURITY_USER_NAME=${CONFIG_SERVER_USR}
+      - SPRING_SECURITY_USER_PASSWORD=${CONFIG_SERVER_PWD}
+    ports:
+      - "8888:8888"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -u ${CONFIG_SERVER_USR}:${CONFIG_SERVER_PWD} http://localhost:8888/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - enseniamelo-network
+
+networks:
+  enseniamelo-network:
+    external: true
+    name: enseniamelo_microservices-net

@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: mensajes-service
+  cloud:
+    config:
+      uri: http://config-server:8888
+      fail-fast: false  # No fallar si config-server no responde
+      username: ${CONFIG_SERVER_USR}
+      password: ${CONFIG_SERVER_PWD}
+      override-none: false  # Permitir que variables de entorno sobrescriban
+      override-system-properties: false

@@ -1,0 +1,28 @@
+spring.application.name: config-server
+server.port: 8888
+
+spring.cloud.config.server.git:
+  uri: https://github.com/BleeeesJc/Enseniamelo_config.git
+  default-label: mergedAll
+  username: BleeeesJc
+  password: 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 #Token generado en github
+  timeout: 30
+  force-pull: true
+ 
+spring.security:
+  user:
+    name: ${CONFIG_SERVER_USR:config-usr}
+    password: ${CONFIG_SERVER_PWD:Enseniamelo2025}
+
+# WARNING: Exposing all management endpoints over http should only be used during development, must be locked down in production!
+management.endpoint.health.show-details: "ALWAYS"
+management.endpoints.web.exposure.include: "*"
+
+logging:
+  level:
+    root: info
+    org.springframework.cloud.config: DEBUG
+#    org.eclipse.jgit: DEBUG
+
+---
+spring.config.activate.on-profile: docker

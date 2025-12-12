@@ -1,0 +1,15 @@
+com\enseniamelo\commentsservice\dto\CommentDTO$CommentDTOBuilder.class
+com\enseniamelo\commentsservice\config\SecurityConfig.class
+com\enseniamelo\commentsservice\service\ComentarioCursoService.class
+com\enseniamelo\commentsservice\model\ComentarioCurso$ComentarioCursoBuilder.class
+com\enseniamelo\commentsservice\exception\ResourceNotFoundException.class
+com\enseniamelo\commentsservice\dto\ComentarioCursoDTO$ComentarioCursoDTOBuilder.class
+com\enseniamelo\commentsservice\service\ComentarioCursoMapper.class
+com\enseniamelo\commentsservice\dto\CommentDTO.class
+com\enseniamelo\commentsservice\controller\ComentarioCursoController.class
+com\enseniamelo\commentsservice\exception\GlobalExceptionHandler.class
+com\enseniamelo\commentsservice\repository\ComentarioCursoRepository.class
+com\enseniamelo\commentsservice\model\ComentarioCurso.class
+com\enseniamelo\commentsservice\config\OpenApiConfig.class
+com\enseniamelo\commentsservice\dto\ComentarioCursoDTO.class
+com\enseniamelo\commentsservice\ComentariosServiceApplication.class

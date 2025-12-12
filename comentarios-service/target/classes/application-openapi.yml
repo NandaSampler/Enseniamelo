@@ -1,0 +1,87 @@
+springdoc:
+  swagger-ui.path: /openapi/swagger-ui.html
+  api-docs.path: /openapi/v3/api-docs
+  packagesToScan: com.enseniamelo.commentsservice.controller
+  pathsToMatch: /**
+  override-with-generic-response: false
+
+api:
+  common:
+    version: 1.0.0
+    title: API de Comentarios - Enseñamelo
+    description: Servicio de gestión de comentarios de cursos de "Enseñamelo"
+    termsOfService: https://www.enseñamelo.com/comentarios
+    license: Licencia MIT
+    licenseUrl: https://opensource.org/licenses/MIT
+    externalDocDesc: Documentación en Wiki
+    externalDocUrl: https://www.enseñamelo.com/wiki
+    contact:
+      name: Soporte Enseñamelo
+      url: https://www.enseñamelo.com/contacto
+      email: soporte@enseñamelo.com
+
+  responseCodes:
+    ok.description: OK
+    badRequest.description: Bad Request, Formato inválido de la solicitud. Ver mensaje de respuesta para más información.
+    notFound.description: Not found, el id especificado no existe.
+    unprocessableEntity.description: Unprocessable entity, no se puede procesar los parámetros de entrada. Ver mensaje de respuesta para más información.
+
+  comentario:
+    get-comentario:
+      description: Retorna la información del comentario en base al id proporcionado.
+      notes: |
+        # Respuesta exitosa
+        Si el id del comentario solicitado es encontrado, el método retornará la información del comentario.
+
+        # Respuestas con error
+        1. Si ningún comentario se encontró se devuelve un error **404 - Not Found**
+      parameters:
+        id: ID del comentario a buscar
+    get-comentarios:
+      description: Retorna la lista de todos los comentarios.
+      notes: |
+        # Respuesta exitosa
+        Si se encuentran comentarios, el método retornará la lista de comentarios.
+
+        # Respuestas con error
+        1. Si no se encontraron comentarios se devuelve un error **404 - Not Found**
+    get-comentarios-by-curso:
+      description: Retorna la lista de comentarios de un curso específico.
+      notes: |
+        # Respuesta exitosa
+        Si se encuentran comentarios para el curso, el método retornará la lista de comentarios.
+
+        # Respuestas con error
+        1. Si no se encontraron comentarios se devuelve un error **404 - Not Found**
+      parameters:
+        idCurso: ID del curso para buscar sus comentarios
+    create-comentario:
+      description: Crea un nuevo comentario.
+      notes: |
+        # Respuesta exitosa
+        Retorna el comentario creado.
+
+        # Respuestas con error
+        1. Si los datos enviados son inválidos se devuelve un error **400 - Bad Request**
+    update-comentario:
+      description: Actualiza un comentario existente en base al id proporcionado.
+      notes: |
+        # Respuesta exitosa
+        Retorna el comentario actualizado.
+
+        # Respuestas con error
+        1. Si ningún comentario se encontró se devuelve un error **404 - Not Found**
+        2. Si los datos enviados son inválidos se devuelve un error **400 - Bad Request**
+      parameters:
+        id: ID del comentario a actualizar
+    delete-comentario:
+      description: Elimina un comentario en base al id proporcionado.
+      notes: |
+        # Respuesta exitosa
+        El comentario es eliminado correctamente.
+
+        # Respuestas con error
+        1. Si ningún comentario se encontró se devuelve un error **404 - Not Found**
+        2. Si el id enviado es inválido se devuelve un error **400 - Bad Request**
+      parameters:
+        id: ID del comentario a eliminar
