@@ -1,5 +1,8 @@
 package com.enseniamelo.usuarios.dto;
 
+import java.time.LocalDateTime;
+import java.util.List; // 👈 IMPORTANTE
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -12,80 +15,65 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@Schema(description = "DTO para solicitud de verificación solicitud de tutor")
+@Schema(description = "DTO para solicitud de verificación de tutor")
 public class VerificarSolicitudDTO {
 
-    @Schema(description = "Identificador de la solicitud", example = "1", accessMode = Schema.AccessMode.READ_ONLY)
+    @Schema(description = "ID de MongoDB de la solicitud", example = "507f1f77bcf86cd799439033", accessMode = Schema.AccessMode.READ_ONLY)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private Integer idVerificar;
+    private String id;
 
-    @Schema(
-        description = "Estado de la solicitud", 
-        example = "PENDIENTE", 
-        allowableValues = {"PENDIENTE", "APROBADO", "RECHAZADO"}, 
-        accessMode = Schema.AccessMode.READ_ONLY
-    )
+    @Schema(description = "Estado de la solicitud", example = "PENDIENTE", allowableValues = { "PENDIENTE", "APROBADO",
+            "RECHAZADO" }, accessMode = Schema.AccessMode.READ_ONLY)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private String estado;
 
-    @Size(max = 250, message = "El comentario no puede superar los 250 caracteres")
-    @Schema(
-        description = "Comentario del administrador sobre la decisión", 
-        example = "Documentos válidos y verificados correctamente",
-        maxLength = 250
-    )
+    @Size(max = 250)
     private String comentario;
 
     @NotBlank(message = "La foto del CI es obligatoria", groups = CreateSolicitud.class)
-    @Pattern(
-        regexp = "^(https?://|data:image/).*", 
-        message = "Debe ser una URL válida (http/https) o data URI",
-        groups = CreateSolicitud.class
-    )
-    @Size(max = 500, message = "La URL de la foto no puede superar los 500 caracteres")
-    @Schema(
-        description = "URL de la foto del carnet de identidad", 
-        example = "https://example.com/documentos/ci_12345678.jpg", 
-        requiredMode = Schema.RequiredMode.REQUIRED,
-        maxLength = 500
-    )
+    @Pattern(regexp = "^(https?://|data:image/).*", message = "Debe ser una URL válida (http/https) o data URI", groups = CreateSolicitud.class)
+    @Size(max = 500)
     private String fotoCi;
 
-    @Schema(description = "ID del usuario que solicita verificación", example = "12345", accessMode = Schema.AccessMode.READ_ONLY)
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private Integer idUsuario;
+    // 👇 NUEVO: idCurso que está en el modelo
+    @Schema(description = "ID de MongoDB del curso asociado (si aplica)", example = "507f1f77bcf86cd7994390AA")
+    private String idCurso;
 
-    @Schema(description = "Nombre completo del usuario", example = "Juan Pérez García", accessMode = Schema.AccessMode.READ_ONLY)
+    // 👇 NUEVO: lista de archivos (urls, ids, lo que uses)
+    @Schema(description = "Lista de archivos adicionales (URLs, IDs de storage, etc.)")
+    private List<String> archivos;
+
+    @Schema(description = "ID de MongoDB del usuario solicitante", example = "507f1f77bcf86cd799439011", accessMode = Schema.AccessMode.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String idUsuario;
+
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private String nombreUsuario;
 
-    @Schema(description = "Email del usuario", example = "juan.perez@example.com", accessMode = Schema.AccessMode.READ_ONLY)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private String emailUsuario;
 
-    @Schema(description = "ID del perfil de tutor creado (si fue aprobado)", example = "1", accessMode = Schema.AccessMode.READ_ONLY)
+    @Schema(description = "ID de MongoDB del perfil de tutor creado (si fue aprobado)", example = "507f1f77bcf86cd799439022", accessMode = Schema.AccessMode.READ_ONLY)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private Integer idPerfilTutor;
+    private String idPerfilTutor;
 
-    @Schema(description = "Fecha de creación de la solicitud", example = "2025-10-15T10:00:00", accessMode = Schema.AccessMode.READ_ONLY)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private LocalDateTime creado;
 
-    @Schema(description = "Fecha de decisión (aprobación o rechazo)", example = "2025-10-16T14:30:00", accessMode = Schema.AccessMode.READ_ONLY)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private LocalDateTime decidido;
 
-    @Schema(description = "Fecha de última actualización", example = "2025-10-16T15:00:00", accessMode = Schema.AccessMode.READ_ONLY)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private LocalDateTime actualizado;
 
-    public interface CreateSolicitud {}
-    public interface UpdateDecision {}
+    public interface CreateSolicitud {
+    }
+
+    public interface UpdateDecision {
+    }
 }

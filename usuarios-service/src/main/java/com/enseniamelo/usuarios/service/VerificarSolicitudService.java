@@ -26,75 +26,76 @@ public class VerificarSolicitudService {
     private final UsuarioRepository usuarioRepository;
     private final PerfilTutorRepository perfilTutorRepository;
     private final VerificarSolicitudMapper solicitudMapper;
-    private final SequenceGeneratorService sequenceGenerator;
 
-    public Mono<VerificarSolicitudDTO> crearSolicitud(Integer idUsuario, VerificarSolicitudDTO solicitudDTO) {
+    // idUsuario = Usuario.id (String)
+    public Mono<VerificarSolicitudDTO> crearSolicitud(String idUsuario, VerificarSolicitudDTO solicitudDTO) {
         log.info("Creando solicitud de verificación para usuario: {}", idUsuario);
 
-        return usuarioRepository.existsByIdUsuario(idUsuario)
+        return usuarioRepository.existsById(idUsuario)
                 .flatMap(existe -> {
                     if (!existe) {
-                        log.error("Usuario no encontrado con idUsuario: {}", idUsuario);
-                        return Mono.error(new RuntimeException("Usuario no encontrado con idUsuario: " + idUsuario));
+                        log.error("Usuario no encontrado con id: {}", idUsuario);
+                        return Mono.error(new RuntimeException("Usuario no encontrado con id: " + idUsuario));
                     }
+
                     return solicitudRepository.existsByIdUsuario(idUsuario)
                             .flatMap(tieneSolicitud -> {
                                 if (tieneSolicitud) {
                                     log.error("El usuario {} ya tiene una solicitud", idUsuario);
-                                    return Mono.error(
-                                            new RuntimeException("El usuario ya tiene una solicitud de verificación"));
+                                    return Mono.error(new RuntimeException(
+                                            "El usuario ya tiene una solicitud de verificación"));
                                 }
-                                return sequenceGenerator.generateSequence("verificar_solicitud_sequence")
-                                        .flatMap(idVerificar -> {
-                                            VerificarSolicitud solicitud = new VerificarSolicitud();
-                                            solicitud.setIdVerificar(idVerificar);
-                                            solicitud.setEstado("PENDIENTE");
-                                            solicitud.setFotoCi(solicitudDTO.getFotoCi());
-                                            solicitud.setIdUsuario(idUsuario);
-                                            LocalDateTime ahora = LocalDateTime.now();
-                                            solicitud.setCreado(ahora);
-                                            solicitud.setActualizado(ahora);
-                                            return solicitudRepository.save(solicitud)
-                                                    .flatMap(guardada -> {
-                                                        return usuarioRepository.findByIdUsuario(idUsuario)
-                                                                .flatMap(usuario -> {
-                                                                    usuario.setIdVerificarSolicitud(
-                                                                            guardada.getIdVerificar());
-                                                                    return usuarioRepository.save(usuario);
-                                                                })
-                                                                .thenReturn(guardada);
-                                                    });
-                                        });
+
+                                VerificarSolicitud solicitud = new VerificarSolicitud();
+                                solicitud.setId(null); // Mongo genera _id
+                                solicitud.setEstado("PENDIENTE");
+                                solicitud.setFotoCi(solicitudDTO.getFotoCi());
+                                solicitud.setIdUsuario(idUsuario);
+
+                                // 🔹 idCurso y archivos desde el DTO
+                                solicitud.setIdCurso(solicitudDTO.getIdCurso());
+
+                                // Si el cliente no envía archivos => lista vacía, nunca null
+                                if (solicitudDTO.getArchivos() != null && !solicitudDTO.getArchivos().isEmpty()) {
+                                    solicitud.setArchivos(solicitudDTO.getArchivos());
+                                } else {
+                                    solicitud.setArchivos(java.util.List.of());
+                                }
+
+                                LocalDateTime ahora = LocalDateTime.now();
+                                solicitud.setCreado(ahora);
+                                solicitud.setActualizado(ahora);
+
+                                return solicitudRepository.save(solicitud);
                             });
                 })
                 .map(guardada -> {
-                    log.info("Solicitud creada exitosamente con id: {}", guardada.getIdVerificar());
+                    log.info("Solicitud creada exitosamente con id: {}", guardada.getId());
                     return solicitudMapper.entityToDto(guardada);
                 });
     }
+
     public Mono<VerificarSolicitudDTO> crearSolicitud(VerificarSolicitudDTO solicitudDTO) {
         log.info("Creando solicitud desde evento");
 
-        Integer idUsuario = solicitudDTO.getIdUsuario();
-
+        String idUsuario = solicitudDTO.getIdUsuario();
         if (idUsuario == null) {
             return Mono.error(new RuntimeException("El idUsuario es obligatorio en el DTO"));
         }
         return crearSolicitud(idUsuario, solicitudDTO);
     }
 
-    public Mono<Void> procesarVerificacion(Integer idVerificar) {
-        log.info("Procesando verificación de solicitud: {}", idVerificar);
+    public Mono<Void> procesarVerificacion(String id) {
+        log.info("Procesando verificación de solicitud: {}", id);
 
-        return solicitudRepository.findByIdVerificar(idVerificar)
-                .switchIfEmpty(Mono.error(new RuntimeException("Solicitud no encontrada con id: " + idVerificar)))
+        return solicitudRepository.findById(id)
+                .switchIfEmpty(Mono.error(new RuntimeException("Solicitud no encontrada con id: " + id)))
                 .flatMap(solicitud -> {
                     if (!"PENDIENTE".equals(solicitud.getEstado())) {
-                        log.warn("La solicitud {} ya fue procesada. Estado actual: {}", idVerificar,
-                                solicitud.getEstado());
+                        log.warn("La solicitud {} ya fue procesada. Estado actual: {}", id, solicitud.getEstado());
                         return Mono.empty();
                     }
-                    log.info("Solicitud {} lista para ser aprobada o rechazada", idVerificar);
+                    log.info("Solicitud {} lista para ser aprobada o rechazada", id);
                     return Mono.empty();
                 })
                 .then();
@@ -107,17 +108,17 @@ public class VerificarSolicitudService {
                 .doOnComplete(() -> log.info("Listado de solicitudes completado"));
     }
 
-    public Mono<VerificarSolicitudDTO> buscarPorId(Integer idVerificar) {
-        log.info("Buscando solicitud con id: {}", idVerificar);
-        return solicitudRepository.findByIdVerificar(idVerificar)
+    public Mono<VerificarSolicitudDTO> buscarPorId(String id) {
+        log.info("Buscando solicitud con id: {}", id);
+        return solicitudRepository.findById(id)
                 .map(solicitudMapper::entityToDto)
                 .switchIfEmpty(Mono.defer(() -> {
-                    log.error("Solicitud no encontrada con id: {}", idVerificar);
-                    return Mono.error(new RuntimeException("Solicitud no encontrada con id: " + idVerificar));
+                    log.error("Solicitud no encontrada con id: {}", id);
+                    return Mono.error(new RuntimeException("Solicitud no encontrada con id: " + id));
                 }));
     }
 
-    public Mono<VerificarSolicitudDTO> buscarPorUsuario(Integer idUsuario) {
+    public Mono<VerificarSolicitudDTO> buscarPorUsuario(String idUsuario) {
         log.info("Buscando solicitud del usuario: {}", idUsuario);
 
         return solicitudRepository.findByIdUsuario(idUsuario)
@@ -135,48 +136,48 @@ public class VerificarSolicitudService {
                 .doOnComplete(() -> log.info("Búsqueda por estado completada"));
     }
 
-    public Mono<VerificarSolicitudDTO> aprobarSolicitud(Integer idVerificar, String comentario) {
-        log.info("Aprobando solicitud: {}", idVerificar);
+    public Mono<VerificarSolicitudDTO> aprobarSolicitud(String id, String comentario) {
+        log.info("Aprobando solicitud: {}", id);
 
-        return solicitudRepository.findByIdVerificar(idVerificar)
+        return solicitudRepository.findById(id)
                 .switchIfEmpty(Mono.error(new RuntimeException("Solicitud no encontrada")))
                 .flatMap(solicitud -> {
                     if (!"PENDIENTE".equals(solicitud.getEstado())) {
                         return Mono.error(new RuntimeException("La solicitud ya fue procesada"));
                     }
+
                     LocalDateTime ahora = LocalDateTime.now();
                     solicitud.setEstado("APROBADO");
                     solicitud.setComentario(comentario);
                     solicitud.setDecidido(ahora);
                     solicitud.setActualizado(ahora);
-                    return sequenceGenerator.generateSequence("perfil_tutor_sequence")
-                            .flatMap(idTutor -> {
-                                PerfilTutor perfil = new PerfilTutor();
-                                perfil.setIdTutor(idTutor);
-                                perfil.setVerificado(true);
-                                perfil.setClasificacion(0.0f);
-                                perfil.setIdUsuario(solicitud.getIdUsuario());
-                                perfil.setIdVerificarSolicitud(solicitud.getIdVerificar());
-                                perfil.setCreacion(ahora);
-                                perfil.setActualizado(ahora);
 
-                                return perfilTutorRepository.save(perfil)
-                                        .flatMap(perfilGuardado -> {
-                                            solicitud.setIdPerfilTutor(perfilGuardado.getIdTutor());
-                                            return solicitudRepository.save(solicitud)
-                                                    .flatMap(solicitudGuardada -> {
-                                                        return usuarioRepository
-                                                                .findByIdUsuario(solicitud.getIdUsuario())
-                                                                .flatMap(usuario -> {
-                                                                    usuario.setIdPerfilTutor(
-                                                                            perfilGuardado.getIdTutor());
-                                                                    usuario.setRol("DOCENTE");
-                                                                    usuario.setActualizado(ahora);
-                                                                    return usuarioRepository.save(usuario);
-                                                                })
-                                                                .thenReturn(solicitudGuardada);
-                                                    });
-                                        });
+                    // Crear perfil de tutor a partir de la solicitud
+                    PerfilTutor perfil = new PerfilTutor();
+                    perfil.setId(null); // Mongo
+                    perfil.setIdUsuario(solicitud.getIdUsuario());
+                    // ci no la tenemos en la solicitud, se completará luego en el perfil
+                    // perfil.setCi(null);
+                    perfil.setVerificado("verificado");
+                    perfil.setClasificacion(0.0f);
+                    // perfil.setBiografia(null);
+                    perfil.setCreacion(ahora);
+                    perfil.setActualizado(ahora);
+
+                    return perfilTutorRepository.save(perfil)
+                            .flatMap(perfilGuardado -> {
+                                // Relación inversa en la solicitud
+                                solicitud.setIdPerfilTutor(perfilGuardado.getId());
+
+                                return solicitudRepository.save(solicitud)
+                                        .flatMap(solicitudGuardada -> usuarioRepository
+                                                .findById(solicitud.getIdUsuario())
+                                                .flatMap(usuario -> {
+                                                    usuario.setRol("DOCENTE");
+                                                    usuario.setActualizado(ahora);
+                                                    return usuarioRepository.save(usuario);
+                                                })
+                                                .thenReturn(solicitudGuardada));
                             });
                 })
                 .map(solicitudGuardada -> {
@@ -185,10 +186,10 @@ public class VerificarSolicitudService {
                 });
     }
 
-    public Mono<VerificarSolicitudDTO> rechazarSolicitud(Integer idVerificar, String comentario) {
-        log.info("Rechazando solicitud: {}", idVerificar);
+    public Mono<VerificarSolicitudDTO> rechazarSolicitud(String id, String comentario) {
+        log.info("Rechazando solicitud: {}", id);
 
-        return solicitudRepository.findByIdVerificar(idVerificar)
+        return solicitudRepository.findById(id)
                 .switchIfEmpty(Mono.error(new RuntimeException("Solicitud no encontrada")))
                 .flatMap(solicitud -> {
                     if (!"PENDIENTE".equals(solicitud.getEstado())) {
@@ -209,17 +210,17 @@ public class VerificarSolicitudService {
                 });
     }
 
-    public Mono<Void> eliminarSolicitud(Integer idVerificar) {
-        log.info("Eliminando solicitud: {}", idVerificar);
+    public Mono<Void> eliminarSolicitud(String id) {
+        log.info("Eliminando solicitud: {}", id);
 
-        return solicitudRepository.existsByIdVerificar(idVerificar)
+        return solicitudRepository.existsById(id)
                 .flatMap(existe -> {
                     if (!existe) {
-                        log.error("Solicitud no encontrada con id: {}", idVerificar);
+                        log.error("Solicitud no encontrada con id: {}", id);
                         return Mono.error(new RuntimeException("Solicitud no encontrada"));
                     }
 
-                    return solicitudRepository.deleteByIdVerificar(idVerificar)
+                    return solicitudRepository.deleteById(id)
                             .doOnSuccess(v -> log.info("Solicitud eliminada exitosamente"));
                 });
     }

@@ -1,36 +1,36 @@
 package com.enseniamelo.usuarios.model;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
-import org.springframework.data.mongodb.core.mapping.Document;
+import java.time.LocalDateTime;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @Document(collection = "perfil_tutor")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class PerfilTutor {
-    
+
     @Id
-    @JsonIgnore
     private String id;
-    
-    @Indexed(unique = true)
-    private Integer idTutor;
-    
+
+    @Field("id_usuario")
+    private String idUsuario; // referencia a usuarios._id
+
     private String ci;
-    private Boolean verificado;
+
+    // en Mongo se veía "verificado": "verificado" / "pendiente" / ...
+    private String verificado;
+
     private Float clasificacion;
     private String biografia;
-    private Integer idUsuario;  
-    private Integer idVerificarSolicitud;  
+
+    @Field("creacion")
     private LocalDateTime creacion;
     private LocalDateTime actualizado;
 }

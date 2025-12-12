@@ -1,6 +1,7 @@
 package com.enseniamelo.usuarios.service;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 
 import org.springframework.stereotype.Service;
 
@@ -21,7 +22,6 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final UsuarioMapper usuarioMapper;
-    private final SequenceGeneratorService sequenceGenerator;
 
     public Mono<UsuarioDTO> crearUsuario(UsuarioDTO usuarioDTO) {
         log.info("Creando usuario");
@@ -32,20 +32,44 @@ public class UsuarioService {
                         log.error("El email ya está registrado: {}", usuarioDTO.getEmail());
                         return Mono.error(new RuntimeException("El email ya está registrado"));
                     }
+
                     Usuario usuario = usuarioMapper.dtoToEntity(usuarioDTO);
+                    usuario.setId(null); // Mongo genera el _id
 
-                    return sequenceGenerator.generateSequence("usuario_sequence")
-                            .flatMap(nuevoId -> {
-                                usuario.setIdUsuario(nuevoId);
-                                LocalDateTime ahora = LocalDateTime.now();
-                                usuario.setCreado(ahora);
-                                usuario.setActualizado(ahora);
+                    LocalDateTime ahora = LocalDateTime.now();
 
-                                return usuarioRepository.save(usuario);
-                            })
+                    // 🔹 Rol viene del DTO: ADMIN | DOCENTE | ESTUDIANTE
+                    String rol = usuario.getRol();
+                    if (rol == null) {
+                        // fallback por si alguien manda DTO sin rol (no debería)
+                        rol = "ESTUDIANTE";
+                        usuario.setRol(rol);
+                    }
+
+                    // 🔹 Mapear rol → rolCodigo (1=ESTUDIANTE, 2=DOCENTE, 3=ADMIN por ejemplo)
+                    if (usuario.getRolCodigo() == null) {
+                        switch (rol) {
+                            case "ADMIN" -> usuario.setRolCodigo(3);
+                            case "DOCENTE" -> usuario.setRolCodigo(2);
+                            case "ESTUDIANTE" -> usuario.setRolCodigo(1);
+                            default -> usuario.setRolCodigo(1);
+                        }
+                    }
+
+                    if (usuario.getActivo() == null) {
+                        usuario.setActivo(true);
+                    }
+                    if (usuario.getDocumentos() == null) {
+                        usuario.setDocumentos(Collections.emptyList());
+                    }
+
+                    usuario.setFechaCreacion(ahora);
+                    usuario.setCreado(ahora);
+                    usuario.setActualizado(ahora);
+
+                    return usuarioRepository.save(usuario)
                             .map(usuarioGuardado -> {
-                                log.info("Usuario creado exitosamente con idUsuario: {}",
-                                        usuarioGuardado.getIdUsuario());
+                                log.info("Usuario creado exitosamente con id: {}", usuarioGuardado.getId());
                                 return usuarioMapper.entityToDto(usuarioGuardado);
                             });
                 });
@@ -59,16 +83,16 @@ public class UsuarioService {
                 .doOnComplete(() -> log.info("Listado de usuarios completado"));
     }
 
-    public Mono<UsuarioDTO> buscarPorIdUsuario(Integer idUsuario) {
-        log.info("Buscando usuario con idUsuario: {}", idUsuario);
+    public Mono<UsuarioDTO> buscarPorId(String id) {
+        log.info("Buscando usuario con id: {}", id);
 
-        return usuarioRepository.findByIdUsuario(idUsuario)
+        return usuarioRepository.findById(id)
                 .map(usuarioMapper::entityToDto)
                 .switchIfEmpty(Mono.defer(() -> {
-                    log.error("Usuario no encontrado con idUsuario: {}", idUsuario);
-                    return Mono.error(new RuntimeException("Usuario no encontrado con idUsuario: " + idUsuario));
+                    log.error("Usuario no encontrado con id: {}", id);
+                    return Mono.error(new RuntimeException("Usuario no encontrado con id: " + id));
                 }))
-                .doOnSuccess(usuario -> log.info("Usuario {} encontrado", idUsuario));
+                .doOnSuccess(usuario -> log.info("Usuario {} encontrado", id));
     }
 
     public Mono<UsuarioDTO> buscarPorEmail(String email) {
@@ -77,42 +101,48 @@ public class UsuarioService {
                 .map(usuarioMapper::entityToDto);
     }
 
-    public Mono<Void> eliminarUsuario(Integer idUsuario) {
-        log.info("Eliminando usuario: {}", idUsuario);
-        return eliminarPorIdUsuario(idUsuario);
-    }
+    public Mono<Void> eliminarPorId(String id) {
+        log.info("Eliminando usuario con id: {}", id);
 
-    public Mono<Void> eliminarPorIdUsuario(Integer idUsuario) {
-        log.info("Eliminando usuario con idUsuario: {}", idUsuario);
-
-        return usuarioRepository.existsByIdUsuario(idUsuario)
+        return usuarioRepository.existsById(id)
                 .flatMap(existe -> {
                     if (!existe) {
-                        log.error("Usuario no encontrado con idUsuario: {}", idUsuario);
-                        return Mono.error(new RuntimeException("Usuario no encontrado con idUsuario: " + idUsuario));
+                        log.error("Usuario no encontrado con id: {}", id);
+                        return Mono.error(new RuntimeException("Usuario no encontrado con id: " + id));
                     }
 
-                    return usuarioRepository.deleteByIdUsuario(idUsuario)
-                            .doOnSuccess(v -> log.info("Usuario eliminado exitosamente con idUsuario: {}", idUsuario));
+                    return usuarioRepository.deleteById(id)
+                            .doOnSuccess(v -> log.info("Usuario eliminado exitosamente con id: {}", id));
                 });
     }
 
-    public Mono<UsuarioDTO> actualizarUsuario(Integer idUsuario, UsuarioDTO usuarioDTO) {
-        log.info("Actualizando usuario con idUsuario: {}", idUsuario);
+    public Mono<UsuarioDTO> actualizarUsuario(String id, UsuarioDTO usuarioDTO) {
+        log.info("Actualizando usuario con id: {}", id);
 
-        return usuarioRepository.findByIdUsuario(idUsuario)
+        return usuarioRepository.findById(id)
                 .switchIfEmpty(Mono.defer(() -> {
-                    log.error("Usuario no encontrado con idUsuario: {}", idUsuario);
-                    return Mono.error(new RuntimeException("Usuario no encontrado con idUsuario: " + idUsuario));
+                    log.error("Usuario no encontrado con id: {}", id);
+                    return Mono.error(new RuntimeException("Usuario no encontrado con id: " + id));
                 }))
                 .flatMap(usuarioExistente -> {
+                    // Actualiza campos “editables” según el mapper
                     usuarioMapper.updateEntityFromDto(usuarioDTO, usuarioExistente);
-                    usuarioExistente.setIdUsuario(idUsuario);
+
+                    // Si cambiaron el rol en el DTO, recalculamos rolCodigo
+                    String rol = usuarioExistente.getRol();
+                    if (rol != null) {
+                        switch (rol) {
+                            case "ADMIN" -> usuarioExistente.setRolCodigo(3);
+                            case "DOCENTE" -> usuarioExistente.setRolCodigo(2);
+                            case "ESTUDIANTE" -> usuarioExistente.setRolCodigo(1);
+                        }
+                    }
+
                     usuarioExistente.setActualizado(LocalDateTime.now());
                     return usuarioRepository.save(usuarioExistente);
                 })
                 .map(guardado -> {
-                    log.info("Usuario actualizado exitosamente con idUsuario: {}", idUsuario);
+                    log.info("Usuario actualizado exitosamente con id: {}", id);
                     return usuarioMapper.entityToDto(guardado);
                 });
     }

@@ -1,35 +1,42 @@
 package com.enseniamelo.usuarios.model;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
-import org.springframework.data.mongodb.core.mapping.Document;
+import java.time.LocalDateTime;
+import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @Document(collection = "verificar_solicitud")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class VerificarSolicitud {
-    
+
     @Id
-    @JsonIgnore
     private String id;
-    
-    @Indexed(unique = true)
-    private Integer idVerificar;
-    
+
+    @Field("id_usuario")
+    private String idUsuario; // usuarios._id
+
+    @Field("id_perfil_tutor")
+    private String idPerfilTutor; // perfil_tutor._id
+
+    @Field("id_curso")
+    private String idCurso; // cursos._id (micro de cursos)
+
     private String estado;
     private String comentario;
+    @Field("foto_ci")
     private String fotoCi;
-    private Integer idUsuario;  
-    private Integer idPerfilTutor;  
+
+    private List<String> archivos;
+
+    @Field("creado")
     private LocalDateTime creado;
     private LocalDateTime decidido;
     private LocalDateTime actualizado;

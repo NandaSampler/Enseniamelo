@@ -1,17 +1,18 @@
 package com.enseniamelo.usuarios.config;
 
 import java.util.function.Consumer;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.enseniamelo.usuarios.dto.UsuarioDTO;
 import com.enseniamelo.usuarios.dto.PerfilTutorDTO;
+import com.enseniamelo.usuarios.dto.UsuarioDTO;
 import com.enseniamelo.usuarios.dto.VerificarSolicitudDTO;
-import com.enseniamelo.usuarios.service.UsuarioService;
 import com.enseniamelo.usuarios.service.PerfilTutorService;
+import com.enseniamelo.usuarios.service.UsuarioService;
 import com.enseniamelo.usuarios.service.VerificarSolicitudService;
 import com.enseniamelo.usuarios.util.events.Event;
 
@@ -34,32 +35,32 @@ public class MessageProcessorConfig {
         this.verificarSolicitudService = verificarSolicitudService;
     }
 
-
+    // -------------------------------------------------------------------------
+    // USUARIO (key = String id de Mongo)
+    // -------------------------------------------------------------------------
     @Bean
-    public Consumer<Event<Integer, UsuarioDTO>> usuarioProcessor() {
+    public Consumer<Event<String, UsuarioDTO>> usuarioProcessor() {
         return event -> {
-            LOGGER.info("📨 [USUARIO] Evento: tipo={}, id={}", 
+            LOGGER.info("📨 [USUARIO] Evento: tipo={}, id={}",
                     event.getEventType(), event.getKey());
 
             try {
                 switch (event.getEventType()) {
-                    case CREATE:
+                    case CREATE -> {
                         LOGGER.info("Creando usuario");
                         usuarioService.crearUsuario(event.getData()).block();
-                        break;
-                    case DELETE:
-                        LOGGER.info("Eliminando usuario: {}", event.getKey());
-                        usuarioService.eliminarUsuario(event.getKey()).block();
-                        break;
-                    case UPDATE:
-                        LOGGER.info("Actualizando usuario: {}", event.getKey());
-                        usuarioService.actualizarUsuario(
-                            event.getKey(), 
-                            event.getData()
-                        ).block();
-                        break;
-                    default:
-                        LOGGER.warn("Evento no soportado: {}", event.getEventType());
+                    }
+                    case DELETE -> {
+                        LOGGER.info("Eliminando usuario con id: {}", event.getKey());
+                        usuarioService.eliminarPorId(event.getKey()).block();
+                    }
+                    case UPDATE -> {
+                        LOGGER.info("Actualizando usuario con id: {}", event.getKey());
+                        usuarioService
+                                .actualizarUsuario(event.getKey(), event.getData())
+                                .block();
+                    }
+                    default -> LOGGER.warn("[USUARIO] Evento no soportado: {}", event.getEventType());
                 }
                 LOGGER.info("[USUARIO] Completado");
             } catch (Exception e) {
@@ -69,32 +70,30 @@ public class MessageProcessorConfig {
         };
     }
 
-
+    // -------------------------------------------------------------------------
+    // PERFIL TUTOR (key = String id de Mongo del perfil_tutor)
+    // -------------------------------------------------------------------------
     @Bean
-    public Consumer<Event<Integer, PerfilTutorDTO>> tutorProcessor() {
+    public Consumer<Event<String, PerfilTutorDTO>> tutorProcessor() {
         return event -> {
-            LOGGER.info("[TUTOR] Evento: tipo={}, id={}", 
+            LOGGER.info("[TUTOR] Evento: tipo={}, id={}",
                     event.getEventType(), event.getKey());
 
             try {
                 switch (event.getEventType()) {
-                    case CREATE:
+                    case CREATE -> {
                         LOGGER.info("Creando perfil tutor");
                         perfilTutorService.crearPerfilTutor(event.getData()).block();
-                        break;
-                    case DELETE:
-                        LOGGER.info("Eliminando tutor: {}", event.getKey());
-                        perfilTutorService.eliminarPerfilTutor(event.getKey()).block();
-                        break;
-                    case UPDATE:
-                        LOGGER.info("Actualizando tutor: {}", event.getKey());
-                        perfilTutorService.actualizarPerfilTutor(
-                            event.getKey(), 
-                            event.getData()
-                        ).block();
-                        break;
-                    default:
-                        LOGGER.warn("Evento no soportado: {}", event.getEventType());
+                    }
+                    case DELETE -> {
+                        LOGGER.info("Eliminando tutor con idPerfil: {}", event.getKey());
+                        perfilTutorService.eliminarPerfil(event.getKey()).block();
+                    }
+                    case UPDATE -> {
+                        LOGGER.info("Actualizando tutor con idPerfil: {}", event.getKey());
+                        perfilTutorService.actualizarPerfil(event.getKey(), event.getData()).block();
+                    }
+                    default -> LOGGER.warn("[TUTOR] Evento no soportado: {}", event.getEventType());
                 }
                 LOGGER.info("[TUTOR] Completado");
             } catch (Exception e) {
@@ -104,49 +103,46 @@ public class MessageProcessorConfig {
         };
     }
 
+    // -------------------------------------------------------------------------
+    // SOLICITUD VERIFICACIÓN (key = String id de Mongo de verificar_solicitud)
+    // -------------------------------------------------------------------------
     @Bean
-    public Consumer<Event<Integer, VerificarSolicitudDTO>> solicitudProcessor() {
+    public Consumer<Event<String, VerificarSolicitudDTO>> solicitudProcessor() {
         return event -> {
-            LOGGER.info("[SOLICITUD] Evento: tipo={}, id={}", 
+            LOGGER.info("[SOLICITUD] Evento: tipo={}, id={}",
                     event.getEventType(), event.getKey());
 
             try {
+                String id = event.getKey();
+
                 switch (event.getEventType()) {
-                    case CREATE:
+                    case CREATE -> {
                         LOGGER.info("Creando solicitud de verificación");
                         verificarSolicitudService.crearSolicitud(event.getData()).block();
-                        break;
-
-                    case VERIFY_REQUEST:
-                        LOGGER.info("Procesando verificación de solicitud: {}", event.getKey());
-                        verificarSolicitudService.procesarVerificacion(event.getKey()).block();
-                        break;
-
-                    case APPROVE_REQUEST:
+                    }
+                    case VERIFY_REQUEST -> {
+                        LOGGER.info("Procesando verificación de solicitud: {}", id);
+                        verificarSolicitudService.procesarVerificacion(id).block();
+                    }
+                    case APPROVE_REQUEST -> {
                         VerificarSolicitudDTO aprobar = event.getData();
-                        LOGGER.info("Aprobando solicitud: {}", event.getKey());
-                        verificarSolicitudService.aprobarSolicitud(
-                            event.getKey(), 
-                            aprobar.getComentario()
-                        ).block();
-                        break;
-
-                    case REJECT_REQUEST:
+                        LOGGER.info("Aprobando solicitud: {}", id);
+                        verificarSolicitudService
+                                .aprobarSolicitud(id, aprobar.getComentario())
+                                .block();
+                    }
+                    case REJECT_REQUEST -> {
                         VerificarSolicitudDTO rechazar = event.getData();
-                        LOGGER.info("Rechazando solicitud: {}", event.getKey());
-                        verificarSolicitudService.rechazarSolicitud(
-                            event.getKey(), 
-                            rechazar.getComentario()
-                        ).block();
-                        break;
-
-                    case DELETE:
-                        LOGGER.info("Eliminando solicitud: {}", event.getKey());
-                        verificarSolicitudService.eliminarSolicitud(event.getKey()).block();
-                        break;
-
-                    default:
-                        LOGGER.warn("Evento no soportado: {}", event.getEventType());
+                        LOGGER.info("Rechazando solicitud: {}", id);
+                        verificarSolicitudService
+                                .rechazarSolicitud(id, rechazar.getComentario())
+                                .block();
+                    }
+                    case DELETE -> {
+                        LOGGER.info("Eliminando solicitud: {}", id);
+                        verificarSolicitudService.eliminarSolicitud(id).block();
+                    }
+                    default -> LOGGER.warn("[SOLICITUD] Evento no soportado: {}", event.getEventType());
                 }
                 LOGGER.info("[SOLICITUD] Completado");
             } catch (Exception e) {
