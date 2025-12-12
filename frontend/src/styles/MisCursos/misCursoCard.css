@@ -6,10 +6,39 @@
   @apply flex items-start justify-between gap-3;
 }
 
+.miscurso-categorias-row {
+  @apply mt-1 flex flex-wrap gap-1.5;
+}
+
+.miscurso-cat-chip {
+  @apply inline-flex items-center px-2.5 py-[3px] rounded-full
+         text-[11px] font-medium border;
+}
+
+.miscurso-cat-color-1 {
+  @apply bg-sky-100 text-sky-700 border-sky-300;
+}
+
+.miscurso-cat-color-2 {
+  @apply bg-emerald-100 text-emerald-700 border-emerald-300;
+}
+
+.miscurso-cat-color-3 {
+  @apply bg-violet-100 text-violet-700 border-violet-300;
+}
+
+.miscurso-cat-color-4 {
+  @apply bg-amber-100 text-amber-700 border-amber-300;
+}
+
 .miscurso-calificar {
   @apply inline-flex items-center justify-center px-3 py-[3px] rounded-full
          text-[11px] font-medium bg-emerald-100 text-emerald-700
          border border-emerald-300 hover:bg-emerald-200 transition-colors;
+}
+
+.miscurso-calificado-chip {
+  @apply inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-300;
 }
 
 .miscurso-fecha-wrapper {

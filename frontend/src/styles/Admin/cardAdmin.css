@@ -1,0 +1,53 @@
+.admin-card {
+    @apply w-full bg-white border border-slate-200 rounded-xl shadow-sm flex items-center justify-between px-4 py-3 transition hover:shadow-md;
+}
+
+/* Columna izquierda (avatar + info) */
+.admin-card-left {
+    @apply flex items-center gap-4 min-w-0;
+}
+
+.admin-card-avatar {
+    @apply w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center;
+}
+
+.admin-card-avatar-icon {
+    @apply text-xl text-slate-400;
+}
+
+.admin-card-info {
+    @apply flex flex-col gap-1 min-w-0;
+}
+
+.admin-card-title {
+    @apply text-sm md:text-base font-semibold text-slate-900;
+}
+
+.admin-card-meta {
+    @apply text-[11px] md:text-xs text-slate-500;
+}
+
+.admin-card-description {
+    @apply text-[11px] md:text-xs text-slate-600;
+}
+
+/* Acciones derecha */
+.admin-card-actions {
+    @apply flex items-center gap-2 ml-4;
+}
+
+.admin-card-btn {
+    @apply px-4 py-1.5 rounded-full text-[11px] md:text-xs font-medium focus:outline-none focus:ring-2 focus:ring-offset-1 transition whitespace-nowrap;
+}
+
+.admin-card-btn-secondary {
+    @apply bg-white text-slate-700 border border-slate-300 hover:bg-slate-100;
+}
+
+.admin-card-btn-outline {
+    @apply bg-sky-100 text-sky-700 border border-sky-300 hover:bg-sky-200;
+}
+
+.admin-card-btn-primary {
+    @apply bg-slate-900 text-white border border-slate-900 hover:bg-slate-800;
+}

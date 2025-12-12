@@ -21,24 +21,42 @@
 
 /* Estilos para tags por categoría */
 .curso-tag {
-  @apply inline-block text-[11px] font-medium px-3 py-[3px] rounded-full mt-2;
+  @apply inline-flex items-center px-3 py-[3px] rounded-full text-[11px]
+         font-medium border mt-2;
 }
 
+/* Paleta alineada con InfoCurso (infocurso-chip-color-1..4) */
+.curso-chip-color-1 {
+  @apply bg-sky-100 text-sky-700 border-sky-300;
+}
+
+.curso-chip-color-2 {
+  @apply bg-emerald-100 text-emerald-700 border-emerald-300;
+}
+
+.curso-chip-color-3 {
+  @apply bg-violet-100 text-violet-700 border-violet-300;
+}
+
+.curso-chip-color-4 {
+  @apply bg-amber-100 text-amber-700 border-amber-300;
+}
+
+/* Tag para categorías/tag genérico (fallback) */
 .tag-blue {
-  @apply bg-sky-600/20 text-sky-600 border border-sky-600/40;
+  @apply bg-sky-600/20 text-sky-600 border-sky-600/40;
 }
 
 .tag-green {
-  @apply bg-green-600/20 text-green-600 border border-green-600/40;
+  @apply bg-green-600/20 text-green-600 border-green-600/40;
 }
 
 .tag-pink {
-  @apply bg-purple-600/20 text-purple-600 border border-purple-600/40;
+  @apply bg-purple-600/20 text-purple-600 border-purple-600/40;
 }
 
-/* Tag para categorías no definidas */
 .tag-default {
-  @apply bg-slate-600/20 text-slate-600 border border-slate-600/40;
+  @apply bg-slate-600/20 text-slate-600 border-slate-600/40;
 }
 
 

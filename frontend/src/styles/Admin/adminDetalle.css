@@ -1,0 +1,142 @@
+    /* ========================= */
+    /* Detalle de solicitud      */
+    /* ========================= */
+
+    .admin-detail {
+        @apply mt-6 grid gap-6 md:grid-cols-2 items-start;
+
+.admin-detail-left {
+    @apply flex flex-col gap-4;
+}
+
+.admin-detail-media {
+    @apply relative w-full h-56 sm:h-64 md:h-72 bg-slate-200 rounded-2xl;
+}
+
+.admin-detail-media-placeholder {
+    @apply w-full h-full rounded-2xl;
+}
+
+.admin-detail-media-img {
+    @apply w-full h-full object-cover rounded-2xl;
+}
+
+/* Tutor */
+.admin-detail-tutor-row {
+    @apply flex items-center justify-between gap-3;
+}
+
+.admin-detail-tutor-info {
+    @apply flex items-center gap-3;
+}
+
+.admin-detail-tutor-avatar {
+    @apply w-10 h-10 rounded-full object-cover;
+}
+
+.admin-detail-tutor-name {
+    @apply text-sm font-semibold text-slate-900;
+}
+
+.admin-detail-tutor-desc {
+    @apply text-xs text-slate-500;
+}
+
+/* Columna derecha: info del curso + solicitud */
+.admin-detail-info {
+    @apply flex flex-col gap-3;
+}
+
+.admin-detail-header-row {
+    @apply flex items-start justify-between gap-3;
+}
+
+.admin-detail-title {
+    @apply text-xl md:text-2xl font-semibold text-slate-900;
+}
+
+.admin-detail-close-btn {
+    @apply text-xs md:text-sm px-3 py-1.5 rounded-full border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 shadow-sm transition;
+}
+
+.admin-detail-tag {
+    @apply inline-block text-[11px] font-medium px-3 py-[3px] rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300;
+}
+
+.admin-detail-price-row {
+    @apply flex items-baseline gap-2 mt-1;
+}
+
+.admin-detail-arrow {
+    @apply text-lg text-slate-700;
+}
+
+.admin-detail-price {
+    @apply text-2xl md:text-3xl font-bold text-slate-900;
+}
+
+.admin-detail-summary {
+    @apply text-sm text-slate-600;
+}
+
+.admin-detail-categories {
+    @apply mt-2 flex flex-wrap gap-2;
+}
+
+.admin-detail-category-chip {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-300;
+}
+
+.admin-detail-meta-grid {
+    @apply mt-4 grid gap-3 sm:grid-cols-2;
+}
+
+.admin-detail-meta-label {
+    @apply text-[11px] font-semibold text-slate-500 uppercase tracking-wide;
+}
+
+.admin-detail-meta-value {
+    @apply text-sm text-slate-800;
+}
+
+.admin-detail-description-block {
+    @apply mt-4;
+}
+
+.admin-detail-description-title {
+    @apply text-sm font-semibold text-slate-800 mb-1 uppercase tracking-wide;
+}
+
+.admin-detail-description-text {
+    @apply text-sm text-slate-700 leading-relaxed;
+}
+
+.admin-detail-actions {
+    @apply mt-6 flex flex-wrap gap-3;
+}
+
+.admin-detail-btn {
+    @apply px-4 py-2 rounded-full text-xs md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-1 transition;
+}
+
+.admin-detail-btn-light {
+    @apply bg-white text-slate-700 border border-slate-300 hover:bg-slate-100;
+}
+        @apply mt-4 flex flex-wrap gap-3;
+    }
+
+    .admin-detail-btn {
+        @apply px-4 py-2 rounded-full text-xs md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-1 transition;
+    }
+
+    .admin-detail-btn-light {
+        @apply bg-white text-slate-700 border border-slate-300 hover:bg-slate-100;
+    }
+
+    .admin-detail-btn-outline {
+        @apply bg-sky-100 text-sky-700 border border-sky-300 hover:bg-sky-200;
+    }
+
+    .admin-detail-btn-primary {
+        @apply bg-slate-900 text-white border border-slate-900 hover:bg-slate-800;
+    }

@@ -1,0 +1,67 @@
+.form-curso-modal-overlay {
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60;
+}
+
+.form-curso-modal {
+  @apply w-full max-w-xl rounded-2xl bg-white shadow-xl p-6 md:p-8;
+}
+
+.form-curso-header {
+  @apply flex items-center justify-between mb-3;
+}
+
+.form-curso-title {
+  @apply text-lg md:text-xl font-semibold text-slate-900;
+}
+
+.form-curso-close-btn {
+  @apply h-8 w-8 flex items-center justify-center rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors;
+}
+
+.form-curso-subtitle {
+  @apply text-sm text-slate-600 mb-4;
+}
+
+.form-curso-error {
+  @apply mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600;
+}
+
+.form-curso-form {
+  @apply space-y-4;
+}
+
+.form-curso-field {
+  @apply flex flex-col gap-1;
+}
+
+.form-curso-label {
+  @apply text-sm font-medium text-slate-800;
+}
+
+.form-curso-textarea {
+  @apply w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 resize-none;
+}
+
+.form-curso-input-file {
+  @apply block w-full text-sm text-slate-700 file:mr-4 file:rounded-md file:border-0 file:bg-sky-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-sky-700 hover:file:bg-sky-100;
+}
+
+.form-curso-hint {
+  @apply text-xs text-slate-500 mt-1;
+}
+
+.form-curso-actions {
+  @apply mt-4 flex justify-end gap-3;
+}
+
+.form-curso-btn {
+  @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors;
+}
+
+.form-curso-btn-secondary {
+  @apply border border-slate-200 text-slate-700 bg-white hover:bg-slate-50;
+}
+
+.form-curso-btn-primary {
+  @apply bg-sky-600 text-white hover:bg-sky-700;
+}
