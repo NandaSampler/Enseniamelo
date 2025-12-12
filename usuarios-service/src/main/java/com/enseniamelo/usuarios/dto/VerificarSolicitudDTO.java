@@ -40,10 +40,6 @@ public class VerificarSolicitudDTO {
     @Size(max = 500)
     private String fotoCi;
 
-    // 👇 NUEVO: idCurso que está en el modelo
-    @Schema(description = "ID de MongoDB del curso asociado (si aplica)", example = "507f1f77bcf86cd7994390AA")
-    private String idCurso;
-
     // 👇 NUEVO: lista de archivos (urls, ids, lo que uses)
     @Schema(description = "Lista de archivos adicionales (URLs, IDs de storage, etc.)")
     private List<String> archivos;

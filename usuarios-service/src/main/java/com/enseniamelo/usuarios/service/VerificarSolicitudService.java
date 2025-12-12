@@ -52,9 +52,6 @@ public class VerificarSolicitudService {
                                 solicitud.setFotoCi(solicitudDTO.getFotoCi());
                                 solicitud.setIdUsuario(idUsuario);
 
-                                // 🔹 idCurso y archivos desde el DTO
-                                solicitud.setIdCurso(solicitudDTO.getIdCurso());
-
                                 // Si el cliente no envía archivos => lista vacía, nunca null
                                 if (solicitudDTO.getArchivos() != null && !solicitudDTO.getArchivos().isEmpty()) {
                                     solicitud.setArchivos(solicitudDTO.getArchivos());
@@ -173,7 +170,7 @@ public class VerificarSolicitudService {
                                         .flatMap(solicitudGuardada -> usuarioRepository
                                                 .findById(solicitud.getIdUsuario())
                                                 .flatMap(usuario -> {
-                                                    usuario.setRol("DOCENTE");
+                                                    usuario.setRol("TUTOR");
                                                     usuario.setActualizado(ahora);
                                                     return usuarioRepository.save(usuario);
                                                 })
