@@ -45,6 +45,11 @@ public class SecurityConfig {
         .csrf(csrf -> csrf.disable())
         .authorizeExchange(auth -> auth
             // Públicos generales
+            .pathMatchers("/*/swagger-ui/**", "/*/swagger-ui.html").permitAll()
+            .pathMatchers("/*/webjars/**").permitAll()
+            .pathMatchers("/*/v3/api-docs/**").permitAll()
+            .pathMatchers("/*/openapi/**").permitAll()
+
             .pathMatchers("/actuator/**").permitAll()
             .pathMatchers("/eureka/**").permitAll()
             .pathMatchers("/error/**").permitAll()
@@ -61,6 +66,12 @@ public class SecurityConfig {
             .pathMatchers("/ms-payments/health").permitAll()
             .pathMatchers("/curso/health").permitAll()
 
+            // Autorización Comentarios
+            .pathMatchers(HttpMethod.GET, "/api/comentario-curso/**").permitAll()
+            .pathMatchers(HttpMethod.POST, "/api/comentario-curso/**").hasAnyRole("USER", "ADMIN")
+            .pathMatchers(HttpMethod.PUT, "/api/comentario-curso/**").hasRole("ADMIN")
+            .pathMatchers(HttpMethod.DELETE, "/api/comentario-curso/**").hasRole("ADMIN")
+
             // Autorización Payments
             .pathMatchers("/ms-payments/v1/pagos/**").hasRole("ADMIN")
             .pathMatchers("/ms-payments/v1/planes/**").hasAnyRole("USER", "TUTOR", "ADMIN")
@@ -68,8 +79,6 @@ public class SecurityConfig {
 
             // Documentación de cursos pública
             .pathMatchers("/curso/docs", "/curso/redoc", "/curso/openapi.json").permitAll()
-            // ====== CURSO-SERVICE ======
-
             // 1) Endpoints de cursos / categorias / horarios PUBLICOS (solo GET)
             .pathMatchers(HttpMethod.GET, "/curso/api/v1/cursos/**").permitAll()
             .pathMatchers(HttpMethod.GET, "/curso/api/v1/categorias/**").permitAll()
