@@ -33,84 +33,86 @@ import reactor.core.publisher.Mono;
 @Slf4j
 public class UsuarioController {
 
-    private final UsuarioService usuarioService;
+        private final UsuarioService usuarioService;
 
-    @Operation(summary = "${api.usuario.get-usuario.description}", description = "${api.usuario.get-usuario.notes}")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
-            @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
-            @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
-    })
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    @GetMapping(value = "/{idUsuario}", produces = "application/json")
-    public Mono<UsuarioDTO> getUsuario(
-            @Parameter(description = "${api.usuario.get-usuario.parameters.id}", required = true) @PathVariable Integer idUsuario) {
+        @Operation(summary = "${api.usuario.get-usuario.description}", description = "${api.usuario.get-usuario.notes}")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
+                        @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}"),
+                        @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
+        })
+        @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'TUTOR')")
+        @GetMapping(value = "/{id}", produces = "application/json")
+        public Mono<UsuarioDTO> getUsuario(
+                        @Parameter(description = "ID de MongoDB del usuario", required = true) @PathVariable String id) {
 
-        log.info("GET /v1/usuario/{} - Obteniendo usuario", idUsuario);
-        return usuarioService.buscarPorIdUsuario(idUsuario)
-                .doOnSuccess(usuario -> log.info("Usuario {} encontrado", idUsuario))
-                .doOnError(error -> log.error("Error buscando usuario {}: {}", idUsuario, error.getMessage()));
-    }
+                log.info("GET /v1/usuario/{} - Obteniendo usuario", id);
+                return usuarioService.buscarPorId(id)
+                                .doOnSuccess(usuario -> log.info("Usuario {} encontrado", id))
+                                .doOnError(error -> log.error("Error buscando usuario {}: {}", id, error.getMessage()));
+        }
 
-    @Operation(summary = "${api.usuario.get-usuarios.description}", description = "${api.usuario.get-usuarios.notes}")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}")
-    })
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    @GetMapping(produces = "application/json")
-    public Flux<UsuarioDTO> getUsuarios() {
-        log.info("GET /v1/usuario - Obteniendo todos los usuarios");
-        return usuarioService.obtenerTodos()
-                .doOnComplete(() -> log.info("Listado de usuarios completado"))
-                .doOnError(error -> log.error("Error obteniendo usuarios: {}", error.getMessage()));
-    }
+        @Operation(summary = "${api.usuario.get-usuarios.description}", description = "${api.usuario.get-usuarios.notes}")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}")
+        })
+        @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'TUTOR')")
+        @GetMapping(produces = "application/json")
+        public Flux<UsuarioDTO> getUsuarios() {
+                log.info("GET /v1/usuario - Obteniendo todos los usuarios");
+                return usuarioService.obtenerTodos()
+                                .doOnComplete(() -> log.info("Listado de usuarios completado"))
+                                .doOnError(error -> log.error("Error obteniendo usuarios: {}", error.getMessage()));
+        }
 
-    @Operation(summary = "${api.usuario.create-usuario.description}", description = "${api.usuario.create-usuario.notes}")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "${api.responseCodes.created.description}"),
-            @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}")
-    })
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    @PostMapping(consumes = "application/json", produces = "application/json")
-    public Mono<UsuarioDTO> createUsuario(
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "${api.usuario.schema.usuario.description}", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = UsuarioDTO.class))) @Valid @RequestBody UsuarioDTO usuarioDTO) {
+        @Operation(summary = "${api.usuario.create-usuario.description}", description = "${api.usuario.create-usuario.notes}")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "201", description = "${api.responseCodes.created.description}"),
+                        @ApiResponse(responseCode = "400", description = "${api.responseCodes.badRequest.description}")
+        })
+        @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'TUTOR')")
+        @PostMapping(consumes = "application/json", produces = "application/json")
+        public Mono<UsuarioDTO> createUsuario(
+                        @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "${api.usuario.schema.usuario.description}", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = UsuarioDTO.class))) @Valid @RequestBody UsuarioDTO usuarioDTO) {
 
-        log.info("POST /v1/usuario - Creando nuevo usuario");
-        return usuarioService.crearUsuario(usuarioDTO)
-                .doOnSuccess(creado -> log.info("Usuario creado con idUsuario: {}", creado.getIdUsuario()))
-                .doOnError(error -> log.error("Error creando usuario: {}", error.getMessage()));
-    }
+                log.info("POST /v1/usuario - Creando nuevo usuario");
+                return usuarioService.crearUsuario(usuarioDTO)
+                                .doOnSuccess(creado -> log.info("Usuario creado con id: {}", creado.getId()))
+                                .doOnError(error -> log.error("Error creando usuario: {}", error.getMessage()));
+        }
 
-    @Operation(summary = "${api.usuario.update-usuario.description}", description = "${api.usuario.update-usuario.notes}")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
-            @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
-    })
-    @PreAuthorize("hasRole('ADMIN') or (hasRole('USER') and #idUsuario == authentication.principal.claims['user_id'])")
-    @PutMapping(value = "/{idUsuario}", consumes = "application/json", produces = "application/json")
-    public Mono<UsuarioDTO> updateUsuario(
-            @Parameter(description = "${api.usuario.update-usuario.parameters.id}", required = true) @PathVariable Integer idUsuario,
-            @Valid @RequestBody UsuarioDTO usuarioDTO) {
+        @Operation(summary = "${api.usuario.update-usuario.description}", description = "${api.usuario.update-usuario.notes}")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
+                        @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
+        })
+        @PreAuthorize("hasRole('ADMIN') or (hasRole('USER') and #id == authentication.principal.claims['sub'])")
+        @PutMapping(value = "/{id}", consumes = "application/json", produces = "application/json")
+        public Mono<UsuarioDTO> updateUsuario(
+                        @Parameter(description = "ID de MongoDB del usuario", required = true) @PathVariable String id,
+                        @Valid @RequestBody UsuarioDTO usuarioDTO) {
 
-        log.info("PUT /v1/usuario/{} - Actualizando usuario", idUsuario);
-        return usuarioService.actualizarUsuario(idUsuario, usuarioDTO)
-                .doOnSuccess(actualizado -> log.info("Usuario {} actualizado", idUsuario))
-                .doOnError(error -> log.error("Error actualizando usuario {}: {}", idUsuario, error.getMessage()));
-    }
+                log.info("PUT /v1/usuario/{} - Actualizando usuario", id);
+                return usuarioService.actualizarUsuario(id, usuarioDTO)
+                                .doOnSuccess(actualizado -> log.info("Usuario {} actualizado", id))
+                                .doOnError(error -> log.error("Error actualizando usuario {}: {}", id,
+                                                error.getMessage()));
+        }
 
-    @Operation(summary = "${api.usuario.delete-usuario.description}", description = "${api.usuario.delete-usuario.notes}")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "${api.responseCodes.noContent.description}"),
-            @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
-    })
-    @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping(value = "/{idUsuario}")
-    public Mono<Void> deleteUsuario(
-            @Parameter(description = "${api.usuario.delete-usuario.parameters.id}", required = true) @PathVariable Integer idUsuario) {
+        @Operation(summary = "${api.usuario.delete-usuario.description}", description = "${api.usuario.delete-usuario.notes}")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "204", description = "${api.responseCodes.noContent.description}"),
+                        @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
+        })
+        @PreAuthorize("hasRole('ADMIN')")
+        @DeleteMapping(value = "/{id}")
+        public Mono<Void> deleteUsuario(
+                        @Parameter(description = "ID de MongoDB del usuario", required = true) @PathVariable String id) {
 
-        log.info("DELETE /v1/usuario/{} - Eliminando usuario", idUsuario);
-        return usuarioService.eliminarPorIdUsuario(idUsuario)
-                .doOnSuccess(v -> log.info("Usuario {} eliminado exitosamente", idUsuario))
-                .doOnError(error -> log.error("Error eliminando usuario {}: {}", idUsuario, error.getMessage()));
-    }
+                log.info("DELETE /v1/usuario/{} - Eliminando usuario", id);
+                return usuarioService.eliminarPorId(id)
+                                .doOnSuccess(v -> log.info("Usuario {} eliminado exitosamente", id))
+                                .doOnError(error -> log.error("Error eliminando usuario {}: {}", id,
+                                                error.getMessage()));
+        }
 }

@@ -1,17 +1,18 @@
 package com.enseniamelo.usuarios.config;
 
 import java.util.function.Consumer;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.enseniamelo.usuarios.dto.UsuarioDTO;
 import com.enseniamelo.usuarios.dto.PerfilTutorDTO;
+import com.enseniamelo.usuarios.dto.UsuarioDTO;
 import com.enseniamelo.usuarios.dto.VerificarSolicitudDTO;
-import com.enseniamelo.usuarios.service.UsuarioService;
 import com.enseniamelo.usuarios.service.PerfilTutorService;
+import com.enseniamelo.usuarios.service.UsuarioService;
 import com.enseniamelo.usuarios.service.VerificarSolicitudService;
 import com.enseniamelo.usuarios.util.events.Event;
 
@@ -34,11 +35,10 @@ public class MessageProcessorConfig {
         this.verificarSolicitudService = verificarSolicitudService;
     }
 
-
     @Bean
     public Consumer<Event<Integer, UsuarioDTO>> usuarioProcessor() {
         return event -> {
-            LOGGER.info("📨 [USUARIO] Evento: tipo={}, id={}", 
+            LOGGER.info("📨 [USUARIO] Evento: tipo={}, id={}",
                     event.getEventType(), event.getKey());
 
             try {
@@ -54,9 +54,8 @@ public class MessageProcessorConfig {
                     case UPDATE:
                         LOGGER.info("Actualizando usuario: {}", event.getKey());
                         usuarioService.actualizarUsuario(
-                            event.getKey(), 
-                            event.getData()
-                        ).block();
+                                event.getKey(),
+                                event.getData()).block();
                         break;
                     default:
                         LOGGER.warn("Evento no soportado: {}", event.getEventType());
@@ -69,11 +68,10 @@ public class MessageProcessorConfig {
         };
     }
 
-
     @Bean
     public Consumer<Event<Integer, PerfilTutorDTO>> tutorProcessor() {
         return event -> {
-            LOGGER.info("[TUTOR] Evento: tipo={}, id={}", 
+            LOGGER.info("[TUTOR] Evento: tipo={}, id={}",
                     event.getEventType(), event.getKey());
 
             try {
@@ -89,9 +87,8 @@ public class MessageProcessorConfig {
                     case UPDATE:
                         LOGGER.info("Actualizando tutor: {}", event.getKey());
                         perfilTutorService.actualizarPerfilTutor(
-                            event.getKey(), 
-                            event.getData()
-                        ).block();
+                                event.getKey(),
+                                event.getData()).block();
                         break;
                     default:
                         LOGGER.warn("Evento no soportado: {}", event.getEventType());
@@ -107,7 +104,7 @@ public class MessageProcessorConfig {
     @Bean
     public Consumer<Event<Integer, VerificarSolicitudDTO>> solicitudProcessor() {
         return event -> {
-            LOGGER.info("[SOLICITUD] Evento: tipo={}, id={}", 
+            LOGGER.info("[SOLICITUD] Evento: tipo={}, id={}",
                     event.getEventType(), event.getKey());
 
             try {
@@ -126,18 +123,16 @@ public class MessageProcessorConfig {
                         VerificarSolicitudDTO aprobar = event.getData();
                         LOGGER.info("Aprobando solicitud: {}", event.getKey());
                         verificarSolicitudService.aprobarSolicitud(
-                            event.getKey(), 
-                            aprobar.getComentario()
-                        ).block();
+                                event.getKey(),
+                                aprobar.getComentario()).block();
                         break;
 
                     case REJECT_REQUEST:
                         VerificarSolicitudDTO rechazar = event.getData();
                         LOGGER.info("Rechazando solicitud: {}", event.getKey());
                         verificarSolicitudService.rechazarSolicitud(
-                            event.getKey(), 
-                            rechazar.getComentario()
-                        ).block();
+                                event.getKey(),
+                                rechazar.getComentario()).block();
                         break;
 
                     case DELETE:

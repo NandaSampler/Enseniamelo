@@ -1,23 +1,32 @@
 package com.enseniamelo.usuarios.mapper;
 
+import java.util.List;
+
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
+
 import com.enseniamelo.usuarios.dto.VerificarSolicitudDTO;
 import com.enseniamelo.usuarios.model.VerificarSolicitud;
 
-import java.util.List;
-
-@Mapper(
-    componentModel = "spring"
-)
+@Mapper(componentModel = "spring")
 public interface VerificarSolicitudMapper {
-    @Mapping(target = "idUsuario", source = "idUsuario")  
-    @Mapping(target = "nombreUsuario", ignore = true)  
-    @Mapping(target = "emailUsuario", ignore = true)  
-    @Mapping(target = "idPerfilTutor", source = "idPerfilTutor")  
+
+    // entity -> dto
+    @Mapping(target = "nombreUsuario", ignore = true)
+    @Mapping(target = "emailUsuario", ignore = true)
     VerificarSolicitudDTO entityToDto(VerificarSolicitud entity);
+    // idCurso y archivos se mapean solos por nombre
+
+    // dto -> entity
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "idUsuario", ignore = true)
+    @Mapping(target = "idPerfilTutor", ignore = true)
+    @Mapping(target = "creado", ignore = true)
+    @Mapping(target = "decidido", ignore = true)
+    @Mapping(target = "actualizado", ignore = true)
     VerificarSolicitud dtoToEntity(VerificarSolicitudDTO dto);
+
     List<VerificarSolicitudDTO> entitiesToDtos(List<VerificarSolicitud> entities);
-    void updateEntityFromDto(VerificarSolicitudDTO dto, @MappingTarget VerificarSolicitud entity);
+
+    List<VerificarSolicitud> dtosToEntities(List<VerificarSolicitudDTO> dtos);
 }

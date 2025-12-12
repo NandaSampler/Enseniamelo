@@ -35,128 +35,128 @@ import reactor.core.publisher.Mono;
 @Slf4j
 public class VerificarSolicitudController {
 
-    private final VerificarSolicitudService solicitudService;
+        private final VerificarSolicitudService solicitudService;
 
-    @Operation(summary = "Crear solicitud de verificación", description = "Un usuario solicita verificación como tutor")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Solicitud creada exitosamente"),
-            @ApiResponse(responseCode = "400", description = "Datos inválidos o usuario ya tiene solicitud")
-    })
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
-    @PostMapping("/usuario/{idUsuario}")
-    public Mono<ResponseEntity<VerificarSolicitudDTO>> crearSolicitud(
-            @Parameter(description = "ID del usuario", required = true) @PathVariable Integer idUsuario,
-            @Valid @RequestBody VerificarSolicitudDTO solicitudDTO) {
+        @Operation(summary = "Crear solicitud de verificación", description = "Un usuario solicita verificación como tutor")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "201", description = "Solicitud creada exitosamente"),
+                        @ApiResponse(responseCode = "400", description = "Datos inválidos o usuario ya tiene solicitud")
+        })
+        @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+        @PostMapping("/usuario/{idUsuario}")
+        public Mono<ResponseEntity<VerificarSolicitudDTO>> crearSolicitud(
+                        @Parameter(description = "ID de MongoDB del usuario", required = true) @PathVariable String idUsuario,
+                        @Valid @RequestBody VerificarSolicitudDTO solicitudDTO) {
 
-        log.info("POST /v1/verificacion/usuario/{} - Creando solicitud", idUsuario);
-        return solicitudService.crearSolicitud(idUsuario, solicitudDTO)
-                .map(creada -> ResponseEntity.status(HttpStatus.CREATED).body(creada));
-    }
+                log.info("POST /v1/verificacion/usuario/{} - Creando solicitud", idUsuario);
+                return solicitudService.crearSolicitud(idUsuario, solicitudDTO)
+                                .map(creada -> ResponseEntity.status(HttpStatus.CREATED).body(creada));
+        }
 
-    @Operation(summary = "Obtener todas las solicitudes")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Lista de solicitudes obtenida")
-    })
-    @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping
-    public Flux<VerificarSolicitudDTO> obtenerTodas() {
-        log.info("GET /v1/verificacion - Obteniendo todas las solicitudes");
-        return solicitudService.obtenerTodas();
-    }
+        @Operation(summary = "Obtener todas las solicitudes")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Lista de solicitudes obtenida")
+        })
+        @PreAuthorize("hasRole('ADMIN')")
+        @GetMapping
+        public Flux<VerificarSolicitudDTO> obtenerTodas() {
+                log.info("GET /v1/verificacion - Obteniendo todas las solicitudes");
+                return solicitudService.obtenerTodas();
+        }
 
-    @Operation(summary = "Buscar solicitud por ID")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Solicitud encontrada"),
-            @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
-    })
-    @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/{idVerificar}")
-    public Mono<ResponseEntity<VerificarSolicitudDTO>> buscarPorId(
-            @Parameter(description = "ID de la solicitud", required = true) @PathVariable Integer idVerificar) {
+        @Operation(summary = "Buscar solicitud por ID")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Solicitud encontrada"),
+                        @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
+        })
+        @PreAuthorize("hasRole('ADMIN')")
+        @GetMapping("/{id}")
+        public Mono<ResponseEntity<VerificarSolicitudDTO>> buscarPorId(
+                        @Parameter(description = "ID de MongoDB de la solicitud", required = true) @PathVariable String id) {
 
-        log.info("GET /v1/verificacion/{} - Buscando solicitud", idVerificar);
-        return solicitudService.buscarPorId(idVerificar)
-                .map(ResponseEntity::ok)
-                .defaultIfEmpty(ResponseEntity.notFound().build());
-    }
+                log.info("GET /v1/verificacion/{} - Buscando solicitud", id);
+                return solicitudService.buscarPorId(id)
+                                .map(ResponseEntity::ok)
+                                .defaultIfEmpty(ResponseEntity.notFound().build());
+        }
 
-    @Operation(summary = "Buscar solicitud de un usuario")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Solicitud encontrada"),
-            @ApiResponse(responseCode = "404", description = "Usuario no tiene solicitud")
-    })
-    @PreAuthorize("hasRole('ADMIN') or #idUsuario == authentication.principal.claims['user_id']")
-    @GetMapping("/usuario/{idUsuario}")
-    public Mono<ResponseEntity<VerificarSolicitudDTO>> buscarPorUsuario(
-            @Parameter(description = "ID del usuario", required = true) @PathVariable Integer idUsuario) {
+        @Operation(summary = "Buscar solicitud de un usuario")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Solicitud encontrada"),
+                        @ApiResponse(responseCode = "404", description = "Usuario no tiene solicitud")
+        })
+        @PreAuthorize("hasRole('ADMIN') or #idUsuario == authentication.principal.claims['sub']")
+        @GetMapping("/usuario/{idUsuario}")
+        public Mono<ResponseEntity<VerificarSolicitudDTO>> buscarPorUsuario(
+                        @Parameter(description = "ID de MongoDB del usuario", required = true) @PathVariable String idUsuario) {
 
-        log.info("GET /v1/verificacion/usuario/{} - Buscando solicitud del usuario", idUsuario);
-        return solicitudService.buscarPorUsuario(idUsuario)
-                .map(ResponseEntity::ok)
-                .defaultIfEmpty(ResponseEntity.notFound().build());
-    }
+                log.info("GET /v1/verificacion/usuario/{} - Buscando solicitud del usuario", idUsuario);
+                return solicitudService.buscarPorUsuario(idUsuario)
+                                .map(ResponseEntity::ok)
+                                .defaultIfEmpty(ResponseEntity.notFound().build());
+        }
 
-    @Operation(summary = "Obtener solicitudes por estado")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Lista de solicitudes obtenida")
-    })
-    @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/estado/{estado}")
-    public Flux<VerificarSolicitudDTO> obtenerPorEstado(
-            @Parameter(description = "Estado: PENDIENTE, APROBADO, RECHAZADO", required = true) @PathVariable String estado) {
+        @Operation(summary = "Obtener solicitudes por estado")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Lista de solicitudes obtenida")
+        })
+        @PreAuthorize("hasRole('ADMIN')")
+        @GetMapping("/estado/{estado}")
+        public Flux<VerificarSolicitudDTO> obtenerPorEstado(
+                        @Parameter(description = "Estado: PENDIENTE, APROBADO, RECHAZADO", required = true) @PathVariable String estado) {
 
-        log.info("GET /v1/verificacion/estado/{} - Obteniendo solicitudes por estado", estado);
-        return solicitudService.obtenerPorEstado(estado);
-    }
+                log.info("GET /v1/verificacion/estado/{} - Obteniendo solicitudes por estado", estado);
+                return solicitudService.obtenerPorEstado(estado);
+        }
 
-    @Operation(summary = "Aprobar solicitud", description = "Aprueba la solicitud y crea el perfil de tutor")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Solicitud aprobada exitosamente"),
-            @ApiResponse(responseCode = "400", description = "La solicitud ya fue procesada"),
-            @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
-    })
-    @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{idVerificar}/aprobar")
-    public Mono<ResponseEntity<VerificarSolicitudDTO>> aprobarSolicitud(
-            @Parameter(description = "ID de la solicitud", required = true) @PathVariable Integer idVerificar,
-            @RequestBody(required = false) Map<String, String> body) {
+        @Operation(summary = "Aprobar solicitud", description = "Aprueba la solicitud y crea el perfil de tutor")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Solicitud aprobada exitosamente"),
+                        @ApiResponse(responseCode = "400", description = "La solicitud ya fue procesada"),
+                        @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
+        })
+        @PreAuthorize("hasRole('ADMIN')")
+        @PutMapping("/{id}/aprobar")
+        public Mono<ResponseEntity<VerificarSolicitudDTO>> aprobarSolicitud(
+                        @Parameter(description = "ID de MongoDB de la solicitud", required = true) @PathVariable String id,
+                        @RequestBody(required = false) Map<String, String> body) {
 
-        String comentario = body != null ? body.get("comentario") : null;
-        log.info("PUT /v1/verificacion/{}/aprobar - Aprobando solicitud", idVerificar);
-        return solicitudService.aprobarSolicitud(idVerificar, comentario)
-                .map(ResponseEntity::ok);
-    }
+                String comentario = body != null ? body.get("comentario") : null;
+                log.info("PUT /v1/verificacion/{}/aprobar - Aprobando solicitud", id);
+                return solicitudService.aprobarSolicitud(id, comentario)
+                                .map(ResponseEntity::ok);
+        }
 
-    @Operation(summary = "Rechazar solicitud")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Solicitud rechazada"),
-            @ApiResponse(responseCode = "400", description = "La solicitud ya fue procesada"),
-            @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
-    })
-    @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{idVerificar}/rechazar")
-    public Mono<ResponseEntity<VerificarSolicitudDTO>> rechazarSolicitud(
-            @Parameter(description = "ID de la solicitud", required = true) @PathVariable Integer idVerificar,
-            @RequestBody(required = false) Map<String, String> body) {
+        @Operation(summary = "Rechazar solicitud")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Solicitud rechazada"),
+                        @ApiResponse(responseCode = "400", description = "La solicitud ya fue procesada"),
+                        @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
+        })
+        @PreAuthorize("hasRole('ADMIN')")
+        @PutMapping("/{id}/rechazar")
+        public Mono<ResponseEntity<VerificarSolicitudDTO>> rechazarSolicitud(
+                        @Parameter(description = "ID de MongoDB de la solicitud", required = true) @PathVariable String id,
+                        @RequestBody(required = false) Map<String, String> body) {
 
-        String comentario = body != null ? body.get("comentario") : "Solicitud rechazada";
-        log.info("PUT /v1/verificacion/{}/rechazar - Rechazando solicitud", idVerificar);
-        return solicitudService.rechazarSolicitud(idVerificar, comentario)
-                .map(ResponseEntity::ok);
-    }
+                String comentario = body != null ? body.get("comentario") : "Solicitud rechazada";
+                log.info("PUT /v1/verificacion/{}/rechazar - Rechazando solicitud", id);
+                return solicitudService.rechazarSolicitud(id, comentario)
+                                .map(ResponseEntity::ok);
+        }
 
-    @Operation(summary = "Eliminar solicitud")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Solicitud eliminada"),
-            @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
-    })
-    @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{idVerificar}")
-    public Mono<ResponseEntity<Void>> eliminarSolicitud(
-            @Parameter(description = "ID de la solicitud", required = true) @PathVariable Integer idVerificar) {
+        @Operation(summary = "Eliminar solicitud")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "204", description = "Solicitud eliminada"),
+                        @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
+        })
+        @PreAuthorize("hasRole('ADMIN')")
+        @DeleteMapping("/{id}")
+        public Mono<ResponseEntity<Void>> eliminarSolicitud(
+                        @Parameter(description = "ID de MongoDB de la solicitud", required = true) @PathVariable String id) {
 
-        log.info("DELETE /v1/verificacion/{} - Eliminando solicitud", idVerificar);
-        return solicitudService.eliminarSolicitud(idVerificar)
-                .then(Mono.just(ResponseEntity.noContent().<Void>build()));
-    }
+                log.info("DELETE /v1/verificacion/{} - Eliminando solicitud", id);
+                return solicitudService.eliminarSolicitud(id)
+                                .then(Mono.just(ResponseEntity.noContent().<Void>build()));
+        }
 }
