@@ -26,9 +26,6 @@ public class VerificarSolicitud {
     @Field("id_perfil_tutor")
     private String idPerfilTutor; // perfil_tutor._id
 
-    @Field("id_curso")
-    private String idCurso; // cursos._id (micro de cursos)
-
     private String estado;
     private String comentario;
     @Field("foto_ci")
