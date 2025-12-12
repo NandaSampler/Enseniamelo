@@ -8,32 +8,42 @@ from pymongo.errors import PyMongoError
 
 from app.schemas.reserva import ReservaCreate, ReservaUpdate, ReservaOut
 from app.core.db import get_collection
+from decimal import Decimal
 
 
 class ReservaRepository:
     """Repositorio Mongo para Reserva."""
     def __init__(self) -> None:
-        # NO crear índices aquí
         self.col = get_collection("reservas")
 
     def ensure_indexes(self) -> None:
         try:
-            self.col.create_index("curso_id")
+            self.col.create_index("id_curso")
         except PyMongoError:
             pass
         try:
-            self.col.create_index("horario_id")
+            self.col.create_index("id_horario")
+        except PyMongoError:
+            pass
+        try:
+            self.col.create_index("id_usuario")
         except PyMongoError:
             pass
 
-    def list(self,
-             curso_id: Optional[str] = None,
-             horario_id: Optional[str] = None) -> List[ReservaOut]:
+    def list(
+        self,
+        id_usuario: Optional[str] = None,
+        id_curso: Optional[str] = None,
+        id_horario: Optional[str] = None,
+    ) -> List[ReservaOut]:
         filtro: Dict[str, Any] = {}
-        if curso_id is not None:
-            filtro["curso_id"] = ObjectId(curso_id)
-        if horario_id is not None:
-            filtro["horario_id"] = ObjectId(horario_id)
+        if id_usuario is not None:
+            filtro["id_usuario"] = ObjectId(id_usuario)
+        if id_curso is not None:
+            filtro["id_curso"] = ObjectId(id_curso)
+        if id_horario is not None:
+            filtro["id_horario"] = ObjectId(id_horario)
+
         docs = list(self.col.find(filtro))
         return [ReservaOut(**self._normalize(d)) for d in docs]
 
@@ -43,25 +53,36 @@ class ReservaRepository:
             raise KeyError("reserva no encontrada")
         return ReservaOut(**self._normalize(doc))
 
+    def _clean_decimal_fields(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        out = dict(data)
+        if isinstance(out.get("monto"), Decimal):
+            out["monto"] = float(out["monto"])
+        return out
+
     def create(self, payload: ReservaCreate) -> ReservaOut:
         now = datetime.utcnow()
         data = payload.model_dump()
-        if "curso_id" in data and data["curso_id"] is not None:
-            data["curso_id"] = ObjectId(data["curso_id"])
-        if "horario_id" in data and data["horario_id"] is not None:
-            data["horario_id"] = ObjectId(data["horario_id"])
-        data.update({"fecha": now, "actualizado": now})
+        data = self._clean_decimal_fields(data)  # 👈 limpiar Decimals
+
+        if "id_curso" in data and data["id_curso"] is not None:
+            data["id_curso"] = ObjectId(data["id_curso"])
+        if "id_horario" in data and data["id_horario"] is not None:
+            data["id_horario"] = ObjectId(data["id_horario"])
+        if "id_usuario" in data and data["id_usuario"] is not None:
+            data["id_usuario"] = ObjectId(data["id_usuario"])
+
+        data.update({"fechaCreacion": now, "actualizado": now})
         res = self.col.insert_one(data)
         data["_id"] = res.inserted_id
         return ReservaOut(**self._normalize(data))
 
     def update(self, reserva_id: str, payload: ReservaUpdate) -> ReservaOut:
         update_data = payload.model_dump(exclude_unset=True)
-        if "curso_id" in update_data and update_data["curso_id"] is not None:
-            update_data["curso_id"] = ObjectId(update_data["curso_id"])
-        if "horario_id" in update_data and update_data["horario_id"] is not None:
-            update_data["horario_id"] = ObjectId(update_data["horario_id"])
+        update_data = self._clean_decimal_fields(update_data)  # 👈 limpiar Decimals
+
+        # si algún día permites actualizar FKs, convertir aquí a ObjectId
         update_data["actualizado"] = datetime.utcnow()
+
         doc = self.col.find_one_and_update(
             {"_id": ObjectId(reserva_id)},
             {"$set": update_data},
@@ -84,10 +105,11 @@ class ReservaRepository:
         d = dict(doc)
         d["id"] = str(d["_id"])
         d.pop("_id", None)
-        if "curso_id" in d and isinstance(d["curso_id"], ObjectId):
-            d["curso_id"] = str(d["curso_id"])
-        if "horario_id" in d and isinstance(d["horario_id"], ObjectId):
-            d["horario_id"] = str(d["horario_id"])
+
+        for field in ("id_usuario", "id_curso", "id_horario"):
+            if field in d and isinstance(d[field], ObjectId):
+                d[field] = str(d[field])
+
         return d
 
 

@@ -18,7 +18,7 @@ class HorarioRepository:
 
     def ensure_indexes(self) -> None:
         try:
-            self.col.create_index("curso_id")
+            self.col.create_index("id_curso")
         except PyMongoError:
             pass
         try:
@@ -26,10 +26,10 @@ class HorarioRepository:
         except PyMongoError:
             pass
 
-    def list(self, curso_id: Optional[str] = None) -> List[HorarioOut]:
+    def list(self, id_curso: Optional[str] = None) -> List[HorarioOut]:
         filtro: Dict[str, Any] = {}
-        if curso_id is not None:
-            filtro["curso_id"] = ObjectId(curso_id)
+        if id_curso is not None:
+            filtro["id_curso"] = ObjectId(id_curso)
         docs = list(self.col.find(filtro))
         return [HorarioOut(**self._normalize(d)) for d in docs]
 
@@ -42,18 +42,18 @@ class HorarioRepository:
     def create(self, payload: HorarioCreate) -> HorarioOut:
         now = datetime.utcnow()
         data = payload.model_dump()
-        if "curso_id" in data and data["curso_id"] is not None:
-            data["curso_id"] = ObjectId(data["curso_id"])
-        data.update({"creado": now, "actualizado": now})
+        if "id_curso" in data and data["id_curso"] is not None:
+            data["id_curso"] = ObjectId(data["id_curso"])
+        data.update({"fechaCreacion": now})
         res = self.col.insert_one(data)
         data["_id"] = res.inserted_id
         return HorarioOut(**self._normalize(data))
 
     def update(self, horario_id: str, payload: HorarioUpdate) -> HorarioOut:
         update_data = payload.model_dump(exclude_unset=True)
-        if "curso_id" in update_data and update_data["curso_id"] is not None:
-            update_data["curso_id"] = ObjectId(update_data["curso_id"])
-        update_data["actualizado"] = datetime.utcnow()
+        if "id_curso" in update_data and update_data["id_curso"] is not None:
+            update_data["id_curso"] = ObjectId(update_data["id_curso"])
+        # si quisieras, aquí podrías añadir un campo "actualizado"
         doc = self.col.find_one_and_update(
             {"_id": ObjectId(horario_id)},
             {"$set": update_data},
@@ -76,8 +76,8 @@ class HorarioRepository:
         d = dict(doc)
         d["id"] = str(d["_id"])
         d.pop("_id", None)
-        if "curso_id" in d and isinstance(d["curso_id"], ObjectId):
-            d["curso_id"] = str(d["curso_id"])
+        if "id_curso" in d and isinstance(d["id_curso"], ObjectId):
+            d["id_curso"] = str(d["id_curso"])
         return d
 
 

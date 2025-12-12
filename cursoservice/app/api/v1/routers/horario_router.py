@@ -10,10 +10,10 @@ def get_service() -> HorarioService:
 
 @router.get("/", response_model=List[HorarioOut])
 def list_horarios(
-    curso_id: Optional[str] = Query(None, description="Filtrar por id de curso"),
+    id_curso: Optional[str] = Query(None, description="Filtrar por id de curso"),
     service: HorarioService = Depends(get_service),
 ):
-    return service.list(curso_id=curso_id)
+    return service.list(id_curso=id_curso)
 
 @router.get("/{horario_id}", response_model=HorarioOut)
 def get_horario(horario_id: str, service: HorarioService = Depends(get_service)):

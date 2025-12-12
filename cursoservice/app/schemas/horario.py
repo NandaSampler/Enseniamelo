@@ -3,8 +3,9 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field, field_validator
 
+
 class HorarioBase(BaseModel):
-    curso_id: str = Field(..., description="FK a curso.id (ObjectId)")
+    id_curso: str = Field(..., description="FK a curso._id (ObjectId)")
     inicio: datetime = Field(..., description="Fecha y hora de inicio")
     fin: datetime = Field(..., description="Fecha y hora de fin")
 
@@ -16,11 +17,13 @@ class HorarioBase(BaseModel):
             raise ValueError("fin debe ser mayor que inicio")
         return fin
 
+
 class HorarioCreate(HorarioBase):
     pass
 
+
 class HorarioUpdate(BaseModel):
-    curso_id: Optional[str] = None
+    id_curso: Optional[str] = None
     inicio: Optional[datetime] = None
     fin: Optional[datetime] = None
 
@@ -34,9 +37,9 @@ class HorarioUpdate(BaseModel):
             raise ValueError("fin debe ser mayor que inicio")
         return fin
 
+
 class HorarioOut(HorarioBase):
     id: str
-    creado: Optional[datetime] = None
-    actualizado: Optional[datetime] = None
+    fechaCreacion: Optional[datetime] = None
 
     model_config = {"from_attributes": True}

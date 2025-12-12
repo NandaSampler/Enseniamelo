@@ -8,7 +8,6 @@ from app.repositories.reserva_repository import get_reserva_repo
 
 
 def _overlaps(a_start, a_end, b_start, b_end) -> bool:
-    # solapa si el inicio es antes del fin del otro y el fin es después del inicio del otro
     return a_start < b_end and a_end > b_start
 
 
@@ -21,8 +20,8 @@ class HorarioService:
         self.repo = repo or get_horario_repo()
         self.curso_repo = curso_repo or get_curso_repo()
 
-    def list(self, curso_id: Optional[str] = None) -> List[HorarioOut]:
-        return self.repo.list(curso_id=curso_id)
+    def list(self, id_curso: Optional[str] = None) -> List[HorarioOut]:
+        return self.repo.list(id_curso=id_curso)
 
     def get(self, horario_id: str) -> HorarioOut:
         try:
@@ -33,12 +32,12 @@ class HorarioService:
     def create(self, payload: HorarioCreate) -> HorarioOut:
         # curso debe existir
         try:
-            self.curso_repo.get(payload.curso_id)
+            self.curso_repo.get(payload.id_curso)
         except KeyError:
             raise KeyError("curso no encontrado")
 
         # Evitar solapes de horarios del mismo curso
-        for h in self.repo.list(curso_id=payload.curso_id):
+        for h in self.repo.list(id_curso=payload.id_curso):
             if _overlaps(payload.inicio, payload.fin, h.inicio, h.fin):
                 raise ValueError("el horario se solapa con otro existente para el mismo curso")
 
@@ -47,16 +46,16 @@ class HorarioService:
     def update(self, horario_id: str, payload: HorarioUpdate) -> HorarioOut:
         current = self.get(horario_id)
 
-        new_curso_id = payload.curso_id if payload.curso_id is not None else current.curso_id
+        new_id_curso = payload.id_curso if payload.id_curso is not None else current.id_curso
         new_inicio = payload.inicio if payload.inicio is not None else current.inicio
         new_fin = payload.fin if payload.fin is not None else current.fin
 
         try:
-            self.curso_repo.get(new_curso_id)
+            self.curso_repo.get(new_id_curso)
         except KeyError:
             raise KeyError("curso no encontrado")
 
-        for h in self.repo.list(curso_id=new_curso_id):
+        for h in self.repo.list(id_curso=new_id_curso):
             if h.id == horario_id:
                 continue
             if _overlaps(new_inicio, new_fin, h.inicio, h.fin):
@@ -69,8 +68,8 @@ class HorarioService:
 
     def delete(self, horario_id: str) -> None:
         # Impedir borrar si hay reservas para ese horario
-        reserva_repo = get_reserva_repo()  # evitar ciclos de import en módulo
-        if reserva_repo.list(horario_id=horario_id):
+        reserva_repo = get_reserva_repo()
+        if reserva_repo.list(id_horario=horario_id):
             raise ValueError("no se puede eliminar: existen reservas para este horario")
         try:
             self.repo.delete(horario_id)

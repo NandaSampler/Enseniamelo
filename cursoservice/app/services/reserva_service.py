@@ -21,8 +21,17 @@ class ReservaService:
         self.curso_repo = curso_repo or get_curso_repo()
         self.horario_repo = get_horario_repo()
 
-    def list(self, curso_id: Optional[str] = None, horario_id: Optional[str] = None) -> List[ReservaOut]:
-        return self.repo.list(curso_id=curso_id, horario_id=horario_id)
+    def list(
+        self,
+        id_usuario: Optional[str] = None,
+        id_curso: Optional[str] = None,
+        id_horario: Optional[str] = None,
+    ) -> List[ReservaOut]:
+        return self.repo.list(
+            id_usuario=id_usuario,
+            id_curso=id_curso,
+            id_horario=id_horario,
+        )
 
     def get(self, reserva_id: str) -> ReservaOut:
         try:
@@ -30,29 +39,29 @@ class ReservaService:
         except KeyError:
             raise KeyError("reserva no encontrada")
 
-    def _assert_integridad(self, curso_id: str, horario_id: str) -> None:
+    def _assert_integridad(self, id_curso: str, id_horario: str) -> None:
         # curso y horario deben existir y estar vinculados
         try:
-            curso = self.curso_repo.get(curso_id)
+            curso = self.curso_repo.get(id_curso)
         except KeyError:
             raise KeyError("curso no encontrado")
 
         try:
-            horario = self.horario_repo.get(horario_id)
+            horario = self.horario_repo.get(id_horario)
         except KeyError:
             raise KeyError("horario no encontrado")
 
-        if horario.curso_id != curso.id:
+        if horario.id_curso != curso.id:
             raise ValueError("el horario indicado no pertenece al curso")
 
     def create(self, payload: ReservaCreate) -> ReservaOut:
         # integridad
-        self._assert_integridad(payload.curso_id, payload.horario_id)
+        self._assert_integridad(payload.id_curso, payload.id_horario)
 
         # Control de cupos: solo consumen cupo reservas no canceladas
         if payload.estado != "cancelada":
             try:
-                self.curso_repo.increment_cupo(payload.curso_id, amount=1)
+                self.curso_repo.increment_cupo(payload.id_curso, amount=1)
             except (KeyError, ValueError) as e:
                 raise ValueError(str(e))
 
@@ -68,12 +77,12 @@ class ReservaService:
         # - cancelada -> NO cancelada: consumir cupo
         if current.estado != "cancelada" and new_estado == "cancelada":
             try:
-                self.curso_repo.decrement_cupo(current.curso_id, amount=1)
+                self.curso_repo.decrement_cupo(current.id_curso, amount=1)
             except (KeyError, ValueError) as e:
                 raise ValueError(str(e))
         elif current.estado == "cancelada" and new_estado != "cancelada":
             try:
-                self.curso_repo.increment_cupo(current.curso_id, amount=1)
+                self.curso_repo.increment_cupo(current.id_curso, amount=1)
             except (KeyError, ValueError) as e:
                 raise ValueError(str(e))
 
@@ -91,7 +100,7 @@ class ReservaService:
 
         if current.estado != "cancelada":
             try:
-                self.curso_repo.decrement_cupo(current.curso_id, amount=1)
+                self.curso_repo.decrement_cupo(current.id_curso, amount=1)
             except (KeyError, ValueError) as e:
                 raise ValueError(str(e))
 

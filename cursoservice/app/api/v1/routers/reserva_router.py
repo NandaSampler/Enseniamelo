@@ -10,11 +10,16 @@ def get_service() -> ReservaService:
 
 @router.get("/", response_model=List[ReservaOut])
 def list_reservas(
-    curso_id: Optional[str] = Query(None),
-    horario_id: Optional[str] = Query(None),
+    id_usuario: Optional[str] = Query(None),
+    id_curso: Optional[str] = Query(None),
+    id_horario: Optional[str] = Query(None),
     service: ReservaService = Depends(get_service),
 ):
-    return service.list(curso_id=curso_id, horario_id=horario_id)
+    return service.list(
+        id_usuario=id_usuario,
+        id_curso=id_curso,
+        id_horario=id_horario,
+    )
 
 @router.get("/{reserva_id}", response_model=ReservaOut)
 def get_reserva(reserva_id: str, service: ReservaService = Depends(get_service)):

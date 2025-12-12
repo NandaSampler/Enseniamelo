@@ -17,12 +17,10 @@ def get_curso_categoria_service() -> CursoCategoriaService:
 @router.get("/", response_model=List[CursoOut])
 def list_cursos(
     q: Optional[str] = Query(None, description="Buscar por nombre o descripción"),
-    tutor_id: Optional[str] = Query(None, description="Filtrar por tutor"),
+    id_tutor: Optional[str] = Query(None, description="Filtrar por tutor"),  # 👈 nombre alineado
     service: CursoService = Depends(get_curso_service),
 ):
-    # Si agregaste soporte de filtro por tutor en el service/repo, pásalo aquí.
-    return service.list(q=q) if tutor_id is None else service.list(q=q)  # opcional: extender para tutor_id
-
+    return service.list(q=q, id_tutor=id_tutor)
 @router.get("/{curso_id}", response_model=CursoOut)
 def get_curso(curso_id: str, service: CursoService = Depends(get_curso_service)):
     return service.get(curso_id)

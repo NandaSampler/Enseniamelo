@@ -17,7 +17,6 @@ class CategoriaRepository:
 
     def ensure_indexes(self) -> None:
         try:
-            # Útil si quieres evitar duplicados por nombre (opcional)
             # self.col.create_index("nombre", unique=True)
             pass
         except PyMongoError:
@@ -44,14 +43,14 @@ class CategoriaRepository:
     def create(self, payload: CategoriaCreate) -> CategoriaOut:
         now = datetime.utcnow()
         data = payload.model_dump()
-        data.update({"creado": now, "actualizado": now})
+        data.update({"fechaCreacion": now})
         res = self.col.insert_one(data)
         data["_id"] = res.inserted_id
         return CategoriaOut(**self._normalize(data))
 
     def update(self, categoria_id: str, payload: CategoriaUpdate) -> CategoriaOut:
         update_data = payload.model_dump(exclude_unset=True)
-        update_data["actualizado"] = datetime.utcnow()
+        # si quieres, puedes agregar campo "actualizado" aquí
         doc = self.col.find_one_and_update(
             {"_id": ObjectId(categoria_id)},
             {"$set": update_data},
