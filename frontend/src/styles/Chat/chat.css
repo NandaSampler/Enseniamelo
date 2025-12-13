@@ -1,0 +1,169 @@
+.chat-page {
+  @apply min-h-[calc(100vh-4rem)] bg-slate-100 flex justify-center items-start py-4;
+}
+
+.chat-container {
+  @apply w-full max-w-6xl bg-white rounded-2xl shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-[260px_minmax(0,1fr)];
+}
+
+.chat-list {
+  @apply border-r border-slate-200 bg-slate-50 flex flex-col;
+}
+
+.search-bar {
+  @apply p-3 border-b border-slate-200 flex items-center gap-2;
+}
+
+.search-bar input {
+  @apply flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500;
+}
+
+.clear-btn {
+  @apply text-lg leading-none text-slate-500 hover:text-slate-700 px-1;
+}
+
+.chat-items {
+  @apply flex-1 overflow-y-auto;
+}
+
+.chat-item {
+  @apply flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-100;
+}
+
+.chat-item-active {
+  @apply bg-sky-100;
+}
+
+.chat-avatar {
+  @apply w-9 h-9 rounded-full bg-slate-300 flex items-center justify-center text-sm font-semibold text-slate-800;
+}
+
+.chat-info {
+  @apply flex-1 min-w-0;
+}
+
+.chat-name {
+  @apply text-sm font-semibold text-slate-900 truncate;
+}
+
+.chat-last-message {
+  @apply text-xs text-slate-500 truncate;
+}
+
+.chat-course {
+  @apply mt-0.5 inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-[11px] text-slate-600 border border-slate-200;
+}
+
+.chat-accept-btn:disabled {
+  @apply bg-slate-300 text-slate-500 cursor-not-allowed hover:bg-slate-300;
+}
+
+.chat-messages {
+  @apply flex flex-col h-[480px] md:h-[540px];
+}
+
+.messages-container {
+  @apply flex-1 overflow-y-auto px-4 py-3 bg-slate-50;
+}
+
+.message {
+  @apply flex mb-2;
+}
+
+.own-message {
+  @apply justify-end;
+}
+
+.message-bubble {
+  @apply max-w-[75%] rounded-2xl px-3 py-2 text-sm bg-white text-slate-900 shadow;
+}
+
+.own-message .message-bubble {
+  @apply bg-sky-600 text-white;
+}
+
+.message-time {
+  @apply mt-1 text-[11px] text-slate-400 text-right;
+}
+
+.own-message .message-time {
+  @apply text-slate-200;
+}
+
+.chat-messages-header {
+  @apply px-4 py-3 border-b border-slate-200 bg-white;
+}
+
+.chat-messages-header-main {
+  @apply flex items-center justify-between gap-3;
+}
+
+.chat-messages-title {
+  @apply text-base md:text-lg font-semibold text-slate-900 truncate;
+}
+
+.chat-messages-subtitle {
+  @apply mt-0.5 text-[11px] md:text-xs text-slate-500;
+}
+
+.chat-reserva-actions {
+  @apply flex items-center gap-2;
+}
+
+.chat-accept-btn {
+  @apply text-xs md:text-sm px-3.5 py-1.5 rounded-full bg-emerald-500 text-white font-medium
+         hover:bg-emerald-600 whitespace-nowrap shadow-sm;
+}
+
+.chat-reject-btn {
+  @apply text-xs md:text-sm px-3.5 py-1.5 rounded-full bg-slate-800 text-slate-50 font-medium
+         hover:bg-slate-900 whitespace-nowrap shadow-sm border border-slate-900;
+}
+
+.chat-reject-btn:disabled {
+  @apply bg-slate-200 text-slate-400 border-slate-200 cursor-not-allowed hover:bg-slate-200;
+}
+
+.chat-modal-backdrop {
+  @apply fixed inset-0 bg-black/40 flex items-center justify-center z-40;
+}
+
+.chat-modal {
+  @apply bg-white rounded-2xl shadow-lg w-full max-w-md p-5;
+}
+
+.chat-modal-title {
+  @apply text-lg font-semibold text-slate-900 mb-1;
+}
+
+.chat-modal-text {
+  @apply text-sm text-slate-600 mb-3;
+}
+
+.chat-modal-input {
+  @apply w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-sky-500;
+}
+
+.chat-modal-actions {
+  @apply flex justify-end gap-2;
+}
+
+.chat-modal-btn-secondary {
+  @apply px-3 py-1.5 rounded-lg text-sm border border-slate-300 text-slate-700 bg-white hover:bg-slate-50;
+}
+
+.chat-modal-btn-primary {
+  @apply px-3 py-1.5 rounded-lg text-sm bg-sky-600 text-white font-medium hover:bg-sky-700;
+}
+
+.message-input {
+  @apply border-t border-slate-200 px-3 py-2 flex items-center gap-2 bg-white;
+}
+
+.message-input input {
+  @apply flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500;
+}
+
+.send-btn {
+  @apply w-9 h-9 rounded-full bg-sky-600 text-white flex items-center justify-center text-sm hover:bg-sky-700;
+}

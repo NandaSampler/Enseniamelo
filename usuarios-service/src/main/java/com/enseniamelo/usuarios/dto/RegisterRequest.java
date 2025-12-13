@@ -1,9 +1,11 @@
 package com.enseniamelo.usuarios.dto;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -40,4 +42,8 @@ public class RegisterRequest {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Schema(description = "Contraseña del usuario", example = "claveSegura123", requiredMode = Schema.RequiredMode.REQUIRED, accessMode = Schema.AccessMode.WRITE_ONLY)
     private String contrasenia;
+    
+    @Pattern(regexp = "^(ESTUDIANTE|DOCENTE|TUTOR|ADMIN)$", message = "El rol debe ser ESTUDIANTE, DOCENTE, TUTOR o ADMIN")
+    @Schema(description = "Rol del usuario", example = "ESTUDIANTE", allowableValues = {"ESTUDIANTE", "DOCENTE", "TUTOR", "ADMIN"})
+    private String rol;
 }

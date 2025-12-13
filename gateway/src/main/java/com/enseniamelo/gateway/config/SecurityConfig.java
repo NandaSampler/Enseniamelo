@@ -57,7 +57,12 @@ public class SecurityConfig {
             .pathMatchers("/webjars/**").permitAll()
             .pathMatchers("/favicon.ico", "/favicon.png", "/robots.txt", "/static/**").permitAll()
             .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
+            .pathMatchers(HttpMethod.POST, "/v1/auth/login").permitAll()
+            .pathMatchers(HttpMethod.POST, "/v1/auth/register").permitAll()
+            .pathMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+            .pathMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
+            .pathMatchers("/v1/auth/login", "/v1/auth/register").permitAll()
+            .pathMatchers("/api/v1/auth/login", "/api/v1/auth/register").permitAll()
             // Endpoints de config-server (si los expones vía gateway)
             .pathMatchers("/config/encrypt").permitAll()
             .pathMatchers("/config/decrypt").permitAll()

@@ -35,15 +35,23 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeExchange(auth -> auth
-                // Endpoints públicos
+                // Endpoints públicos - SIEMPRE PRIMERO
                 .pathMatchers("/actuator/**").permitAll()
                 .pathMatchers("/openapi/**").permitAll()
                 .pathMatchers("/swagger-ui/**").permitAll()
                 .pathMatchers("/swagger-ui.html").permitAll()
                 .pathMatchers("/v3/api-docs/**").permitAll()
                 .pathMatchers("/webjars/**").permitAll()
-                .pathMatchers("/v1/auth/login", "/v1/auth/register").permitAll()
-                .pathMatchers("/api/v1/auth/**").permitAll()
+                
+                .pathMatchers(HttpMethod.POST, "/v1/auth/login").permitAll()
+                .pathMatchers(HttpMethod.POST, "/v1/auth/register").permitAll()
+                .pathMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                .pathMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
+                
+                .pathMatchers(HttpMethod.GET, "/v1/auth/me").authenticated()
+                .pathMatchers(HttpMethod.GET, "/v1/auth/me/**").authenticated()
+                .pathMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
+                .pathMatchers(HttpMethod.GET, "/api/v1/auth/me/**").authenticated()
                 
                 // Usuario endpoints 
                 .pathMatchers(HttpMethod.GET, "/v1/usuario/**").hasAnyRole("ADMIN", "USER")

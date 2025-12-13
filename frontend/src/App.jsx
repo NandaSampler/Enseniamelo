@@ -1,75 +1,138 @@
-import { Navigate, Route, Routes } from "react-router-dom";
-import Explorar from "./components/Explorar/Explorar";
-import InfoCurso from "./components/InfoCurso/InfoCurso";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { NotificationProvider } from "./components/NotificationProvider";
 import LoginForm from "./components/LoginForm";
-import MisCursos from "./components/MisCursos/MisCursos";
-import MisCursosAdmin from "./components/MisCursos/MisCursosAdmin";
-import Navbar from "./components/Navbar";
 import RegisterForm from "./components/RegisterForm";
-
-
-// PANEL DE PAGOS
-import PaymentsDashboard from "./components/Payments-Service/PaymentDashboard";
+import Explorar from "./components/Explorar/Explorar";
+import MisCursos from "./components/MisCursos/MisCursos";
+import InfoCurso from "./components/InfoCurso/InfoCurso";
+import Navbar from "./components/Navbar";
+import PerfilEstudiante from "./components/Perfiles/PerfilEstudiante";
+import EditarPerfilEstudiante from "./components/Perfiles/EditarPerfilEstudiante";
+import PanelTutor from "./components/Tutor/PanelTutor";
+import ConfigurarCurso from "./components/Tutor/ConfigurarCurso";
+import PerfilTutor from "./components/Perfiles/PerfilTutor";
+import EditarPerfilTutor from "./components/Perfiles/EditarPerfilTutor";
+import PanelAdmin from "./components/Admin/PanelAdmin";
+import ChatPage from "./components/Chat/ChatPage";
 
 function App() {
   return (
-    <div className="min-h-screen bg-slate-100">
-      <Routes>
+    <NotificationProvider>
+      <div className="min-h-screen bg-slate-100">
+        <Routes>
+          {/* Redirección raíz  */}
+          <Route path="/" element={<Navigate to="/explorar" replace />} />
 
-        {/* Login y registro */}
-        <Route path="/login" element={<LoginForm />} />
-        <Route path="/register" element={<RegisterForm />} />
-        <Route path="/payments-service-panel" element={<PaymentsDashboard />} />
+          {/* Login y registro */}
+          <Route path="/login" element={<LoginForm />} />
+          <Route path="/register" element={<RegisterForm />} />
 
-        {/* Explorar */}
-        <Route path="/explorar" element={
-          <>
-            <Navbar currentSection="explore" />
-            <Explorar />
-          </>
-        }/>
+          {/* Panel admin (solicitudes de tutores) */}
+          <Route
+            path="/admin/solicitudes-tutores"
+            element={
+              <>
+                <Navbar currentSection="admin" adminMode />
+                <PanelAdmin />
+              </>
+            }
+          />
 
-        {/* Mis cursos */}
-        <Route path="/mis-cursos" element={
-          <>
-            <Navbar currentSection="courses" />
-            <MisCursos />
-          </>
-        }/>
+          {/* Chats */}
+          <Route
+            path="/chats"
+            element={
+              <>
+                <Navbar currentSection="chats" />
+                <ChatPage />
+              </>
+            }
+          />
+          <Route
+            path="/chats/:id"
+            element={
+              <>
+                <Navbar currentSection="chats" />
+                <ChatPage />
+              </>
+            }
+          />
 
-        {/* Info de curso */}
-        <Route
-          path="/curso/:id"
-          element={
+          {/* Explorar */}
+          <Route
+            path="/explorar"
+            element={
+              <>
+                <Navbar currentSection="explore" />
+                <Explorar />
+              </>
+            }
+          />
+
+          {/* Mis cursos */}
+          <Route
+            path="/mis-cursos"
+            element={
+              <>
+                <Navbar currentSection="courses" />
+                <MisCursos />
+              </>
+            }
+          />
+
+          {/* Perfil */}
+          <Route path="/perfil" element={
             <>
-              <Navbar currentSection="courses" />  
-              <InfoCurso />
+              <Navbar currentSection="profile" />
+              <PerfilEstudiante />
             </>
-          }
-        />
-        <Route
-          path="/mis-cursos-admin"
-          element={
+          }/>
+
+          {/* Editar Perfil */}
+          <Route path="/perfil/editar" element={
+            <>
+              <Navbar currentSection="profile" />
+              <EditarPerfilEstudiante />
+            </>
+          }/>
+
+          {/* Info de curso */}
+          <Route path="/curso/:id" element={
             <>
               <Navbar currentSection="courses" />
-              <MisCursosAdmin />
+              <InfoCurso />
             </>
-          }
-        />
-        <Route path="/curso/:id" element={
-          <>
-            <Navbar currentSection="courses" />
-            <InfoCurso />
-          </>
-        }/>
+          }/>
 
-        {/* PAYMENTS SERVICE PANEL */}
-        <Route path="/payments-service-panel" element={<PaymentsDashboard />} />
+          {/* Panel tutor */}
+          <Route
+            path="/panel-tutor"
+            element={
+              <>
+                <Navbar currentSection="tutor-panel" />
+                <PanelTutor />
+              </>
+            }
+          />
+          <Route
+            path="/tutor/curso/nuevo"
+            element={
+              <>
+                <Navbar currentSection="tutor-panel" />
+                <ConfigurarCurso />
+              </>
+            }
+          />
 
-        {/* Default */}
-        <Route path="*" element={<Navigate to="/payments-service-panel" replace />} />
-      </Routes>
-    </div>
+          {/* Perfil tutor */}
+          <Route path="/tutor/perfil" element={<PerfilTutor />} />
+          <Route path="/tutor/perfil/editar" element={<EditarPerfilTutor />} />
+
+          {/* Default */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </div>
+    </NotificationProvider>
   );
 }
 

@@ -67,7 +67,7 @@ services:
       - enseniamelo-network
 
   mensajes:
-    build: mensajes-service
+    build: ./mensajes-service
     image: mensajes-service:latest
     ports:
       - "8082:8082"
