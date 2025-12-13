@@ -181,5 +181,10 @@ class Settings(BaseSettings):
         populate_by_name=True,
     )
 
+    # Usuarios-service
+    usuarios_service_url: str = Field(
+        default="http://usuarios:8081",
+        alias="USUARIOS_SERVICE_URL",
+    )
 
 settings = Settings()

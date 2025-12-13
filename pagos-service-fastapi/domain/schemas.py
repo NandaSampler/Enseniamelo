@@ -137,3 +137,16 @@ class PagoOut(BaseModel):
     stripeSessionId: Optional[str] = None
     createdAt: Optional[str] = None
     updatedAt: Optional[str] = None
+
+class UsuarioOut(BaseModel):
+    # lo mínimo; dejamos extra permitido por si el MS usuarios trae más campos
+    id: str | None = None
+    email: str | None = None
+    model_config = ConfigDict(extra="allow")
+
+class SubsOutEnriched(SubsOut):
+    usuario: UsuarioOut | None = None
+
+class SubsCreateMe(BaseModel):
+    id_plan: str
+    inicio: str

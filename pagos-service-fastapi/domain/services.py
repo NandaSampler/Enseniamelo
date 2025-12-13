@@ -2,9 +2,13 @@
 from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any, Iterable
+import asyncio
+from external.ms_usuarios_integration import get_usuarios_integration
 
 from bson import ObjectId
 from fastapi import HTTPException
+import re
+OID_RE = re.compile(r"^[a-fA-F0-9]{24}$")
 
 from infra.mongo import db
 from payments_errors.errors import NotFoundError, ConflictError
@@ -51,6 +55,8 @@ def _oid(s: str) -> ObjectId:
 # ---------- servicio ----------
 
 class PaymentsService:
+    def __init__(self):
+        self.usuarios = get_usuarios_integration()
     # ------------- PLANES -------------
     async def list_plans(self) -> list[dict]:
         cur = db().plan.find({})
@@ -310,3 +316,44 @@ class PaymentsService:
             raise ConflictError("No se puede eliminar un pago exitoso", extra={"id": pid})
         res = await db().pago.delete_one({"_id": _oid(pid)})
         return res.deleted_count == 1
+    
+    async def _current_user_mongo_id(self, token: str) -> str:
+        me = await self.usuarios.get_usuario_from_jwt(token)
+        uid = (me or {}).get("id")
+        if not uid or not OID_RE.match(uid):
+            raise NotFoundError("Usuario no encontrado en Mongo desde /v1/auth/me")
+        return uid
+
+    async def list_my_subs(self, token: str) -> list[dict]:
+        uid = await self._current_user_mongo_id(token)
+        return await self.list_subs(id_usuario=uid)
+
+    async def create_my_sub(self, token: str, id_plan: str, inicio: str) -> dict:
+        uid = await self._current_user_mongo_id(token)
+        return await self.create_sub(uid, id_plan, inicio)
+
+    async def get_sub_enriched(self, sid: str, token: str) -> dict:
+        sub = await self.get_sub(sid)
+        usuario = await self.usuarios.get_usuario_info(sub["id_usuario"], token)
+        sub["usuario"] = usuario
+        return sub
+
+    async def list_subs_enriched(
+        self,
+        token: str,
+        id_usuario: str | None = None,
+        id_plan: str | None = None,
+        estado: str | None = None,
+    ) -> list[dict]:
+        subs = await self.list_subs(id_usuario=id_usuario, id_plan=id_plan, estado=estado)
+
+        # enriquecer en paralelo (limitado por simplicidad)
+        async def enrich_one(s: dict) -> dict:
+            try:
+                s["usuario"] = await self.usuarios.get_usuario_info(s["id_usuario"], token)
+            except Exception:
+                s["usuario"] = None
+            return s
+
+        return await asyncio.gather(*[enrich_one(s) for s in subs])
+
