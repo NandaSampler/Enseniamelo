@@ -44,7 +44,8 @@ const LoginForm = () => {
 
             const tokenData = await tokenResponse.json();
             
-            // Guardar tokens
+            // Guardar tokens - usar 'token' para compatibilidad con api/config.js
+            localStorage.setItem('token', tokenData.access_token);
             localStorage.setItem('access_token', tokenData.access_token);
             localStorage.setItem('refresh_token', tokenData.refresh_token);
 
@@ -58,10 +59,22 @@ const LoginForm = () => {
             if (userResponse.ok) {
                 const userData = await userResponse.json();
                 localStorage.setItem('user', JSON.stringify(userData));
+                
+                // 3. Redirigir según el rol del usuario
+                // Verificar tanto 'rol' como 'rolCodigo' para mayor compatibilidad
+                const esDocente = userData.rol === 'TUTOR' || 
+                                 userData.rol === 'TUTOR' || 
+                                 userData.rolCodigo === 2;
+                
+                if (esDocente) {
+                    navigate('/panel-tutor');
+                } else {
+                    navigate('/explorar');
+                }
+            } else {
+                // Si no se puede obtener info del usuario, ir a explorar por defecto
+                navigate('/explorar');
             }
-
-            // Redirigir al dashboard
-            navigate('/explorar');
             
         } catch (err) {
             console.error('Error en login:', err);
