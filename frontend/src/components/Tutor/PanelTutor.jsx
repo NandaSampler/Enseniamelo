@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cursosAPI } from "../../api/cursos";
 import { reservasAPI } from "../../api/reservas";
+import { planesAPI } from "../../api/planes";
+import { useNotification } from "../NotificationProvider";
 import CardTutor from "./CardTutor";
 import "../../styles/Tutor/panelTutor.css";
 
@@ -12,11 +14,14 @@ const PanelTutor = () => {
   const [cursos, setCursos] = useState([]);
   const [loadingCursos, setLoadingCursos] = useState(false);
   const [errorCursos, setErrorCursos] = useState("");
+  const [suscripcion, setSuscripcion] = useState(null);
+  const [loadingSuscripcion, setLoadingSuscripcion] = useState(false);
   const [reservasConfirmadas, setReservasConfirmadas] = useState([]);
   const [currentMonthDate, setCurrentMonthDate] = useState(() => {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), 1);
   });
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     const fetchCursos = async () => {
@@ -50,7 +55,23 @@ const PanelTutor = () => {
       }
     };
 
+    const fetchSuscripcion = async () => {
+      setLoadingSuscripcion(true);
+      try {
+        const { data } = await planesAPI.getMiSuscripcion();
+        if (data?.success && data.suscripcion) {
+          setSuscripcion(data.suscripcion);
+        }
+      } catch (err) {
+        // No hay suscripción activa, no es un error
+        setSuscripcion(null);
+      } finally {
+        setLoadingSuscripcion(false);
+      }
+    };
+
     fetchCursos();
+    fetchSuscripcion();
 
     const fetchReservasConfirmadas = async () => {
       try {
@@ -80,6 +101,34 @@ const PanelTutor = () => {
   };
 
   const createNewCourse = () => {
+    // Verificar límite de cursos
+    const cursosActivos = cursos.length;
+    const limiteGratuito = 3;
+    
+    if (!suscripcion && cursosActivos >= limiteGratuito) {
+      showNotification({
+        type: 'warning',
+        title: 'Límite de cursos alcanzado',
+        message: `Has alcanzado el límite de ${limiteGratuito} cursos gratuitos. Adquiere un plan para crear más cursos.`,
+        duration: 6000
+      });
+      navigate("/planes");
+      return;
+    }
+    
+    if (suscripcion && suscripcion.id_plan) {
+      const limitePlan = suscripcion.id_plan.cantidadCursos;
+      if (cursosActivos >= limitePlan) {
+        showNotification({
+          type: 'warning',
+          title: 'Límite de cursos del plan alcanzado',
+          message: `Has alcanzado el límite de ${limitePlan} cursos según tu plan "${suscripcion.id_plan.nombre}".`,
+          duration: 6000
+        });
+        return;
+      }
+    }
+    
     navigate("/tutor/curso/nuevo");
   };
 

@@ -23,7 +23,6 @@ const RegisterForm = () => {
         const password = formData.get("password");
 
         try {
-            // 1. Registrar en tu backend (usando gateway directamente)
             const registerResponse = await fetch('https://localhost:8443/v1/auth/register', {
                 method: 'POST',
                 headers: {
@@ -35,6 +34,7 @@ const RegisterForm = () => {
                     email,
                     telefono,
                     contrasenia: password,
+                    rol: role 
                 }),
             });
 
@@ -44,15 +44,11 @@ const RegisterForm = () => {
             }
 
             const userData = await registerResponse.json();
-
-            // 2. Esperar un momento para que Keycloak procese el usuario
             await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // 3. Hacer login automático
             const params = new URLSearchParams();
             params.append('grant_type', 'password');
             params.append('client_id', 'react-web-client');
-            params.append('username', email); // Keycloak usa el email como username
+            params.append('username', email); 
             params.append('password', password);
 
             const tokenResponse = await fetch(
@@ -73,14 +69,15 @@ const RegisterForm = () => {
             }
 
             const tokenData = await tokenResponse.json();
-            
-            // Guardar tokens y usuario
+        
             localStorage.setItem('access_token', tokenData.access_token);
             localStorage.setItem('refresh_token', tokenData.refresh_token);
             localStorage.setItem('user', JSON.stringify(userData));
-
-            // Redirigir
-            navigate('/explorar');
+            if (role === 'DOCENTE') {
+                navigate('/panel-tutor');
+            } else {
+                navigate('/explorar');
+            }
             
         } catch (err) {
             console.error('Error en registro:', err);

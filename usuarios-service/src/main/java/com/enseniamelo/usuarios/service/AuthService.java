@@ -49,18 +49,26 @@ public class AuthService {
     private String adminPassword;
 
     public Mono<AuthResponse> register(RegisterRequest request) {
-        log.debug("Iniciando registro para email: {}", request.getEmail());
+        log.debug("Iniciando registro para email: {} con rol: {}", request.getEmail(), request.getRol());
 
         return usuarioRepository.existsByEmail(request.getEmail())
                 .flatMap(exists -> {
                     if (exists) {
                         return Mono.error(new RuntimeException("El email ya está registrado"));
                     }
+                    String rol = request.getRol();
+                    if (rol == null || rol.trim().isEmpty()) {
+                        rol = "ESTUDIANTE";
+                    }
+                    
+                    // Normalizar el rol
+                    final String rolFinal = normalizarRol(rol);
+                    log.debug("Rol normalizado: {}", rolFinal);
 
-                    // 1. Crear usuario en Keycloak
-                    return createUserInKeycloak(request)
+                    // 2. Crear usuario en Keycloak con el rol correspondiente
+                    return createUserInKeycloak(request, rolFinal)
                             .flatMap(keycloakUserId -> {
-                                // 2. Guardar en MongoDB
+                                // 3. Guardar en MongoDB
                                 LocalDateTime ahora = LocalDateTime.now();
 
                                 Usuario usuario = new Usuario();
@@ -70,8 +78,8 @@ public class AuthService {
                                 usuario.setEmail(request.getEmail());
                                 usuario.setTelefono(request.getTelefono());
                                 usuario.setContrasenia(passwordEncoder.encode(request.getContrasenia()));
-                                usuario.setRol("ESTUDIANTE");
-                                usuario.setRolCodigo(1);
+                                usuario.setRol(rolFinal);
+                                usuario.setRolCodigo(obtenerRolCodigo(rolFinal));
                                 usuario.setActivo(true);
                                 usuario.setDocumentos(Collections.emptyList());
                                 usuario.setFechaCreacion(ahora);
@@ -80,7 +88,9 @@ public class AuthService {
 
                                 return usuarioRepository.save(usuario);
                             })
-                            .map(savedUsuario -> new AuthResponse(
+                            .map(savedUsuario -> {
+                                log.info("Usuario registrado exitosamente con rol: {}", savedUsuario.getRol());
+                                return new AuthResponse(
                                     savedUsuario.getId(),
                                     null,
                                     savedUsuario.getNombre(),
@@ -90,12 +100,43 @@ public class AuthService {
                                     savedUsuario.getFoto(),
                                     "Usuario registrado exitosamente",
                                     null
-                            ));
+                                );
+                            });
                 });
     }
 
-    private Mono<String> createUserInKeycloak(RegisterRequest request) {
-        log.debug("Creando usuario en Keycloak: {}", request.getEmail());
+    private String normalizarRol(String rol) {
+        if (rol == null) return "ESTUDIANTE";
+        
+        String rolUpper = rol.toUpperCase().trim();
+        
+        // Mapeo de valores del frontend
+        return switch (rolUpper) {
+            case "DOCENTE", "TUTOR" -> "TUTOR";
+            case "ADMIN", "ADMINISTRADOR" -> "ADMIN";
+            default -> "ESTUDIANTE";
+        };
+    }
+
+    private Integer obtenerRolCodigo(String rol) {
+        return switch (rol) {
+            case "ADMIN" -> 3;
+            case "TUTOR" -> 2;
+            default -> 1; 
+        };
+    }
+
+    private String obtenerKeycloakRole(String rol) {
+        return switch (rol) {
+            case "ADMIN" -> "ADMIN";
+            case "TUTOR" -> "TUTOR";
+            default -> "USER"; 
+        };
+    }
+
+    private Mono<String> createUserInKeycloak(RegisterRequest request, String rol) {
+        log.debug("Creando usuario en Keycloak: {} con rol: {}", request.getEmail(), rol);
+        
         return getAdminToken()
                 .flatMap(adminToken -> {
                     WebClient webClient = webClientBuilder.build();
@@ -107,6 +148,7 @@ public class AuthService {
                     keycloakUser.put("lastName", request.getApellido());
                     keycloakUser.put("enabled", true);
                     keycloakUser.put("emailVerified", false);
+                    
                     Map<String, Object> credential = new HashMap<>();
                     credential.put("type", "password");
                     credential.put("value", request.getContrasenia());
@@ -140,7 +182,9 @@ public class AuthService {
                                 String userId = location.substring(location.lastIndexOf('/') + 1);
                                 log.debug("Usuario creado en Keycloak con ID: {}", userId);
                                 
-                                return assignRoleToUser(adminToken, userId, "USER")
+                                // Asignar el rol correspondiente en Keycloak
+                                String keycloakRole = obtenerKeycloakRole(rol);
+                                return assignRoleToUser(adminToken, userId, keycloakRole)
                                         .thenReturn(userId);
                             });
                 });

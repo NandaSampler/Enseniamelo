@@ -3,6 +3,7 @@ import "../../styles/Admin/adminPanel.css";
 import CardAdmin from "./CardAdmin";
 import AdminDetalle from "./AdminDetalle";
 import { verificarAPI } from "../../api/verificar";
+import PlanesAdmin from "../Pagos/PlanesAdmin";
 
 const mapSolicitudFromApi = (raw) => {
   const user = raw.id_usuario || {};
@@ -66,6 +67,7 @@ const mapSolicitudFromApi = (raw) => {
 };
 
 const PanelAdmin = () => {
+  const [activeTab, setActiveTab] = useState("solicitudes"); // 'solicitudes' | 'planes'
   const [filter, setFilter] = useState("todos");
   const [solicitudes, setSolicitudes] = useState([]);
   const [selectedSolicitud, setSelectedSolicitud] = useState(null);
@@ -138,23 +140,40 @@ const PanelAdmin = () => {
             <div>
               <h1 className="admin-panel-title">Panel de administración</h1>
               <p className="admin-panel-subtitle">
-                Administra y revisa las solicitudes de verificación de tutores y sus cursos.
+                Administra solicitudes de verificación y los planes de suscripción para tutores.
               </p>
             </div>
             <div className="admin-panel-hero-buttons">
-              <span className="admin-panel-chip admin-panel-chip-primary">
+              <button
+                type="button"
+                className={
+                  "admin-panel-chip " +
+                  (activeTab === "solicitudes"
+                    ? "admin-panel-chip-primary"
+                    : "admin-panel-chip-light")
+                }
+                onClick={() => setActiveTab("solicitudes")}
+              >
                 Solicitudes de tutores
-              </span>
-              <span className="admin-panel-chip admin-panel-chip-light">
-                Revisa, acepta o rechaza cursos propuestos
-              </span>
+              </button>
+              <button
+                type="button"
+                className={
+                  "admin-panel-chip " +
+                  (activeTab === "planes"
+                    ? "admin-panel-chip-primary"
+                    : "admin-panel-chip-light")
+                }
+                onClick={() => setActiveTab("planes")}
+              >
+                Planes de suscripción
+              </button>
             </div>
           </div>
           <div className="admin-panel-hero-graphic" />
         </section>
 
-        {/* Filtros por estado (solo si NO hay detalle abierto) */}
-        {!selectedSolicitud && (
+        {activeTab === "solicitudes" && !selectedSolicitud && (
           <div className="admin-panel-filters">
             <button
               className={
@@ -196,8 +215,13 @@ const PanelAdmin = () => {
           </div>
         )}
 
-        {/* Detalle de curso */}
-        {selectedSolicitud && (
+        {activeTab === "planes" && (
+          <section className="admin-panel-list">
+            <PlanesAdmin />
+          </section>
+        )}
+
+        {activeTab === "solicitudes" && selectedSolicitud && (
           <AdminDetalle
             solicitud={selectedSolicitud}
             onClose={() => setSelectedSolicitud(null)}
@@ -227,8 +251,7 @@ const PanelAdmin = () => {
           />
         )}
 
-        {/* Lista de cards: solo cuando NO hay detalle abierto */}
-        {!selectedSolicitud && (
+        {activeTab === "solicitudes" && !selectedSolicitud && (
           <section className="admin-panel-list">
             {loading && (
               <p className="text-center text-sm text-slate-500 py-6">
