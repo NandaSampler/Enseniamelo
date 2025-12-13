@@ -1,5 +1,6 @@
+# cursoservice/app/api/v1/routers/curso_router.py
 from typing import List, Optional
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, Header
 from app.schemas.curso import CursoCreate, CursoUpdate, CursoOut
 from app.schemas.categoria import CategoriaOut
 from app.schemas.curso_categoria import CursoCategoriaLink
@@ -20,24 +21,45 @@ def list_cursos(
     tutor_id: Optional[str] = Query(None, description="Filtrar por tutor"),
     service: CursoService = Depends(get_curso_service),
 ):
-    # Si agregaste soporte de filtro por tutor en el service/repo, pásalo aquí.
-    return service.list(q=q) if tutor_id is None else service.list(q=q)  # opcional: extender para tutor_id
+    return service.list(q=q, id_tutor=tutor_id)
 
 @router.get("/{curso_id}", response_model=CursoOut)
 def get_curso(curso_id: str, service: CursoService = Depends(get_curso_service)):
     return service.get(curso_id)
 
 @router.post("/", response_model=CursoOut, status_code=status.HTTP_201_CREATED)
-def create_curso(payload: CursoCreate, service: CursoService = Depends(get_curso_service)):
-    return service.create(payload)
+async def create_curso(
+    payload: CursoCreate, 
+    service: CursoService = Depends(get_curso_service),
+    authorization: Optional[str] = Header(None)
+):
+    """
+    Crea un nuevo curso validando que el tutor existe en el sistema.
+    Requiere que el id_tutor corresponda a un perfil de tutor válido.
+    """
+    # Extraer el token del header Authorization
+    token = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+    
+    return await service.create(payload, token)
 
 @router.put("/{curso_id}", response_model=CursoOut)
-def update_curso(
+async def update_curso(
     curso_id: str,
     payload: CursoUpdate,
     service: CursoService = Depends(get_curso_service),
+    authorization: Optional[str] = Header(None)
 ):
-    return service.update(curso_id, payload)
+    """
+    Actualiza un curso. Si se cambia el tutor, valida que el nuevo tutor existe.
+    """
+    # Extraer el token del header Authorization
+    token = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+    
+    return await service.update(curso_id, payload, token)
 
 @router.delete("/{curso_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_curso(curso_id: str, service: CursoService = Depends(get_curso_service)):
