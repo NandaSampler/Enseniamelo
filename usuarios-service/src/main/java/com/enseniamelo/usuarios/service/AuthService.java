@@ -20,7 +20,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import com.enseniamelo.usuarios.dto.AuthResponse;
 import com.enseniamelo.usuarios.dto.LoginRequest;
 import com.enseniamelo.usuarios.dto.RegisterRequest;
+import com.enseniamelo.usuarios.model.PerfilTutor;
 import com.enseniamelo.usuarios.model.Usuario;
+import com.enseniamelo.usuarios.repository.PerfilTutorRepository;
 import com.enseniamelo.usuarios.repository.UsuarioRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,7 @@ import reactor.core.publisher.Mono;
 public class AuthService {
 
     private final UsuarioRepository usuarioRepository;
+    private final PerfilTutorRepository perfilTutorRepository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final WebClient.Builder webClientBuilder;
 
@@ -60,15 +63,10 @@ public class AuthService {
                     if (rol == null || rol.trim().isEmpty()) {
                         rol = "ESTUDIANTE";
                     }
-                    
-                    // Normalizar el rol
                     final String rolFinal = normalizarRol(rol);
                     log.debug("Rol normalizado: {}", rolFinal);
-
-                    // 2. Crear usuario en Keycloak con el rol correspondiente
                     return createUserInKeycloak(request, rolFinal)
                             .flatMap(keycloakUserId -> {
-                                // 3. Guardar en MongoDB
                                 LocalDateTime ahora = LocalDateTime.now();
 
                                 Usuario usuario = new Usuario();
@@ -86,7 +84,15 @@ public class AuthService {
                                 usuario.setCreado(ahora);
                                 usuario.setActualizado(ahora);
 
-                                return usuarioRepository.save(usuario);
+                                return usuarioRepository.save(usuario)
+                                        .flatMap(savedUsuario -> {
+                                            if ("TUTOR".equals(rolFinal)) {
+                                                log.info("Creando perfil de tutor para usuario: {}", savedUsuario.getId());
+                                                return crearPerfilTutorAutomatico(savedUsuario.getId(), ahora)
+                                                        .thenReturn(savedUsuario);
+                                            }
+                                            return Mono.just(savedUsuario);
+                                        });
                             })
                             .map(savedUsuario -> {
                                 log.info("Usuario registrado exitosamente con rol: {}", savedUsuario.getRol());
@@ -110,7 +116,6 @@ public class AuthService {
         
         String rolUpper = rol.toUpperCase().trim();
         
-        // Mapeo de valores del frontend
         return switch (rolUpper) {
             case "DOCENTE", "TUTOR" -> "TUTOR";
             case "ADMIN", "ADMINISTRADOR" -> "ADMIN";
@@ -122,16 +127,31 @@ public class AuthService {
         return switch (rol) {
             case "ADMIN" -> 3;
             case "TUTOR" -> 2;
-            default -> 1; 
+            default -> 1; // ESTUDIANTE
         };
     }
-
     private String obtenerKeycloakRole(String rol) {
         return switch (rol) {
             case "ADMIN" -> "ADMIN";
             case "TUTOR" -> "TUTOR";
             default -> "USER"; 
         };
+    }
+
+    private Mono<PerfilTutor> crearPerfilTutorAutomatico(String idUsuario, LocalDateTime ahora) {
+        PerfilTutor perfil = new PerfilTutor();
+        perfil.setId(null); 
+        perfil.setIdUsuario(idUsuario);
+        perfil.setCi(""); 
+        perfil.setVerificado("verificado"); 
+        perfil.setClasificacion(0.0f); 
+        perfil.setBiografia(""); 
+        perfil.setCreacion(ahora);
+        perfil.setActualizado(ahora);
+        
+        return perfilTutorRepository.save(perfil)
+                .doOnSuccess(saved -> log.info("Perfil de tutor creado automáticamente con id: {}", saved.getId()))
+                .doOnError(error -> log.error("Error creando perfil de tutor automático: {}", error.getMessage()));
     }
 
     private Mono<String> createUserInKeycloak(RegisterRequest request, String rol) {
