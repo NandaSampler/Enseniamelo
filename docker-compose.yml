@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   eureka-server:
-    image: eureka-server:latest
+    image: enseniamelo-eureka-server:latest
     ports:
       - "8761:8761"
     mem_limit: 512m
@@ -14,6 +14,12 @@ services:
     depends_on:
       config-server:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8761/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - enseniamelo-network
 
@@ -31,7 +37,8 @@ services:
       - enseniamelo-network
 
   usuarios:
-    image: usuarios-service:latest
+    build: ./usuarios-service
+    image: enseniamelo-usuarios:latest
     ports:
       - "8081:8081"
     environment:
@@ -60,6 +67,7 @@ services:
       - enseniamelo-network
 
   mensajes:
+    build: ./mensajes-service
     image: mensajes-service:latest
     ports:
       - "8082:8082"
@@ -90,6 +98,7 @@ services:
       - enseniamelo-network
 
   comentarios:
+    build: ./comentarios-service
     image: comentarios-service:latest
     ports:
       - "8083:8083"
@@ -114,7 +123,7 @@ services:
       - enseniamelo-network
 
   gateway:
-    image: gateway-service:latest
+    image: enseniamelo-gateway:latest
     mem_limit: 512m
     ports:
       - "8443:8443"
@@ -137,6 +146,12 @@ services:
     depends_on:
       config-server:
         condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      usuarios:
+        condition: service_started
+      cursoservice:
+        condition: service_healthy
     volumes:
       - ${KEYSTORE_PATH:-./keystore}:/keystore
     networks:
@@ -158,6 +173,13 @@ services:
     depends_on:
       config-server:
         condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
     networks:
       - enseniamelo-network
 
@@ -177,13 +199,25 @@ services:
     depends_on:
       config-server:
         condition: service_healthy
+      eureka-server:
+        condition: service_started
     ports:
       - "8002:8002"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8002/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
     networks:
       - enseniamelo-network
 
+  # =========================
+  # CONFIG SERVER (Spring Cloud Config)
+  # =========================
   config-server:
-    image: configserver:latest
+    build: ./configserver
+    image: enseniamelo-configserver:latest
     container_name: config-server
     mem_limit: 512m
     environment:
@@ -204,3 +238,4 @@ services:
 networks:
   enseniamelo-network:
     external: true
+    name: enseniamelo_microservices-net
