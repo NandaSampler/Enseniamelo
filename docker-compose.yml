@@ -238,4 +238,3 @@ services:
 networks:
   enseniamelo-network:
     external: true
-    name: enseniamelo_microservices-net
