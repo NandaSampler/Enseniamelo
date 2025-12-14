@@ -1,39 +1,54 @@
 # cursoservice/app/services/curso_service.py
 from __future__ import annotations
+
 from typing import List, Optional
+
+import httpx
 
 from app.schemas.curso import CursoCreate, CursoUpdate, CursoOut
 
-# Repos con getters (NO singletons a nivel de módulo)
 from app.repositories.curso_repository import CursoRepository, get_curso_repo
 from app.repositories.horario_repository import HorarioRepository, get_horario_repo
 from app.repositories.reserva_repository import ReservaRepository, get_reserva_repo
 from app.repositories.curso_categoria_repository import (
-    CursoCategoriaRepository, get_curso_categoria_repo
+    CursoCategoriaRepository,
+    get_curso_categoria_repo,
 )
 
-# Integración con microservicio de usuarios
-from app.external.MsUsuariosIntegration import get_usuarios_integration
+from app.external.ms_usuarios_integration import get_usuarios_integration, MsUsuariosIntegration
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
 
+def _safe_json(resp: Optional[httpx.Response]) -> str:
+    if resp is None:
+        return ""
+    try:
+        return str(resp.json())
+    except Exception:
+        return (resp.text or "").strip()[:800]
+
+
 class CursoService:
     """Reglas de negocio para Curso (Mongo)."""
 
-    def __init__(self,
-                 repo: Optional[CursoRepository] = None,
-                 horario_repo: Optional[HorarioRepository] = None,
-                 reserva_repo: Optional[ReservaRepository] = None,
-                 curso_categoria_repo: Optional[CursoCategoriaRepository] = None) -> None:
+    def __init__(
+        self,
+        repo: Optional[CursoRepository] = None,
+        horario_repo: Optional[HorarioRepository] = None,
+        reserva_repo: Optional[ReservaRepository] = None,
+        curso_categoria_repo: Optional[CursoCategoriaRepository] = None,
+    ) -> None:
         self.repo = repo or get_curso_repo()
         self.horario_repo = horario_repo or get_horario_repo()
         self.reserva_repo = reserva_repo or get_reserva_repo()
         self.curso_categoria_repo = curso_categoria_repo or get_curso_categoria_repo()
         self.usuarios_integration = get_usuarios_integration()
 
+    # -----------------------
     # Query
+    # -----------------------
     def list(self, q: Optional[str] = None, id_tutor: Optional[str] = None) -> List[CursoOut]:
         return self.repo.list(q=q, id_tutor=id_tutor)
 
@@ -43,86 +58,106 @@ class CursoService:
         except KeyError:
             raise KeyError("curso no encontrado")
 
+    # -----------------------
     # Commands
+    # -----------------------
     async def create(self, payload: CursoCreate, token: Optional[str] = None) -> CursoOut:
         """
-        Crea un nuevo curso validando que el tutor existe en el servicio de usuarios.
-        
-        Args:
-            payload: Datos del curso a crear
-            token: Token JWT para autenticación con el servicio de usuarios
-            
-        Returns:
-            CursoOut: Curso creado
-            
-        Raises:
-            ValueError: Si el tutor no existe o no está verificado
+        Crea un curso.
+
+        Flujo correcto (estilo payments):
+        - Si no viene id_tutor:
+          1) /v1/auth/me -> obtiene usuario interno {id/_id}
+          2) /v1/tutores/usuario/{usuario_id} -> obtiene tutor {id/_id}
+          3) crea curso con id_tutor
         """
-        logger.info(f"Validando tutor {payload.id_tutor} antes de crear curso")
-        
+
+        # 1) Resolver id_tutor si falta
+        id_tutor = payload.id_tutor
+        if not id_tutor:
+            if not token:
+                raise ValueError("Falta Authorization Bearer token para resolver el tutor.")
+
+            try:
+                id_tutor = await self.usuarios_integration.resolve_tutor_id_from_token(token)
+
+            except ValueError:
+                # Mensaje de negocio (usuario sin tutor, etc.)
+                raise
+
+            except httpx.HTTPStatusError as e:
+                # 🔥 NO escondemos: devolvemos status/url/body real
+                msg = MsUsuariosIntegration.debug_http_error(e)
+                logger.error("Error resolviendo tutor desde JWT | %s", msg)
+                raise ValueError(msg)
+
+            except httpx.RequestError as e:
+                logger.error(
+                    "usuarios-service no disponible resolviendo tutor | base_url=%s err=%s",
+                    getattr(self.usuarios_integration, "base_url", None),
+                    str(e),
+                )
+                raise ValueError("usuarios-service no disponible (RequestError)")
+
+            except Exception as e:
+                logger.exception("Error inesperado resolviendo tutor desde JWT: %s", str(e))
+                raise ValueError("Error inesperado resolviendo tutor desde JWT")
+
+        # 2) Validar tutor por id (si vino del front o de resolve_tutor_id_from_token)
         try:
-            # Validar que el tutor existe en el servicio de usuarios
-            perfil_tutor = await self.usuarios_integration.get_perfil_tutor_by_id(
-                payload.id_tutor, 
-                token
+            perfil_val = await self.usuarios_integration.get_perfil_tutor_by_id(id_tutor, token)
+
+        except httpx.HTTPStatusError as e:
+            msg = MsUsuariosIntegration.debug_http_error(e)
+            logger.error("Error validando tutor por id | %s", msg)
+            raise ValueError(msg)
+
+        except httpx.RequestError as e:
+            logger.error(
+                "usuarios-service no disponible validando tutor | base_url=%s err=%s",
+                getattr(self.usuarios_integration, "base_url", None),
+                str(e),
             )
-            
-            if perfil_tutor is None:
-                logger.error(f"Tutor no encontrado: {payload.id_tutor}")
-                raise ValueError(f"El tutor con id {payload.id_tutor} no existe")
-            
-            # Validar que el tutor está verificado (opcional, según tu lógica de negocio)
-            if not perfil_tutor.get("verificado"):
-                logger.warning(f"Tutor no verificado: {payload.id_tutor}")
-                # Puedes decidir si permitir o no cursos de tutores no verificados
-                # raise ValueError(f"El tutor con id {payload.id_tutor} no está verificado")
-            
-            logger.info(f"Tutor validado exitosamente: {perfil_tutor.get('id')}")
-            
-        except ValueError:
-            # Re-lanzar los errores de validación
-            raise
+            raise ValueError("usuarios-service no disponible (RequestError)")
+
         except Exception as e:
-            logger.error(f"Error al validar tutor: {str(e)}")
-            raise ValueError(f"No se pudo validar el tutor: {str(e)}")
-        
-        # Si la validación pasó, crear el curso
-        return self.repo.create(payload)
+            logger.exception("Error inesperado validando tutor por id: %s", str(e))
+            raise ValueError("Error inesperado validando tutor por id")
+
+        if perfil_val is None:
+            raise ValueError(f"El tutor con id {id_tutor} no existe.")
+
+        # 3) Crear (sin mutar payload original)
+        payload_db = payload.model_copy(update={"id_tutor": id_tutor})
+        try:
+            return self.repo.create(payload_db)
+        except Exception as e:
+            logger.exception("Error creando curso en repo: %s", str(e))
+            raise ValueError("Error interno creando el curso.")
 
     async def update(self, curso_id: str, payload: CursoUpdate, token: Optional[str] = None) -> CursoOut:
-        """
-        Actualiza un curso validando el tutor si se cambió.
-        
-        Args:
-            curso_id: ID del curso a actualizar
-            payload: Datos a actualizar
-            token: Token JWT para autenticación
-            
-        Returns:
-            CursoOut: Curso actualizado
-        """
-        # Si se está cambiando el tutor, validarlo
         if payload.id_tutor is not None:
-            logger.info(f"Validando nuevo tutor {payload.id_tutor} para curso {curso_id}")
-            
+            logger.info("Validando nuevo tutor %s para curso %s", payload.id_tutor, curso_id)
+
             try:
-                perfil_tutor = await self.usuarios_integration.get_perfil_tutor_by_id(
-                    payload.id_tutor, 
-                    token
+                perfil_tutor = await self.usuarios_integration.get_perfil_tutor_by_id(payload.id_tutor, token)
+
+            except httpx.HTTPStatusError as e:
+                msg = MsUsuariosIntegration.debug_http_error(e)
+                logger.error("Error validando tutor en update | %s", msg)
+                raise ValueError(msg)
+
+            except httpx.RequestError as e:
+                logger.error(
+                    "usuarios-service no disponible en update | base_url=%s err=%s",
+                    getattr(self.usuarios_integration, "base_url", None),
+                    str(e),
                 )
-                
-                if perfil_tutor is None:
-                    logger.error(f"Tutor no encontrado: {payload.id_tutor}")
-                    raise ValueError(f"El tutor con id {payload.id_tutor} no existe")
-                
-                logger.info(f"Nuevo tutor validado exitosamente: {perfil_tutor.get('id')}")
-                
-            except ValueError:
-                raise
-            except Exception as e:
-                logger.error(f"Error al validar tutor: {str(e)}")
-                raise ValueError(f"No se pudo validar el tutor: {str(e)}")
-        
+                raise ValueError("usuarios-service no disponible (RequestError)")
+
+            if perfil_tutor is None:
+                raise ValueError(f"El tutor con id {payload.id_tutor} no existe.")
+
         try:
             return self.repo.update(curso_id, payload)
         except KeyError:
@@ -131,7 +166,6 @@ class CursoService:
             raise ValueError(str(e))
 
     def delete(self, curso_id: str) -> None:
-        # Reglas: no permitir borrar si hay dependencias
         if self.horario_repo.list(curso_id=curso_id):
             raise ValueError("no se puede eliminar: curso tiene horarios")
         if self.reserva_repo.list(curso_id=curso_id):
@@ -143,31 +177,16 @@ class CursoService:
             self.repo.delete(curso_id)
         except KeyError:
             raise KeyError("curso no encontrado")
-    
+
     async def get_curso_with_tutor_info(self, curso_id: str, token: Optional[str] = None) -> dict:
-        """
-        Obtiene un curso con información enriquecida del tutor.
-        
-        Args:
-            curso_id: ID del curso
-            token: Token JWT para autenticación
-            
-        Returns:
-            Dict con datos del curso e información del tutor
-        """
         curso = self.get(curso_id)
         curso_dict = curso.model_dump()
-        
+
         try:
-            # Obtener información del tutor desde el servicio de usuarios
-            perfil_tutor = await self.usuarios_integration.get_perfil_tutor_by_id(
-                curso.id_tutor,
-                token
-            )
-            
+            perfil_tutor = await self.usuarios_integration.get_perfil_tutor_by_id(curso.id_tutor, token)
             if perfil_tutor:
                 curso_dict["tutor_info"] = {
-                    "id": perfil_tutor.get("id"),
+                    "id": perfil_tutor.get("_id") or perfil_tutor.get("id"),
                     "nombre_completo": perfil_tutor.get("nombreCompleto"),
                     "email": perfil_tutor.get("email"),
                     "verificado": perfil_tutor.get("verificado"),
@@ -176,10 +195,8 @@ class CursoService:
                 }
             else:
                 curso_dict["tutor_info"] = None
-                logger.warning(f"No se encontró información del tutor {curso.id_tutor}")
-                
         except Exception as e:
-            logger.error(f"Error obteniendo información del tutor: {str(e)}")
+            logger.error("Error obteniendo información del tutor: %s", str(e))
             curso_dict["tutor_info"] = None
-        
+
         return curso_dict

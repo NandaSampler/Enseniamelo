@@ -1,19 +1,26 @@
 # cursoservice/app/main.py
 from __future__ import annotations
+
 import os
 import socket
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from py_eureka_client import eureka_client
 
 from app.core.config import settings
 from app.core.logging import setup_logging, get_logger
 from app.exceptions.handlers import register_exception_handlers
 from app.api.v1.routers import (
-    curso_router, categoria_router, curso_categoria_router, 
-    horario_router, reserva_router
+    curso_router,
+    categoria_router,
+    curso_categoria_router,
+    horario_router,
+    reserva_router,
 )
-# Importar el nuevo router de tutor
 from app.api.v1.routers import tutor_router
+from app.api.v1.routers import uploads_router
 
 # Importa SOLO las clases (no singletons) para evitar conectar en import
 from app.repositories.curso_repository import CursoRepository
@@ -21,7 +28,6 @@ from app.repositories.categoria_repository import CategoriaRepository
 from app.repositories.horario_repository import HorarioRepository
 from app.repositories.reserva_repository import ReservaRepository
 from app.repositories.curso_categoria_repository import CursoCategoriaRepository
-
 
 APP_DESCRIPTION = """
 API para gestionar Cursos, Categorías, Horarios y Reservas.
@@ -51,11 +57,17 @@ API para gestionar Cursos, Categorías, Horarios y Reservas.
 - Gestión de pagos y estados
 """
 
-root_path = os.getenv("ROOT_PATH", "") 
+root_path = os.getenv("ROOT_PATH", "")
+
 
 def create_app() -> FastAPI:
     setup_logging()
     logger = get_logger(__name__)
+
+    # ✅ asegurar carpeta uploads para servir archivos
+    # En docker recomiendo /app/uploads; si no está seteado, cae a "uploads" (relativo)
+    upload_dir = Path(os.getenv("UPLOAD_DIR", "/app/uploads"))
+    upload_dir.mkdir(parents=True, exist_ok=True)
 
     app = FastAPI(
         title=settings.APP_NAME,
@@ -67,13 +79,18 @@ def create_app() -> FastAPI:
         root_path=root_path,
     )
 
+    # ✅ Archivos estáticos: accesibles como /uploads/<file>
+    # (detrás del gateway será /curso/uploads/<file>)
+    app.mount("/uploads", StaticFiles(directory=str(upload_dir)), name="uploads")
+
     # Routers
     app.include_router(curso_router.router)
     app.include_router(categoria_router.router)
     app.include_router(curso_categoria_router.router)
     app.include_router(horario_router.router)
     app.include_router(reserva_router.router)
-    app.include_router(tutor_router.router)  # 👈 Nuevo router
+    app.include_router(tutor_router.router)
+    app.include_router(uploads_router.router)  # ✅ NUEVO
 
     # Root informativo
     @app.get("/", tags=["Health"])
@@ -92,7 +109,9 @@ def create_app() -> FastAPI:
                 "horarios": "/api/v1/horarios",
                 "reservas": "/api/v1/reservas",
                 "mis_cursos": "/api/v1/tutor/mis-cursos",
-            }
+                "uploads": "/uploads/<filename>",
+                "upload_image": "/api/v1/uploads/image",
+            },
         }
 
     # Health (Eureka/Gateway lo consultan)
@@ -117,8 +136,8 @@ def create_app() -> FastAPI:
             except Exception:
                 instance_ip = "127.0.0.1"
 
-            base_host = hostname
-            base_url = f"http://{base_host}:{port}"
+            # OJO: esto es para Eureka; el gateway es quien expone hacia el browser.
+            base_url = f"http://{hostname}:{port}"
 
             await eureka_client.init_async(
                 eureka_server=eureka_server,
