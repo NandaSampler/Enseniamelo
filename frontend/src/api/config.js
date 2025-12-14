@@ -1,11 +1,10 @@
 // frontend/src/api/config.js
 import axios from "axios";
 
-// En DEV usamos el proxy de Vite: /api -> gateway
-// En PROD puedes setear VITE_API_BASE_URL="https://tu-dominio.com"
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+const API_BASE_URL = import.meta.env.DEV
+  ? "/api"
+  : (import.meta.env.VITE_API_BASE_URL || "/api");
 
-// Keycloak token endpoint (mejor por env para PROD)
 const KEYCLOAK_TOKEN_URL =
   import.meta.env.VITE_KEYCLOAK_TOKEN_URL ||
   "http://localhost:8080/realms/enseniamelo-realm/protocol/openid-connect/token";
@@ -18,39 +17,68 @@ const api = axios.create({
   timeout: 30000,
 });
 
-// ✅ helper: busca token en varios lugares típicos
+function normalizeToken(raw) {
+  if (!raw) return null;
+
+  let t = String(raw).trim();
+
+  // quita comillas si quedó guardado como JSON string
+  if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
+    t = t.slice(1, -1).trim();
+  }
+
+  // si ya viene "Bearer xxx", deja solo el token
+  if (t.toLowerCase().startsWith("bearer ")) {
+    t = t.slice(7).trim();
+  }
+
+  return t || null;
+}
+
 function getAccessToken() {
-  return (
+  return normalizeToken(
     localStorage.getItem("access_token") ||
-    localStorage.getItem("token") ||
-    sessionStorage.getItem("access_token") ||
-    sessionStorage.getItem("token") ||
-    null
+      localStorage.getItem("token") ||
+      sessionStorage.getItem("access_token") ||
+      sessionStorage.getItem("token")
   );
 }
 
 function getRefreshToken() {
-  return (
-    localStorage.getItem("refresh_token") ||
-    sessionStorage.getItem("refresh_token") ||
-    null
+  return normalizeToken(
+    localStorage.getItem("refresh_token") || sessionStorage.getItem("refresh_token")
   );
 }
 
-// ✅ Añade token automáticamente
+// ✅ Request interceptor
 api.interceptors.request.use(
   (config) => {
     const token = getAccessToken();
     config.headers = config.headers || {};
 
-    // No fuerces JSON si es FormData (axios lo detecta solo)
-    // Solo setea JSON si el caller no puso nada
-    if (!config.headers["Content-Type"]) {
+    // ✅ NO setear Content-Type en GET/HEAD (a veces el gateway devuelve 400)
+    const method = (config.method || "get").toLowerCase();
+    const isBodyMethod = ["post", "put", "patch", "delete"].includes(method);
+
+    // Si es FormData, axios pone el boundary solo
+    const isFormData =
+      typeof FormData !== "undefined" && config.data instanceof FormData;
+
+    if (isBodyMethod && !isFormData && !config.headers["Content-Type"]) {
       config.headers["Content-Type"] = "application/json";
     }
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      delete config.headers.Authorization;
+    }
+
+    // Debug útil (solo DEV)
+    if (import.meta.env.DEV && config.url?.includes("/tutor/mis-cursos")) {
+      console.log("➡️ GET mis-cursos URL:", `${config.baseURL}${config.url}`);
+      console.log("➡️ Authorization header:", config.headers.Authorization);
+      console.log("➡️ Content-Type:", config.headers["Content-Type"]);
     }
 
     return config;
@@ -58,20 +86,14 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ Refresh token si 401
+// ✅ Response interceptor (igual que antes, pero guardando token normalizado)
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error?.config;
 
-    // Si es error de red (cert/caído), no intentes refresh
-    if (error?.code === "ERR_NETWORK") {
-      return Promise.reject(error);
-    }
-
-    if (!originalRequest) {
-      return Promise.reject(error);
-    }
+    if (error?.code === "ERR_NETWORK") return Promise.reject(error);
+    if (!originalRequest) return Promise.reject(error);
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
@@ -105,14 +127,15 @@ api.interceptors.response.use(
 
         const tokenData = await tokenResponse.json();
 
-        // ✅ guarda tokens
-        localStorage.setItem("token", tokenData.access_token);
-        localStorage.setItem("access_token", tokenData.access_token);
-        localStorage.setItem("refresh_token", tokenData.refresh_token);
+        const newAccess = normalizeToken(tokenData.access_token);
+        const newRefresh = normalizeToken(tokenData.refresh_token);
 
-        // ✅ reintenta request original con nuevo token
+        localStorage.setItem("token", newAccess || "");
+        localStorage.setItem("access_token", newAccess || "");
+        localStorage.setItem("refresh_token", newRefresh || "");
+
         originalRequest.headers = originalRequest.headers || {};
-        originalRequest.headers.Authorization = `Bearer ${tokenData.access_token}`;
+        originalRequest.headers.Authorization = `Bearer ${newAccess}`;
 
         return api(originalRequest);
       } catch (refreshError) {
