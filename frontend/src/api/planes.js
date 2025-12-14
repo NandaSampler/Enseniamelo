@@ -4,16 +4,13 @@ import api from "./config";
 const PAYMENTS_PREFIX = "/ms-payments/v1";
 
 export const planesAPI = {
-  // ====== PLANES ======
+  // Planes
   getPlanes: () => api.get(`${PAYMENTS_PREFIX}/planes/`),
 
-  // ====== SUSCRIPCIONES ======
-  getSuscripciones: (id_usuario) =>
-    api.get(`${PAYMENTS_PREFIX}/suscripciones/`, { params: { id_usuario } }),
+  // Suscripciones (si las sigues usando)
+  getMisSuscripciones: () => api.get(`${PAYMENTS_PREFIX}/suscripciones/mias`),
 
-  crearSuscripcion: (payload) =>
-    api.post(`${PAYMENTS_PREFIX}/suscripciones/`, payload),
-
-  cancelarSuscripcion: (sid) =>
-    api.put(`${PAYMENTS_PREFIX}/suscripciones/${sid}`, { estado: "cancelada" }),
+  // ✅ NUEVO: crear sesión de checkout Stripe (gateway -> payments-service)
+  crearCheckoutStripe: ({ id_plan, inicio }) =>
+    api.post(`${PAYMENTS_PREFIX}/stripe/checkout-session`, { id_plan, inicio }),
 };

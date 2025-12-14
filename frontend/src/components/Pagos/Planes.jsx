@@ -1,115 +1,106 @@
 // frontend/src/components/Pagos/Planes.jsx
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { planesAPI } from "../../api/planes";
-import api from "../../api/config";
 import { useNotification } from "../NotificationProvider";
 import "../../styles/Explorar/explorar.css";
 
 const Planes = () => {
   const [planes, setPlanes] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [mensaje, setMensaje] = useState("");
   const [suscripcionActiva, setSuscripcionActiva] = useState(null);
-  const [mongoId, setMongoId] = useState(null);
-
+  const location = useLocation();
   const navigate = useNavigate();
   const { showNotification } = useNotification();
 
   useEffect(() => {
-    const boot = async () => {
+    if (location.pathname.endsWith("/success")) {
+      setMensaje("Pago realizado con éxito. Tu suscripción será activada en segundos.");
+    } else if (location.pathname.endsWith("/cancel")) {
+      setMensaje("El pago fue cancelado. Puedes intentar nuevamente cuando desees.");
+    } else {
+      setMensaje("");
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const fetchPlanes = async () => {
       setLoading(true);
+      setError("");
       try {
-        // 1) Usuario actual (usuarios-service via gateway)
-        const meRes = await api.get("/v1/auth/me");
-        const me = meRes.data;
-        if (!me?.id) throw new Error("No se pudo obtener el id del usuario.");
-        setMongoId(me.id);
-
-        // 2) Planes (payments-service via gateway)
-        const plansRes = await planesAPI.getPlanes();
-        setPlanes(Array.isArray(plansRes.data) ? plansRes.data : []);
-
-        // 3) Suscripciones del usuario (payments-service via gateway)
-        const subsRes = await planesAPI.getSuscripciones(me.id);
-        const subs = Array.isArray(subsRes.data) ? subsRes.data : [];
-
-        // Preferimos activa, si no, pendiente
-        const found =
-          subs.find((s) => s.estado === "activa") ||
-          subs.find((s) => s.estado === "pendiente") ||
-          null;
-
-        setSuscripcionActiva(found);
+        const { data } = await planesAPI.getPlanes();
+        // tu FastAPI devuelve lista directa
+        if (Array.isArray(data)) setPlanes(data);
+        else setError("No se pudieron cargar los planes.");
       } catch (err) {
-        console.error(err);
-        showNotification({
-          type: "error",
-          title: "Error cargando planes",
-          message: err?.message || "No se pudo cargar la información.",
-        });
+        console.error("Error obteniendo planes:", err);
+        setError("Error al obtener los planes. Inténtalo de nuevo más tarde.");
       } finally {
         setLoading(false);
       }
     };
 
-    boot();
+    fetchPlanes();
   }, []);
 
-  const handleElegirPlan = async (id_plan) => {
-    if (!mongoId) return;
-
-    if (suscripcionActiva) {
-      showNotification({
-        type: "warning",
-        title: "Ya tienes una suscripción",
-        message: `Ya tienes una suscripción en estado "${suscripcionActiva.estado}".`,
-      });
-      return;
-    }
-
+  const handleElegirPlan = async (planId) => {
     try {
-      // El backend espera "YYYY-MM-DDTHH:MM:SS"
+      // inicio: ahora (ISO sin ms, como vienes usando)
       const inicio = new Date().toISOString().slice(0, 19);
 
-      const payload = { id_usuario: mongoId, id_plan, inicio };
-      const { data } = await planesAPI.crearSuscripcion(payload);
-
-      showNotification({
-        type: "success",
-        title: "Suscripción creada",
-        message: `Se creó tu suscripción (estado: "${data.estado}").`,
+      const { data } = await planesAPI.crearCheckoutStripe({
+        id_plan: planId,
+        inicio,
       });
 
-      setSuscripcionActiva(data);
+      if (data?.url) {
+        window.location.href = data.url; // ✅ Stripe Checkout
+        return;
+      }
 
-      // Si quieres redirigir al perfil tutor al crear suscripción:
-      // navigate("/tutor/perfil");
-    } catch (err) {
-      console.error("Error creando suscripción:", err);
       showNotification({
         type: "error",
-        title: "No se pudo crear la suscripción",
-        message: err?.response?.data?.error?.message || err.message || "Error desconocido",
+        title: "Error al iniciar pago",
+        message: "No se pudo iniciar el pago. Intenta nuevamente.",
+      });
+    } catch (error) {
+      console.error("Error creando checkout:", error);
+      showNotification({
+        type: "error",
+        title: "Error al iniciar pago",
+        message: "Ocurrió un error al iniciar el pago.",
       });
     }
   };
+
+  const volverAPlanes = () => navigate("/planes", { replace: true });
 
   return (
     <div className="explorar-page">
       <main className="explorar-main">
         <h2 className="explorar-title">Planes para tutores</h2>
 
-        {loading && <p className="explorar-empty">Cargando...</p>}
-
-        {!loading && suscripcionActiva && (
-          <div className="mb-4 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
-            <strong className="font-medium">Suscripción:</strong>{" "}
-            Estado: {suscripcionActiva.estado} — válida hasta{" "}
-            {new Date(suscripcionActiva.fin).toLocaleDateString()}
+        {mensaje && (
+          <div className="mb-4 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2 flex items-center justify-between">
+            <span>{mensaje}</span>
+            {location.pathname !== "/planes" && (
+              <button
+                type="button"
+                className="text-xs font-medium text-emerald-800 hover:underline ml-4"
+                onClick={volverAPlanes}
+              >
+                Ver planes
+              </button>
+            )}
           </div>
         )}
 
-        {!loading && (
+        {loading && <p className="explorar-empty">Cargando planes...</p>}
+        {!loading && error && <p className="explorar-empty text-red-500">{error}</p>}
+
+        {!loading && !error && (
           <section className="explorar-grid">
             {planes.length > 0 ? (
               planes.map((plan) => (
@@ -137,13 +128,10 @@ const Planes = () => {
 
                       <button
                         type="button"
-                        className={`infocurso-reserve-btn w-auto px-4 py-2 text-sm ${
-                          suscripcionActiva ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
+                        className="infocurso-reserve-btn w-auto px-4 py-2 text-sm"
                         onClick={() => handleElegirPlan(plan.id)}
-                        disabled={!!suscripcionActiva}
                       >
-                        {suscripcionActiva ? "Ya suscrito" : "Elegir plan"}
+                        Suscribirse
                       </button>
                     </div>
                   </div>

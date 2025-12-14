@@ -2,6 +2,12 @@ from fastapi import APIRouter, Response
 from domain.schemas import PlanOut, PlanCreate, PlanUpdate, ErrorResponse
 from domain.services import PaymentsService
 
+import stripe
+from bson import ObjectId
+from domain.settings import settings
+from infra.mongo import db
+from datetime import datetime
+
 router = APIRouter(prefix="/planes", tags=["planes"])
 svc = PaymentsService()
 
@@ -26,7 +32,40 @@ async def list_plans():
     },
 )
 async def create_plan(payload: PlanCreate):
-    return await svc.create_plan(payload.model_dump())
+    # 1) Crear en Mongo 
+    plan = await svc.create_plan(payload.model_dump())  # devuelve dict con "id"
+
+    # 2) Crear en Stripe
+    stripe.api_key = settings.stripe_secret_key
+
+    product = stripe.Product.create(
+        name=plan["nombre"],
+        description=plan.get("descripcion", ""),
+    )
+
+    unit_amount = int(round(float(plan["precio"]) * 100))
+    price = stripe.Price.create(
+        product=product["id"],
+        unit_amount=unit_amount,
+        currency="usd",
+    )
+
+    # 3) Persistir IDs de Stripe en el plan (Mongo)
+    await db().plan.update_one(
+        {"_id": ObjectId(plan["id"])},
+        {
+            "$set": {
+                "stripe_product_id": product["id"],
+                "stripe_price_id": price["id"],
+                "updatedAt": datetime.utcnow(),
+            }
+        },
+    )
+
+    # 4) Responder (mismo formato que siempre)
+    plan["stripe_product_id"] = product["id"]
+    plan["stripe_price_id"] = price["id"]
+    return plan
 
 @router.get(
     "/{pid}",
