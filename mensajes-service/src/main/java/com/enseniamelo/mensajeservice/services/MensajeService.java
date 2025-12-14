@@ -2,6 +2,7 @@ package com.enseniamelo.mensajeservice.services;
 
 import java.time.LocalDateTime;
 
+import org.bson.types.ObjectId;
 import org.springframework.stereotype.Service;
 
 import com.enseniamelo.mensajeservice.dto.MensajeDTO;
@@ -63,5 +64,11 @@ public class MensajeService {
             .flatMap(mensajeRepository::delete)
             .doOnSuccess(v -> log.info("Mensaje eliminado con ID {}", id))
             .doOnError(err -> log.error("Error al eliminar mensaje: {}", err.getMessage()));
+    }
+
+    public Flux<MensajeDTO> obtenerMensajesPorChat(String idChat) {
+        ObjectId id = new ObjectId(idChat);
+        return mensajeRepository.findByIdChat(id)
+                .map(mensajeMapper::toDto);
     }
 }

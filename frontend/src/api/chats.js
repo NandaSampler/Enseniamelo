@@ -2,7 +2,8 @@
 import api from './config';
 
 // Rutas del servicio de mensajes a través del gateway
-const CHATS_BASE = '/v1/chat';
+const CHATS_BASE = 'api/v1/chat';
+const MENSAJES_BASE = 'api/v1/mensaje';
 
 export const chatsAPI = {
   // Obtener todos los chats del usuario autenticado
@@ -22,7 +23,7 @@ export const chatsAPI = {
 
   // Obtener mensajes de un chat
   getMensajes: async (chatId) => {
-    return await api.get(`${CHATS_BASE}/${chatId}/mensajes`);
+    return await api.get(`${MENSAJES_BASE}/chat/${chatId}`);
   },
 
   // Enviar un mensaje en un chat

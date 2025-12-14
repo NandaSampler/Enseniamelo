@@ -17,11 +17,11 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token') || localStorage.getItem('token');
-    
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     return config;
   },
   (error) => {
@@ -43,7 +43,7 @@ api.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem('refresh_token');
-        
+
         if (!refreshToken) {
           // No hay refresh token, redirigir a login
           localStorage.clear();
@@ -70,7 +70,7 @@ api.interceptors.response.use(
 
         if (tokenResponse.ok) {
           const tokenData = await tokenResponse.json();
-          
+
           // Guardar nuevos tokens
           localStorage.setItem('token', tokenData.access_token);
           localStorage.setItem('access_token', tokenData.access_token);

@@ -71,6 +71,18 @@ public class SecurityConfig {
             .pathMatchers("/ms-payments/health").permitAll()
             .pathMatchers("/curso/health").permitAll()
 
+            //Autorizacion chats
+            .pathMatchers(HttpMethod.GET, "/v1/chat/**").hasAnyRole("USER", "TUTOR", "ADMIN")
+            .pathMatchers(HttpMethod.POST, "/v1/chat/**").hasAnyRole("USER", "TUTOR", "ADMIN")
+            .pathMatchers(HttpMethod.PUT, "/v1/chat/**").hasAnyRole("USER", "TUTOR", "ADMIN")
+            .pathMatchers(HttpMethod.DELETE, "/v1/chat/**").hasAnyRole("USER", "TUTOR", "ADMIN")
+
+            //Autorizacion mensajes
+            .pathMatchers(HttpMethod.GET, "/v1/mensaje/**").hasAnyRole("USER", "TUTOR", "ADMIN")
+            .pathMatchers(HttpMethod.POST, "/v1/mensaje/**").hasAnyRole("USER", "TUTOR", "ADMIN")
+            .pathMatchers(HttpMethod.PUT, "/v1/mensaje/**").hasAnyRole("USER", "TUTOR", "ADMIN")
+            .pathMatchers(HttpMethod.DELETE, "/v1/mensaje/**").hasAnyRole("USER", "TUTOR", "ADMIN")
+
             // Autorización Comentarios
             .pathMatchers(HttpMethod.GET, "/api/comentario-curso/**").permitAll()
             .pathMatchers(HttpMethod.POST, "/api/comentario-curso/**").hasAnyRole("USER", "ADMIN")

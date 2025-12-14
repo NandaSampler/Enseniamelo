@@ -26,44 +26,59 @@ const ChatPage = () => {
   useEffect(() => {
     const fetchChats = async () => {
       try {
-        const { data } = await chatsAPI.getChats();
-        if (data?.success) {
-          const chatsObtenidos = data.chats || [];
-          setChats(chatsObtenidos);
+        const response = await chatsAPI.getChats();
+        const data = response.data;
+        const chatsObtenidos = Array.isArray(data) ? data : data.chats || [];
 
-          const reservasMap = {};
-          await Promise.all(
-            chatsObtenidos.map(async (chat) => {
-              if (!chat.id_curso?._id) return;
+        const chatsDelUsuario = chatsObtenidos.filter(chat =>
+          (chat.participantes || []).some(p => String(p) === String(usuarioActualId))
+        );
 
-              let estudianteId = null;
-              if (usuarioActualRolCodigo === 1 || usuarioActualRol === "estudiante") {
-                estudianteId = usuarioActualId;
-              } else {
-                const otros = (chat.participantes || []).filter(
-                  (p) => String(p._id) !== String(usuarioActualId)
-                );
-                if (otros[0]) estudianteId = otros[0]._id;
-              }
+        setChats(chatsDelUsuario);
 
-              if (!estudianteId) return;
-
-              try {
-                const { data: dataReserva } = await reservasAPI.getEstadoReservaChat({
-                  cursoId: chat.id_curso._id,
-                  estudianteId,
-                });
-                if (dataReserva?.success && dataReserva.reserva) {
-                  reservasMap[chat._id] = dataReserva.reserva;
-                }
-              } catch (error) {
-                console.error("Error obteniendo estado de reserva para chat:", error);
-              }
-            })
-          );
-
-          setReservasPorChat(reservasMap);
+        // Setear selectedChatId
+        if (routeChatId) {
+          // Si viene de la URL
+          setSelectedChatId(routeChatId);
+        } else if (chatsDelUsuario.length > 0) {
+          // Si no hay routeChatId, tomar el primero
+          setSelectedChatId(chatsDelUsuario[0]._id);
         }
+
+        // Cargar reservas por chat (igual que antes)
+        const reservasMap = {};
+        await Promise.all(
+          chatsObtenidos.map(async chat => {
+            if (!chat.id_curso?._id) return;
+
+            let estudianteId = null;
+            if (usuarioActualRolCodigo === 1 || usuarioActualRol === "estudiante") {
+              estudianteId = usuarioActualId;
+            } else {
+              const otros = (chat.participantes || []).filter(
+                p => String(p._id) !== String(usuarioActualId)
+              );
+              if (otros[0]) estudianteId = otros[0]._id;
+            }
+
+            if (!estudianteId) return;
+
+            try {
+              const { data: dataReserva } = await reservasAPI.getEstadoReservaChat({
+                cursoId: chat.id_curso._id,
+                estudianteId,
+              });
+              if (dataReserva?.success && dataReserva.reserva) {
+                reservasMap[chat._id] = dataReserva.reserva;
+              }
+            } catch (error) {
+              console.error("Error obteniendo estado de reserva para chat:", error);
+            }
+          })
+        );
+
+        setReservasPorChat(reservasMap);
+
       } catch (error) {
         console.error("Error obteniendo chats:", error);
         showNotification({
@@ -75,13 +90,16 @@ const ChatPage = () => {
     };
 
     fetchChats();
-  }, []);
+  }, [routeChatId]);
+
 
   useEffect(() => {
-    if (!selectedChatId && chats.length > 0) {
+    if (chats.length > 0 && !selectedChatId) {
       setSelectedChatId(chats[0]._id);
-      return;
     }
+  }, [chats, selectedChatId]);
+
+  useEffect(() => {
 
     if (!selectedChatId) return;
 
@@ -90,6 +108,8 @@ const ChatPage = () => {
         const { data } = await chatsAPI.getMensajes(selectedChatId);
         if (data?.success) {
           setMensajes(data.mensajes || []);
+        } else {
+          setMensajes([]);
         }
       } catch (error) {
         console.error("Error obteniendo mensajes:", error);
@@ -98,11 +118,12 @@ const ChatPage = () => {
           title: 'Error',
           message: 'No se pudieron cargar los mensajes'
         });
+        setMensajes([]);
       }
     };
 
     fetchMensajes();
-  }, [selectedChatId, chats]);
+  }, [selectedChatId]);
 
   useEffect(() => {
     if (routeChatId) {
@@ -379,7 +400,7 @@ const ChatPage = () => {
                         reservaSeleccionada &&
                         ((
                           reservaSeleccionada.estado &&
-                            reservaSeleccionada.estado !== "pendiente"
+                          reservaSeleccionada.estado !== "pendiente"
                         ) || reservaSeleccionada.id_horario)
                       }
                     >
@@ -393,7 +414,7 @@ const ChatPage = () => {
           <div className="messages-container">
             {mensajes.map((m) => {
               const remitenteId = m.remitente?._id || m.remitente;
-              const esPropio = remitenteId && usuarioActualId && String(remitenteId) === String(usuarioActualId);
+              const esPropio = String(m.remitente) === String(chatSeleccionado.participantes[0]);
               const horaTexto = m.creado
                 ? new Date(m.creado).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                 : "";
@@ -401,14 +422,14 @@ const ChatPage = () => {
               return (
                 <div
                   key={m._id}
-                  className={
-                    "message" + (esPropio ? " own-message" : "")
-                  }
+                  className={"message" + (esPropio ? " own-message" : "")}
                 >
                   <div className="message-bubble">
                     <div>{m.contenido}</div>
-                    {horaTexto && (
-                      <div className="message-time">{horaTexto}</div>
+                    {m.creado && (
+                      <div className="message-time">
+                        {new Date(m.creado).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </div>
                     )}
                   </div>
                 </div>

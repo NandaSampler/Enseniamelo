@@ -47,7 +47,6 @@ public class ChatController {
     })
     @PostMapping
     @ResponseStatus(code = org.springframework.http.HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('USER', 'TUTOR')")
     public Mono<ChatDTO> createChat(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "${api.usuario.schema.usuario.description}", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = ChatDTO.class))) @RequestBody ChatDTO chatDTO) {
         log.info("POST /api/chats - Crear chat: {}", chatDTO);
@@ -60,7 +59,6 @@ public class ChatController {
     @Operation(summary = "Obtener todos los chats")
     @ApiResponse(responseCode = "200", description = "Lista de chats")
     @GetMapping
-    @PreAuthorize("hasAnyRole('USER', 'TUTOR')")
     public Flux<ChatDTO> getChats() {
         log.info("GET /api/chat - Obtener todos los chats");
         return service.obtenerTodos()
@@ -74,7 +72,6 @@ public class ChatController {
             @ApiResponse(responseCode = "404", description = "Chat no encontrado")
     })
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('USER', 'TUTOR')")
     public Mono<ChatDTO> getChatById(@PathVariable @NotBlank String id) {
         return service.obtenerPorId(id)
                 .doOnError(e -> log.error("Error al obtener chat: {}", e.getMessage()));
@@ -84,7 +81,6 @@ public class ChatController {
     @Operation(summary = "Actualizar chat")
     @PutMapping("/{id}")
     @ResponseStatus(code = org.springframework.http.HttpStatus.OK)
-    @PreAuthorize("hasAnyRole('USER', 'TUTOR')")
     public Mono<ChatDTO> updateChat(
             @PathVariable @NotBlank String id,
             @Valid @RequestBody ChatDTO chatDTO) {
@@ -97,7 +93,6 @@ public class ChatController {
     @Operation(summary = "Eliminar chat por ID")
     @DeleteMapping("/{id}")
     @ResponseStatus(code = org.springframework.http.HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('USER', 'TUTOR')")
     public Mono<Void> deleteChat(@PathVariable @NotBlank String id) {
 
         return service.eliminarChat(id)
