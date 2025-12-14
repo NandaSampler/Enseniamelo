@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { verificarAPI } from "../../api/verificar";
+import { uploadsAPI } from "../../api/uploads";
+import { usuariosAPI } from "../../api/usuarios";
 import "../../styles/Tutor/formularioCurso.css";
 
 const FormularioCurso = ({ open, onClose, onSuccess, cursoId }) => {
@@ -20,24 +22,93 @@ const FormularioCurso = ({ open, onClose, onSuccess, cursoId }) => {
       return;
     }
 
-    const formData = new FormData();
-    if (comentario.trim()) {
-      formData.append("comentario", comentario.trim());
-    }
-    if (cursoId) {
-      formData.append("cursoId", cursoId);
-    }
-    formData.append("foto_ci", fotoCi);
-    archivos.forEach((file) => {
-      formData.append("archivos", file);
-    });
-
+    // Subir archivos primero y construir payload JSON según DTO esperado por usuarios-service
     try {
       setLoading(true);
-      const { data } = await verificarAPI.crearSolicitud(formData);
-      if (data?.success) {
+
+      // Subir foto_ci
+      let fotoCiUrl = null;
+      try {
+        const res = await uploadsAPI.uploadImage(fotoCi);
+        fotoCiUrl = res?.data?.url || null;
+      } catch (upErr) {
+        console.error("Error subiendo foto_ci:", upErr);
+        throw new Error("No se pudo subir la foto del CI.");
+      }
+
+      // Subir archivos adicionales en paralelo
+      const archivosUrls = [];
+      if (archivos && archivos.length > 0) {
+        const uploadPromises = archivos.map((file) => uploadsAPI.uploadImage(file));
+        try {
+          const results = await Promise.all(uploadPromises);
+          results.forEach((r) => {
+            if (r?.data?.url) archivosUrls.push(r.data.url);
+          });
+        } catch (upErr) {
+          console.warn("Algunos archivos no se subieron:", upErr);
+        }
+      }
+
+      // Agregar IDs desde localStorage
+      let usuarioId = null;
+      let perfilTutorId = null;
+      try {
+        const stored = localStorage.getItem("user");
+        if (stored) {
+          const user = JSON.parse(stored);
+          const idVal = user?._id || user?.id || user?.usuarioId || user?.userId || user?.sub;
+          if (idVal) {
+            usuarioId = idVal;
+            console.log("Usuario ID obtenido de localStorage:", usuarioId);
+            
+            // Obtener el perfil de tutor del usuario
+            try {
+              const perfilRes = await usuariosAPI.obtenerPerfilTutorPorUsuario(idVal);
+              console.log("Respuesta completa de perfil tutor:", perfilRes);
+              
+              // La respuesta puede tener la estructura completa (con data, status, etc.)
+              // o directamente el objeto del perfil
+              const perfilData = perfilRes?.data || perfilRes;
+              perfilTutorId = perfilData?._id || perfilData?.id || null;
+              
+              console.log("Perfil tutor objeto:", perfilData);
+              console.log("Perfil tutor ID extraído:", perfilTutorId);
+              
+              if (!perfilTutorId) {
+                console.error("No se pudo extraer el ID del perfil de tutor. Objeto:", perfilData);
+              }
+            } catch (tutorErr) {
+              console.error("Error completo obtieniendo perfil de tutor:", tutorErr);
+              console.error("Status:", tutorErr?.response?.status);
+              console.error("Data:", tutorErr?.response?.data);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("No se pudo parsear localStorage.user:", err);
+      }
+
+      if (!perfilTutorId) {
+        setError("No se pudo obtener tu perfil de tutor. Por favor, contacta al administrador.");
+        return;
+      }
+
+      const payload = {
+        comentario: comentario?.trim() || null,
+        fotoCi: fotoCiUrl,
+        archivos: archivosUrls,
+        idCurso: cursoId || null,
+        idUsuario: usuarioId,
+        idPerfilTutor: perfilTutorId,
+      };
+
+      console.log("Payload enviado:", payload);
+      const { data } = await verificarAPI.crearSolicitudCurso(payload);
+
+      if (data) {
         if (onSuccess) {
-          onSuccess(data.solicitud);
+          onSuccess(data);
         } else if (onClose) {
           onClose();
         }
@@ -45,9 +116,9 @@ const FormularioCurso = ({ open, onClose, onSuccess, cursoId }) => {
         setError("No se pudo enviar la solicitud. Intenta nuevamente.");
       }
     } catch (err) {
+      console.error("Error en handleSubmit FormularioCurso:", err);
       setError(
-        err?.response?.data?.message ||
-          "Error al enviar la solicitud de verificación."
+        err?.message || err?.response?.data?.message || "Error al enviar la solicitud de verificación."
       );
     } finally {
       setLoading(false);

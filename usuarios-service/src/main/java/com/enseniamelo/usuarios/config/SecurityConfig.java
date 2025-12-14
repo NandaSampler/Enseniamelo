@@ -67,11 +67,11 @@ public class SecurityConfig {
                 .pathMatchers(HttpMethod.DELETE, "/v1/tutores/**").hasRole("ADMIN")
                 
                 // Verificacion endpoints
-                .pathMatchers(HttpMethod.POST, "/v1/verificacion/usuario/**").authenticated()
+                .pathMatchers(HttpMethod.POST, "/v1/verificacion/curso").permitAll()
+                .pathMatchers(HttpMethod.GET, "/v1/verificacion/curso/**").hasAnyRole("ADMIN", "TUTOR")
                 .pathMatchers(HttpMethod.GET, "/v1/verificacion/usuario/**").authenticated()
+                .pathMatchers(HttpMethod.GET, "/v1/verificacion/tutor/**").hasAnyRole("ADMIN", "TUTOR")
                 .pathMatchers(HttpMethod.GET, "/v1/verificacion/**").hasRole("ADMIN")
-                .pathMatchers(HttpMethod.PUT, "/v1/verificacion/**").hasRole("ADMIN")
-                .pathMatchers(HttpMethod.DELETE, "/v1/verificacion/**").hasRole("ADMIN")
                 
                 .anyExchange().authenticated()
             )
