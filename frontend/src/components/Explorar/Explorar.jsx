@@ -1,9 +1,8 @@
-import { useState, useMemo, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { categoriasAPI, cursosAPI } from "../../api/cursos";
+import "../../styles/Explorar/explorar.css";
 import Buscador from "./Buscador";
 import CursoCard from "./CursoCard";
-import api from "../../api/config";
-import { cursosAPI } from "../../api/cursos";
-import "../../styles/Explorar/explorar.css";
 
 const PER_PAGE = 6;
 
@@ -11,111 +10,135 @@ const Explorar = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTags, setActiveTags] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+
   const [cursos, setCursos] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [categorias, setCategorias] = useState([]);
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   useEffect(() => {
-    const fetchCursos = async () => {
+    let mounted = true;
+
+    const fetchData = async () => {
       setLoading(true);
       setError("");
+
       try {
-        const { data } = await cursosAPI.getCursos();
-        if (data?.success && Array.isArray(data.cursos)) {
-          const reales = data.cursos
-            .filter((curso) => {
-              const tutor = curso.id_tutor;
-              const verificacionCurso = curso.verificacion_estado;
+        // 1) CATEGORÍAS
+        const catResp = await categoriasAPI.getCategorias();
+        const catData = catResp?.data;
 
-              if (!tutor || tutor.verificado !== "verificado") {
-                return false;
-              }
+        const cats = Array.isArray(catData)
+          ? catData
+          : (catData?.success && Array.isArray(catData.categorias) ? catData.categorias : []);
 
-              // Caso nuevo: cursos con verificacion_estado deben estar aceptados
-              if (typeof verificacionCurso === "string") {
-                return verificacionCurso === "aceptado";
-              }
+        // mapa local id -> nombre
+        const catMap = new Map();
+        (cats || []).forEach((c) => {
+          const id = c?.id || c?._id;
+          if (id) catMap.set(String(id), c?.nombre || String(id));
+        });
 
-              // Compatibilidad hacia atrás: si no hay campo, mostramos igual
-              return true;
-            })
-            .map((curso) => ({
-              id: curso._id,
-              titulo: curso.nombre,
-              descripcion: curso.descripcion,
-              tag:
-                (Array.isArray(curso.tags) && curso.tags[0]) ||
-                (Array.isArray(curso.categorias) &&
-                  curso.categorias[0]?.nombre) ||
-                "General",
-              categorias: Array.isArray(curso.categorias)
-                ? curso.categorias
-                : [],
-              modalidad: curso.modalidad,
-              precio: curso.precio_reserva,
-              portada: curso.portada_url,
-            }));
-
-          setCursos(reales);
-        } else {
-          setError("No se pudieron cargar los cursos.");
+        if (import.meta.env.DEV) {
+          console.log("✅ categorias:", cats);
         }
-      } catch (error) {
-        console.error("Error obteniendo cursos:", error);
-        setError(
-          error?.response?.data?.message ||
-            "Error al obtener los cursos. Inténtalo de nuevo más tarde."
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
 
-    const fetchCategorias = async () => {
-      try {
-        const { data } = await api.get("/categorias");
-        if (data?.success && Array.isArray(data.categorias)) {
-          setCategorias(data.categorias);
+        if (mounted) setCategorias(cats);
+
+        // 2) CURSOS (públicos)
+        const cursosResp = await cursosAPI.getCursos();
+        const cursosData = cursosResp?.data;
+
+        const raw = Array.isArray(cursosData)
+          ? cursosData
+          : (cursosData?.success && Array.isArray(cursosData.cursos) ? cursosData.cursos : []);
+
+        if (import.meta.env.DEV) {
+          console.log("✅ cursos raw:", raw);
         }
+
+        const publicados = (raw || [])
+          .filter((c) => {
+            const activo = c?.activo !== false;
+            const estadoOk = !c?.estado || c?.estado === "activo";
+            const verifOk = !c?.verificacion_estado || c?.verificacion_estado === "aceptado";
+            return activo && estadoOk && verifOk;
+          })
+          .map((c) => {
+            const id = c?.id || c?._id;
+            const categoriasIds = Array.isArray(c?.categorias) ? c.categorias : [];
+
+            const categoriasNombres = categoriasIds.map((cid) => {
+              const key = String(cid);
+              return catMap.get(key) || key;
+            });
+
+            const tag =
+              (Array.isArray(c?.tags) && c.tags[0]) ||
+              categoriasNombres[0] ||
+              "General";
+
+            return {
+              id,
+              titulo: c?.nombre || "",
+              descripcion: c?.descripcion || "",
+              tag,
+              categorias: categoriasNombres, // nombres
+              modalidad: c?.modalidad,
+              precio: c?.precio_reserva,
+              portada: c?.portada_url,
+            };
+          });
+
+        if (mounted) setCursos(publicados);
       } catch (err) {
-        console.error("Error obteniendo categorías:", err);
+        console.error("❌ Error en Explorar:", {
+          status: err?.response?.status,
+          data: err?.response?.data,
+          message: err?.message,
+        });
+
+        const msg =
+          err?.response?.data?.detail ||
+          err?.response?.data?.message ||
+          "Error al obtener los cursos. Inténtalo de nuevo más tarde.";
+
+        if (mounted) setError(msg);
+      } finally {
+        if (mounted) setLoading(false);
       }
     };
 
-    fetchCursos();
-    fetchCategorias();
+    fetchData();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleToggleTag = (tag) => {
     setActiveTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
-    setCurrentPage(1); 
+    setCurrentPage(1);
   };
 
   const cursosFiltrados = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+
     return cursos.filter((curso) => {
       const textMatch =
-        searchTerm.trim() === "" ||
-        curso.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        curso.descripcion.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        curso.tag.toLowerCase().includes(searchTerm.toLowerCase());
+        term === "" ||
+        (curso.titulo || "").toLowerCase().includes(term) ||
+        (curso.descripcion || "").toLowerCase().includes(term) ||
+        (curso.tag || "").toLowerCase().includes(term);
 
-      // Si no hay categorías activas o está seleccionado "Todos", no filtramos por categoría
       const hasTodos = activeTags.includes("Todos");
-      if (activeTags.length === 0 || hasTodos) {
-        return textMatch;
-      }
+      if (activeTags.length === 0 || hasTodos) return textMatch;
 
-      // Filtrar por categorías seleccionadas (por nombre)
-      const nombresCategoriasCurso = Array.isArray(curso.categorias)
-        ? curso.categorias.map((c) => c.nombre || c)
-        : [];
-
-      const categoriaMatch = nombresCategoriasCurso.some((nombre) =>
-        activeTags.includes(nombre)
-      );
+      const categoriaMatch = Array.isArray(curso.categorias)
+        ? curso.categorias.some((nombre) => activeTags.includes(nombre))
+        : false;
 
       return textMatch && categoriaMatch;
     });
@@ -124,13 +147,10 @@ const Explorar = () => {
   const totalPages = Math.max(1, Math.ceil(cursosFiltrados.length / PER_PAGE));
   const safePage = Math.min(currentPage, totalPages);
   const startIndex = (safePage - 1) * PER_PAGE;
-  const cursosPagina = cursosFiltrados.slice(
-    startIndex,
-    startIndex + PER_PAGE
-  );
+  const cursosPagina = cursosFiltrados.slice(startIndex, startIndex + PER_PAGE);
 
   const goToPage = (page) => {
-    setCurrentPage((prev) => {
+    setCurrentPage(() => {
       if (page < 1) return 1;
       if (page > totalPages) return totalPages;
       return page;
@@ -143,9 +163,9 @@ const Explorar = () => {
         searchTerm={searchTerm}
         onSearchChange={(value) => {
           setSearchTerm(value);
-          setCurrentPage(1); 
+          setCurrentPage(1);
         }}
-        tags={["Todos", ...categorias.map((c) => c.nombre)]}
+        tags={["Todos", ...(categorias || []).map((c) => c?.nombre).filter(Boolean)]}
         activeTags={activeTags}
         onTagToggle={handleToggleTag}
         onClear={() => {
@@ -158,9 +178,7 @@ const Explorar = () => {
         <h2 className="explorar-title">Explora cursos</h2>
 
         <section className="explorar-grid">
-          {loading && (
-            <p className="explorar-empty">Cargando cursos...</p>
-          )}
+          {loading && <p className="explorar-empty">Cargando cursos...</p>}
 
           {!loading && error && (
             <p className="explorar-empty text-red-500">{error}</p>
@@ -169,9 +187,7 @@ const Explorar = () => {
           {!loading && !error && (
             <>
               {cursosPagina.length > 0 ? (
-                cursosPagina.map((curso) => (
-                  <CursoCard key={curso.id} {...curso} />
-                ))
+                cursosPagina.map((curso) => <CursoCard key={curso.id} {...curso} />)
               ) : (
                 <p className="explorar-empty">
                   No se encontraron cursos con esos filtros.
@@ -193,7 +209,6 @@ const Explorar = () => {
               </button>
             )}
 
-
             {[...Array(totalPages)].map((_, idx) => {
               const pageNumber = idx + 1;
               const isActive = pageNumber === safePage;
@@ -212,7 +227,6 @@ const Explorar = () => {
               );
             })}
 
-            {/* Botón siguiente (solo se muestra si no estamos en la última) */}
             {safePage < totalPages && (
               <button
                 type="button"
@@ -224,7 +238,6 @@ const Explorar = () => {
             )}
           </div>
         )}
-
       </main>
     </div>
   );
