@@ -2,15 +2,20 @@ package com.enseniamelo.gateway.config;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.core.GrantedAuthority;
@@ -30,6 +35,7 @@ import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Configuration
 @EnableWebFluxSecurity
@@ -57,12 +63,14 @@ public class SecurityConfig {
             .pathMatchers("/webjars/**").permitAll()
             .pathMatchers("/favicon.ico", "/favicon.png", "/robots.txt", "/static/**").permitAll()
             .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
             .pathMatchers(HttpMethod.POST, "/v1/auth/login").permitAll()
             .pathMatchers(HttpMethod.POST, "/v1/auth/register").permitAll()
             .pathMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
             .pathMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
             .pathMatchers("/v1/auth/login", "/v1/auth/register").permitAll()
             .pathMatchers("/api/v1/auth/login", "/api/v1/auth/register").permitAll()
+
             // Endpoints de config-server (si los expones vía gateway)
             .pathMatchers("/config/encrypt").permitAll()
             .pathMatchers("/config/decrypt").permitAll()
@@ -81,22 +89,43 @@ public class SecurityConfig {
 
             // Documentación de cursos pública
             .pathMatchers("/curso/docs", "/curso/redoc", "/curso/openapi.json").permitAll()
-            // 1) Endpoints de cursos / categorias / horarios PUBLICOS (solo GET)
-            .pathMatchers(HttpMethod.GET, "/curso/api/v1/cursos/**").permitAll()
-            .pathMatchers(HttpMethod.GET, "/curso/api/v1/categorias/**").permitAll()
-            .pathMatchers(HttpMethod.GET, "/curso/api/v1/horarios/**").permitAll()
 
-            // 2) Reservas: requieren usuario logueado (USER/TUTOR/ADMIN)
+            // GET públicos (listar/ver)
+            .pathMatchers(HttpMethod.GET,
+                "/curso/api/v1/cursos/**",
+                "/curso/api/v1/categorias/**",
+                "/curso/api/v1/horarios/**",
+                "/curso/api/v1/tutor/**",
+                "/curso/uploads/**")
+            .permitAll()
+
+            // POST/PUT/DELETE solo TUTOR o ADMIN
+            .pathMatchers(HttpMethod.POST,
+                "/curso/api/v1/cursos/**",
+                "/curso/api/v1/categorias/**",
+                "/curso/api/v1/horarios/**",
+                "/curso/api/v1/tutor/**",
+                "/curso/uploads/**")
+            .hasAnyRole("TUTOR", "ADMIN")
+
+            .pathMatchers(HttpMethod.PUT,
+                "/curso/api/v1/cursos/**",
+                "/curso/api/v1/categorias/**",
+                "/curso/api/v1/horarios/**",
+                "/curso/api/v1/tutor/**",
+                "/curso/uploads/**")
+            .hasAnyRole("TUTOR", "ADMIN")
+
+            .pathMatchers(HttpMethod.DELETE,
+                "/curso/api/v1/cursos/**",
+                "/curso/api/v1/categorias/**",
+                "/curso/api/v1/horarios/**",
+                "/curso/api/v1/tutor/**",
+                "/curso/uploads/**")
+            .hasAnyRole("TUTOR", "ADMIN")
+
+            // Reservas: requieren usuario logueado (USER/TUTOR/ADMIN)
             .pathMatchers("/curso/api/v1/reservas/**").hasAnyRole("USER", "TUTOR", "ADMIN")
-
-            // 3) Gestión de cursos (crear/editar/borrar, asignar categorías)
-            .pathMatchers("/curso/api/v1/cursos/**").hasAnyRole("TUTOR", "ADMIN")
-
-            // 4) Gestión de horarios
-            .pathMatchers("/curso/api/v1/horarios/**").hasAnyRole("TUTOR", "ADMIN")
-
-            // 5) Gestión de categorías (crear/editar/borrar)
-            .pathMatchers("/curso/api/v1/categorias/**").hasRole("ADMIN")
 
             // Todo lo demás autenticado
             .anyExchange().authenticated())
@@ -106,34 +135,71 @@ public class SecurityConfig {
     return http.build();
   }
 
-  /**
-   * Convierte los roles de Keycloak (realm_access.roles) en authorities de
-   * Spring:
-   * ROLE_<ROL>
-   * Ej: "CURSO_ADMIN" -> "ROLE_CURSO_ADMIN"
-   */
   @Bean
-  public ReactiveJwtAuthenticationConverter jwtAuthenticationConverter() {
+  public Converter<Jwt, Mono<AbstractAuthenticationToken>> jwtAuthenticationConverter() {
     ReactiveJwtAuthenticationConverter converter = new ReactiveJwtAuthenticationConverter();
+    converter.setJwtGrantedAuthoritiesConverter(new KeycloakAuthoritiesConverter());
+    return converter;
+  }
 
-    converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+  static class KeycloakAuthoritiesConverter implements Converter<Jwt, Flux<GrantedAuthority>> {
+
+    @Override
+    public Flux<GrantedAuthority> convert(Jwt jwt) {
+      Set<String> roles = new LinkedHashSet<>();
+
       Map<String, Object> realmAccess = jwt.getClaim("realm_access");
+      roles.addAll(extractRolesFromRealmAccess(realmAccess));
 
-      if (realmAccess == null || realmAccess.get("roles") == null) {
-        return Flux.empty();
-      }
+      Map<String, Object> resourceAccess = jwt.getClaim("resource_access");
+      roles.addAll(extractRolesFromResourceAccess(resourceAccess));
 
-      @SuppressWarnings("unchecked")
-      Collection<String> roles = (Collection<String>) realmAccess.get("roles");
-
-      Collection<GrantedAuthority> authorities = roles.stream()
-          .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-          .collect(Collectors.toSet());
+      // Normaliza a ROLE_*
+      List<GrantedAuthority> authorities = roles.stream()
+          .filter(Objects::nonNull)
+          .map(String::trim)
+          .filter(s -> !s.isBlank())
+          .map(r -> r.startsWith("ROLE_") ? r : "ROLE_" + r)
+          .map(SimpleGrantedAuthority::new)
+          .collect(Collectors.toList());
 
       return Flux.fromIterable(authorities);
-    });
+    }
 
-    return converter;
+    @SuppressWarnings("unchecked")
+    private static Collection<String> extractRolesFromRealmAccess(Map<String, Object> realmAccess) {
+      if (realmAccess == null)
+        return List.of();
+      Object rolesObj = realmAccess.get("roles");
+      if (!(rolesObj instanceof Collection<?> rolesCol))
+        return List.of();
+      return rolesCol.stream()
+          .filter(Objects::nonNull)
+          .map(Object::toString)
+          .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Collection<String> extractRolesFromResourceAccess(Map<String, Object> resourceAccess) {
+      if (resourceAccess == null)
+        return List.of();
+
+      Set<String> roles = new LinkedHashSet<>();
+      for (Object clientObj : resourceAccess.values()) {
+        if (!(clientObj instanceof Map<?, ?> clientMap))
+          continue;
+
+        Object rolesObj = clientMap.get("roles");
+        if (!(rolesObj instanceof Collection<?> rolesCol))
+          continue;
+
+        for (Object r : rolesCol) {
+          if (r != null)
+            roles.add(r.toString());
+        }
+      }
+      return roles;
+    }
   }
 
   /**
@@ -161,7 +227,6 @@ public class SecurityConfig {
     };
 
     decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(timestampValidator, issuerValidator));
-
     return decoder;
   }
 
