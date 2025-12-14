@@ -7,6 +7,7 @@ import api from "../../api/config";
 import { cursosAPI } from "../../api/cursos";
 import { chatsAPI } from "../../api/chats";
 import { reservasAPI } from "../../api/reservas";
+import { comentariosAPI } from "../../api/comentarios";
 import { useNotification } from "../NotificationProvider";
 
 // 🔹 Mock de datos del curso
@@ -14,62 +15,23 @@ const cursoMock = {
     titulo: "Título del curso",
     tag: "Programación",
     precio: "25 Bs/hora",
-    resumen:
-        "Texto cualquiera para poder poner información del curso en una línea corta.",
-    descripcionLarga:
-        "Aquí irá una descripción más extensa del curso. Puedes explicar qué aprenderá el estudiante, qué temas se cubren y cómo se organiza el contenido.",
+    resumen: "Texto cualquiera para poder poner información del curso en una línea corta.",
     tutor: {
         nombre: "Nombre del tutor",
         descripcion: "Soy un tutor nuevo",
-        avatar:
-            "https://ui-avatars.com/api/?name=Tutor&background=0EA5E9&color=0F172A",
+        avatar: "https://ui-avatars.com/api/?name=Tutor&background=0EA5E9&color=0F172A",
     },
 };
 
-// 🔹 Mock de reseñas
-const reseñasMock = [
-    {
-        id: 1,
-        titulo: "Título reseña",
-        cuerpo:
-            "Cuerpo de la reseña. Aquí va la opinión del estudiante sobre el curso.",
-        usuario: "Nombre usuario reseña",
-        fecha: "Mar 20, 2025",
-        rating: 4,
-    },
-    {
-        id: 2,
-        titulo: "Excelente tutor",
-        cuerpo:
-            "Explica con claridad y responde rápido a las dudas. Muy recomendable.",
-        usuario: "Ana López",
-        fecha: "Mar 18, 2025",
-        rating: 5,
-    },
-    {
-        id: 3,
-        titulo: "Buen contenido",
-        cuerpo:
-            "El curso cubre justo lo que necesitaba para empezar en este tema.",
-        usuario: "Carlos Pérez",
-        fecha: "Mar 10, 2025",
-        rating: 4,
-    },
-];
-
-
 const resolvePortadaUrl = (portada) => {
     if (!portada) return "";
-
     if (portada.startsWith("data:")) return portada;
     if (portada.startsWith("http://") || portada.startsWith("https://")) return portada;
-
     if (portada.startsWith("/")) {
-        const baseApi = api.defaults.baseURL || ""; // ej: http://localhost:3000/api
-        const root = baseApi.replace(/\/+api\/?$/, ""); // -> http://localhost:3000
+        const baseApi = api.defaults.baseURL || "";
+        const root = baseApi.replace(/\/+api\/?$/, "");
         return root + portada;
     }
-
     return portada;
 };
 
@@ -154,14 +116,12 @@ const CourseInfoSection = ({
                     >
                         <ChatBubbleLeftRightIcon className="w-5 h-5" />
                     </button>
-
                 </div>
             </div>
 
             <div className="infocurso-info">
                 <h1 className="infocurso-title">{titulo}</h1>
 
-                {/* Fila de categorías */}
                 <div className="infocurso-chips-row">
                     {Array.isArray(categoriasNombres) && categoriasNombres.length > 0
                         ? categoriasNombres.map((cat, index) => (
@@ -182,7 +142,6 @@ const CourseInfoSection = ({
                           )}
                 </div>
 
-                {/* Fila de modalidad */}
                 {modalidad && (
                     <div className="infocurso-chips-row">
                         <span className="infocurso-chip infocurso-chip-modalidad">
@@ -224,7 +183,6 @@ const CourseInfoSection = ({
                             ? "Reservar" 
                             : "Curso lleno"}
                 </button>
-                {/* La descripción detallada ya se muestra en el resumen para evitar duplicados */}
             </div>
         </section>
     );
@@ -259,19 +217,26 @@ const ReviewCard = ({ titulo, cuerpo, usuario, fecha, rating }) => {
     );
 };
 
-const ReviewsSection = ({ userReviews, onAddReview, puedeResenar, yaReseno }) => {
+const ReviewsSection = ({ 
+    comentarios, 
+    onAddReview, 
+    puedeResenar, 
+    yaReseno,
+    loadingComentarios,
+    promedioClasificacion 
+}) => {
     const { showNotification } = useNotification();
     const [titulo, setTitulo] = useState("");
     const [cuerpo, setCuerpo] = useState("");
     const [rating, setRating] = useState(5);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!titulo.trim() || !cuerpo.trim()) {
+        if (!cuerpo.trim()) {
             showNotification({
                 type: 'warning',
                 title: 'Campos incompletos',
-                message: 'Por favor completa el título y el comentario'
+                message: 'Por favor completa el comentario'
             });
             return;
         }
@@ -284,21 +249,11 @@ const ReviewsSection = ({ userReviews, onAddReview, puedeResenar, yaReseno }) =>
             return;
         }
 
-        const nueva = {
-            id: Date.now(),
-            titulo: titulo.trim(),
-            cuerpo: cuerpo.trim(),
-            usuario: "Tú",
-            fecha: new Date().toLocaleDateString(),
-            rating: Number(rating) || 5,
-        };
-
-        onAddReview(nueva);
-        showNotification({
-            type: 'success',
-            title: '¡Reseña publicada!',
-            message: 'Tu reseña ha sido publicada exitosamente'
+        await onAddReview({
+            comentario: cuerpo.trim(),
+            clasificacion: Number(rating) || 5,
         });
+
         setTitulo("");
         setCuerpo("");
         setRating(5);
@@ -306,31 +261,49 @@ const ReviewsSection = ({ userReviews, onAddReview, puedeResenar, yaReseno }) =>
 
     return (
         <section className="infocurso-reviews-section">
-            <h2 className="infocurso-reviews-title">Reseñas</h2>
-
-            <div className="infocurso-reviews-grid">
-                {reseñasMock.map((r) => (
-                    <ReviewCard key={r.id} {...r} />
-                ))}
-                {userReviews.map((r) => (
-                    <ReviewCard key={r.id} {...r} />
-                ))}
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="infocurso-reviews-title">Reseñas</h2>
+                {promedioClasificacion !== null && (
+                    <div className="text-sm text-slate-600">
+                        Promedio: <span className="font-semibold text-slate-900">{promedioClasificacion.toFixed(1)} ★</span>
+                    </div>
+                )}
             </div>
+
+            {loadingComentarios && (
+                <p className="text-center text-sm text-slate-500 py-6">
+                    Cargando comentarios...
+                </p>
+            )}
+
+            {!loadingComentarios && (
+                <>
+                    {comentarios.length === 0 ? (
+                        <p className="text-center text-sm text-slate-500 py-6">
+                            Aún no hay reseñas para este curso. ¡Sé el primero en comentar!
+                        </p>
+                    ) : (
+                        <div className="infocurso-reviews-grid">
+                            {comentarios.map((comentario) => (
+                                <ReviewCard
+                                    key={comentario.idComentario || comentario._id}
+                                    titulo={`Comentario de ${comentario.usuario || 'Usuario'}`}
+                                    cuerpo={comentario.comentario}
+                                    usuario={comentario.usuario || "Usuario"}
+                                    fecha={comentario.fechaCreacion 
+                                        ? new Date(comentario.fechaCreacion).toLocaleDateString()
+                                        : ""}
+                                    rating={comentario.clasificacion}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </>
+            )}
 
             {puedeResenar && !yaReseno ? (
                 <form className="infocurso-review-form" onSubmit={handleSubmit}>
                     <h3 className="infocurso-review-form-title">Escribe tu reseña</h3>
-                    <div className="infocurso-review-form-row">
-                        <label>
-                            Título
-                            <input
-                                type="text"
-                                value={titulo}
-                                onChange={(e) => setTitulo(e.target.value)}
-                                className="infocurso-review-input"
-                            />
-                        </label>
-                    </div>
                     <div className="infocurso-review-form-row">
                         <label>
                             Comentario
@@ -339,6 +312,7 @@ const ReviewsSection = ({ userReviews, onAddReview, puedeResenar, yaReseno }) =>
                                 onChange={(e) => setCuerpo(e.target.value)}
                                 className="infocurso-review-textarea"
                                 rows={4}
+                                placeholder="Comparte tu experiencia con este curso..."
                             />
                         </label>
                     </div>
@@ -375,9 +349,12 @@ const InfoCurso = () => {
     const navigate = useNavigate();
     const { showNotification } = useNotification();
     const [curso, setCurso] = useState(null);
-    const [userReviews, setUserReviews] = useState([]);
+    const [comentarios, setComentarios] = useState([]);
+    const [loadingComentarios, setLoadingComentarios] = useState(false);
+    const [promedioClasificacion, setPromedioClasificacion] = useState(null);
     const [puedeResenar, setPuedeResenar] = useState(false);
     const [tieneReserva, setTieneReserva] = useState(false);
+    const [yaReseno, setYaReseno] = useState(false);
 
     const [disponibilidad, setDisponibilidad] = useState({
         tiene_cupo_limitado: false,
@@ -386,6 +363,7 @@ const InfoCurso = () => {
         usuario_tiene_reserva: false
     });
 
+    // Cargar datos del curso
     useEffect(() => {
         const fetchCurso = async () => {
             if (!id) return;
@@ -402,7 +380,6 @@ const InfoCurso = () => {
                         : [];
 
                     const mapped = {
-                        // Campos que ya usa el layout
                         id: c._id,
                         titulo: c.nombre || cursoMock.titulo,
                         tag:
@@ -430,49 +407,135 @@ const InfoCurso = () => {
 
                     setCurso(mapped);
                 }
-            } catch {
-               console.error("Error cargando curso:", error);
+            } catch (error) {
+                console.error("Error cargando curso:", error);
             }
         };
 
         fetchCurso();
     }, [id]);
+
+    // Cargar comentarios del curso
     useEffect(() => {
-    const fetchDisponibilidad = async () => {
-        if (!id) return;
-        
-        try {
-        const usuarioActual = JSON.parse(localStorage.getItem("user") || "{}");
-        const usuarioId = usuarioActual._id || usuarioActual.id;
-        
-        const { data } = await api.get(`/reservas/disponibilidad/${id}`, {
-            params: { id_usuario: usuarioId }
-        });
-        
-        if (data?.success) {
-            setDisponibilidad({
-            tiene_cupo_limitado: data.tiene_cupo_limitado,
-            cupos_disponibles: data.cupos_disponibles,
-            tiene_disponibilidad: data.tiene_disponibilidad,
-            usuario_tiene_reserva: data.usuario_tiene_reserva
-            });
-            setTieneReserva(data.usuario_tiene_reserva);
-        }
-        } catch (error) {
-            console.error("Error verificando disponibilidad:", error);
-        }
-    };
-    
-    fetchDisponibilidad();
+        const fetchComentarios = async () => {
+            if (!id) return;
+            setLoadingComentarios(true);
+            try {
+                const { data } = await comentariosAPI.getComentariosByCurso(id);
+                if (Array.isArray(data)) {
+                    setComentarios(data);
+                }
+            } catch (error) {
+                console.error("Error obteniendo comentarios:", error);
+            } finally {
+                setLoadingComentarios(false);
+            }
+        };
+
+        fetchComentarios();
     }, [id]);
 
+    // Cargar promedio de clasificación
+    useEffect(() => {
+        const fetchPromedio = async () => {
+            if (!id) return;
+            try {
+                const promedio = await comentariosAPI.getPromedioClasificacion(id);
+                if (typeof promedio === 'number') {
+                    setPromedioClasificacion(promedio);
+                }
+            } catch (error) {
+                console.error("Error obteniendo promedio:", error);
+            }
+        };
+
+        fetchPromedio();
+    }, [id, comentarios]);
+
+    // Cargar disponibilidad
+    useEffect(() => {
+        const fetchDisponibilidad = async () => {
+            if (!id) return;
+            
+            try {
+                const usuarioActual = JSON.parse(localStorage.getItem("user") || "{}");
+                const usuarioId = usuarioActual._id || usuarioActual.id;
+                
+                const { data } = await api.get(`/reservas/disponibilidad/${id}`, {
+                    params: { id_usuario: usuarioId }
+                });
+                
+                if (data?.success) {
+                    setDisponibilidad({
+                        tiene_cupo_limitado: data.tiene_cupo_limitado,
+                        cupos_disponibles: data.cupos_disponibles,
+                        tiene_disponibilidad: data.tiene_disponibilidad,
+                        usuario_tiene_reserva: data.usuario_tiene_reserva
+                    });
+                    setTieneReserva(data.usuario_tiene_reserva);
+                }
+            } catch (error) {
+                console.error("Error verificando disponibilidad:", error);
+            }
+        };
+        
+        fetchDisponibilidad();
+    }, [id]);
+
+    // Verificar si puede reseñar y si ya reseñó
+    useEffect(() => {
+        const checkReservaParaResena = async () => {
+            if (!id) return;
+            try {
+                const usuarioActual = JSON.parse(localStorage.getItem("user") || "{}");
+                const usuarioId = usuarioActual._id || usuarioActual.id;
+
+                const { data } = await reservasAPI.getMisReservasEstudiante();
+                if (data?.success && Array.isArray(data.reservas)) {
+                    const ahora = new Date();
+                    const tieneReservaCurso = data.reservas.some((r) => {
+                        if (!r.id_curso) return false;
+                        return String(r.id_curso._id) === String(id) && r.estado !== "cancelada";
+                    });
+
+                    const tieneReservaValida = data.reservas.some((r) => {
+                        if (!r.id_curso) return false;
+                        if (String(r.id_curso._id) !== String(id)) return false;
+                        if (r.estado !== "confirmada" && r.estado !== "completada") return false;
+
+                        const fechaClase = r.fecha
+                            ? new Date(r.fecha)
+                            : r.id_horario?.inicio
+                            ? new Date(r.id_horario.inicio)
+                            : null;
+
+                        return fechaClase && fechaClase <= ahora;
+                    });
+
+                    setTieneReserva(tieneReservaCurso);
+                    setPuedeResenar(tieneReservaValida);
+
+                    // Verificar si ya reseñó
+                    const yaComentado = comentarios.some(c => 
+                        String(c.id_usuario) === String(usuarioId)
+                    );
+                    setYaReseno(yaComentado);
+                }
+            } catch (error) {
+                console.error("Error verificando permisos de reseña:", error);
+                setPuedeResenar(false);
+                setTieneReserva(false);
+            }
+        };
+
+        checkReservaParaResena();
+    }, [id, comentarios]);
 
     const handleReservar = async () => {
         try {
             const cursoId = curso?.id || id;
             if (!cursoId) return;
 
-            // ⭐ Verificar disponibilidad antes de reservar
             if (!disponibilidad.tiene_disponibilidad && !tieneReserva) {
                 showNotification({
                     type: 'warning',
@@ -495,7 +558,6 @@ const InfoCurso = () => {
                 return;
             }
 
-            // Si ya existe alguna reserva para este curso, solo abrimos/creamos chat
             if (tieneReserva) {
                 const chatResp = await chatsAPI.createChat({ cursoId });
                 if (chatResp?.data?.success && chatResp.data.chat?._id) {
@@ -510,7 +572,6 @@ const InfoCurso = () => {
                 return;
             }
 
-            // Caso normal: crear reserva pendiente y luego chat
             const reservaResp = await reservasAPI.createReserva({ cursoId });
             
             if (!reservaResp?.data?.success) {
@@ -532,7 +593,7 @@ const InfoCurso = () => {
                 return;
             }
 
-             showNotification({
+            showNotification({
                 type: 'success',
                 title: '¡Reserva creada!',
                 message: 'Tu reserva ha sido creada exitosamente'
@@ -558,89 +619,43 @@ const InfoCurso = () => {
         }
     };
 
-    // Cargar reseñas guardadas en localStorage para este curso
-    useEffect(() => {
-        if (!id) return;
-        try {
-            const raw = localStorage.getItem(`cursoReviews:${id}`);
-            if (raw) {
-                const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed)) {
-                    setUserReviews(parsed);
-                }
-            }
-        } catch {
-            // ignorar errores de parseo
-        }
-    }, [id]);
-
-    // Verificar si el usuario puede dejar reseña: debe tener una reserva
-    // confirmada o completada para este curso, y la fecha de la clase debe
-    // haber pasado.
-    useEffect(() => {
-        const checkReservaParaResena = async () => {
-            if (!id) return;
-            try {
-                const { data } = await reservasAPI.getMisReservasEstudiante();
-                if (data?.success && Array.isArray(data.reservas)) {
-                    const ahora = new Date();
-                    const tieneReservaCurso = data.reservas.some((r) => {
-                        if (!r.id_curso) return false;
-                        return String(r.id_curso._id) === String(id) && r.estado !== "cancelada";
-                    });
-
-                    const tieneReservaValida = data.reservas.some((r) => {
-                        if (!r.id_curso) return false;
-                        if (String(r.id_curso._id) !== String(id)) return false;
-
-                        if (r.estado !== "confirmada" && r.estado !== "completada") {
-                            return false;
-                        }
-
-                        const fechaClase = r.fecha
-                            ? new Date(r.fecha)
-                            : r.id_horario?.inicio
-                            ? new Date(r.id_horario.inicio)
-                            : null;
-
-                        return fechaClase && fechaClase <= ahora;
-                    });
-                    setTieneReserva(tieneReservaCurso);
-                    setPuedeResenar(tieneReservaValida);
-                } else {
-                    setPuedeResenar(false);
-                    setTieneReserva(false);
-                }
-            } catch {
-                setPuedeResenar(false);
-                setTieneReserva(false);
-            }
-        };
-
-        checkReservaParaResena();
-    }, [id]);
-
-    const handleAddReview = async (review) => {
-        setUserReviews((prev) => {
-            const updated = [review, ...prev];
-            if (id) {
-                try {
-                    localStorage.setItem(`cursoReviews:${id}`, JSON.stringify(updated));
-                } catch {
-                    // ignorar errores de almacenamiento
-                }
-            }
-            return updated;
-        });
-
-        // Marcar la reserva como completada para este curso (si existe)
+    const handleAddReview = async (reviewData) => {
         try {
             const cursoId = curso?.id || id;
-            if (cursoId) {
-                await reservasAPI.marcarReservaCompletada({ cursoId });
+            if (!cursoId) return;
+
+            const payload = {
+                id_curso: cursoId,
+                comentario: reviewData.comentario,
+                clasificacion: reviewData.clasificacion
+            };
+
+            const { data } = await comentariosAPI.createComentario(payload);
+            
+            if (data) {
+                // Actualizar la lista de comentarios
+                setComentarios(prev => [data, ...prev]);
+                
+                showNotification({
+                    type: 'success',
+                    title: '¡Reseña publicada!',
+                    message: 'Tu reseña ha sido publicada exitosamente'
+                });
+
+                // Marcar reserva como completada
+                try {
+                    await reservasAPI.marcarReservaCompletada({ cursoId });
+                } catch (error) {
+                    console.error("Error marcando reserva como completada:", error);
+                }
             }
         } catch (error) {
-            console.error("Error marcando reserva como completada tras reseña:", error);
+            console.error("Error creando comentario:", error);
+            showNotification({
+                type: 'error',
+                title: 'Error',
+                message: error?.response?.data?.message || 'No se pudo publicar la reseña'
+            });
         }
     };
 
@@ -654,10 +669,12 @@ const InfoCurso = () => {
                     disponibilidad={disponibilidad}
                 />
                 <ReviewsSection
-                    userReviews={userReviews}
+                    comentarios={comentarios}
                     onAddReview={handleAddReview}
                     puedeResenar={puedeResenar}
-                    yaReseno={userReviews.length > 0}
+                    yaReseno={yaReseno}
+                    loadingComentarios={loadingComentarios}
+                    promedioClasificacion={promedioClasificacion}
                 />
             </main>
         </div>

@@ -11,3 +11,4 @@ export { chatsAPI } from './chats';
 export { planesAPI } from './planes';
 export { verificarAPI } from './verificar';
 export { uploadsAPI } from './uploads';
+export { comentariosAPI } from './comentarios';
