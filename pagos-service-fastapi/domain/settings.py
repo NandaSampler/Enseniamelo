@@ -127,7 +127,10 @@ def bootstrap_from_config_server() -> None:
             "EUREKA_REFRESH",
             "MONGO_URI",
             "MONGO_DB",
-            "secret.mongo-password"
+            "secret.mongo-password",
+            "STRIPE_SECRET_KEY",
+            "STRIPE_WEBHOOK_SECRET",
+            "FRONTEND_BASE_URL",
         ]
 
         for key in keys_to_copy:
@@ -180,6 +183,17 @@ class Settings(BaseSettings):
         extra="ignore",
         populate_by_name=True,
     )
+
+    # Usuarios-service
+    usuarios_service_url: str = Field(
+        default="http://usuarios:8081",
+        alias="USUARIOS_SERVICE_URL",
+    )
+    
+    # Stripe
+    stripe_secret_key: str = Field(..., alias="STRIPE_SECRET_KEY")
+    stripe_webhook_secret: str = Field(..., alias="STRIPE_WEBHOOK_SECRET")
+    frontend_base_url: str = Field(default="http://localhost:5173", alias="FRONTEND_BASE_URL")
 
 
 settings = Settings()

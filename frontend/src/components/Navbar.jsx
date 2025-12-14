@@ -45,7 +45,7 @@ const Navbar = ({ currentSection, adminMode = false }) => {
   const linkClasses = (section) =>
     "navbar-link " + (currentSection === section ? "navbar-link-active" : "");
 
-  const isTutor = user?.rolCodigo === 2 || user?.rol === "docente";
+  const isTutor = user?.rolCodigo === 2 || user?.rol === "TUTOR";
   const isOnTutorPanel = location.pathname === "/panel-tutor";
 
   const handleLogout = () => {

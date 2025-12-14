@@ -114,6 +114,8 @@ services:
       - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
       - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
       - SERVER_PORT=8083
+      - USUARIOS_SERVICE_URL=http://usuarios:8081
+      - CURSOS_SERVICE_URL=http://cursoservice:8000
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -123,6 +125,7 @@ services:
       - enseniamelo-network
 
   gateway:
+    build: ./gateway
     image: enseniamelo-gateway:latest
     mem_limit: 512m
     ports:
@@ -197,6 +200,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - APP_NAME=payments-service
       - EUREKA_SERVER_URL=http://eureka-server:8761/eureka
+      - USUARIOS_SERVICE_URL=http://usuarios:8081
     depends_on:
       config-server:
         condition: service_healthy

@@ -1,10 +1,3 @@
-<<<<<<< HEAD
 com\enseniamelo\gateway\config\SecurityConfig.class
-=======
-<<<<<<< HEAD
-com\enseniamelo\gateway\config\SecurityConfig.class
-=======
->>>>>>> origin/dpDesarrollo
->>>>>>> 3ab44bd0dbc43443ab5865f44b5861d58886c662
 com\enseniamelo\gateway\GatewayApplication.class
 com\enseniamelo\gateway\config\HealthCheckConfiguration.class
