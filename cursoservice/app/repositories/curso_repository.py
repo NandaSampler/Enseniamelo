@@ -10,6 +10,8 @@ from pymongo.errors import PyMongoError
 from app.schemas.curso import CursoCreate, CursoUpdate, CursoOut
 from app.core.db import get_collection
 from decimal import Decimal
+from bson.errors import InvalidId
+from pydantic import ValidationError
 
 
 class CursoRepository:
@@ -51,15 +53,33 @@ class CursoRepository:
     # ---------- CRUD ----------
     def list(self, q: Optional[str] = None, id_tutor: Optional[str] = None) -> List[CursoOut]:
         filtro: Dict[str, Any] = {}
+
+        # ✅ filtro robusto por tutor (ObjectId OR string)
         if id_tutor:
-            filtro["id_tutor"] = ObjectId(id_tutor)
+            raw = str(id_tutor).strip()
+            try:
+                oid = ObjectId(raw)
+                filtro["id_tutor"] = {"$in": [oid, raw]}
+            except (InvalidId, TypeError):
+                filtro["id_tutor"] = raw
+
         if q:
             filtro["$or"] = [
                 {"nombre": {"$regex": q, "$options": "i"}},
                 {"descripcion": {"$regex": q, "$options": "i"}},
             ]
+
         docs = list(self.col.find(filtro))
-        return [CursoOut(**self._normalize(d)) for d in docs]
+
+        out: List[CursoOut] = []
+        for d in docs:
+            try:
+                out.append(CursoOut(**self._normalize(d)))
+            except ValidationError:
+                # Si hay docs viejos que no cumplen el schema actual, no rompemos el endpoint
+                continue
+
+        return out
     
     def _clean_decimal_fields(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Convierte Decimal a float para campos numéricos que van a Mongo."""

@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cursosAPI } from "../../api/cursos";
-import { reservasAPI } from "../../api/reservas";
 import { planesAPI } from "../../api/planes";
+import { reservasAPI } from "../../api/reservas";
+import "../../styles/Tutor/panelTutor.css";
 import { useNotification } from "../NotificationProvider";
 import CardTutor from "./CardTutor";
-import "../../styles/Tutor/panelTutor.css";
 
 const calendarDays = Array.from({ length: 31 }, (_, i) => i + 1);
 
@@ -27,33 +27,45 @@ const PanelTutor = () => {
     const fetchCursos = async () => {
       setLoadingCursos(true);
       setErrorCursos("");
+
       try {
         const { data } = await cursosAPI.getMisCursos();
-        if (data?.success && Array.isArray(data.cursos)) {
-          setCursos(
-            data.cursos.map((c) => ({
-              id: c._id,
-              titulo: c.nombre,
-              descripcion: c.descripcion,
-              categorias: c.categorias || [],
-              precio: c.precio_reserva,
-              modalidad: c.modalidad,
-              verificacion_estado: c.verificacion_estado,
-            }))
-          );
-        } else {
-          setErrorCursos("No se pudieron cargar tus cursos.");
-        }
-      } catch (err) {
-        console.error("Error obteniendo cursos del tutor:", err);
-        setErrorCursos(
-          err?.response?.data?.message ||
-            "Error al obtener tus cursos. Inténtalo de nuevo más tarde."
+
+        // ✅ FastAPI: data es Array[CursoOut]
+        const cursosRaw = Array.isArray(data)
+          ? data
+          : (data?.success && Array.isArray(data.cursos) ? data.cursos : []);
+
+        setCursos(
+          cursosRaw.map((c) => ({
+            id: c.id || c._id,
+            titulo: c.nombre,
+            descripcion: c.descripcion,
+            categorias: c.categorias || [],
+            precio: c.precio_reserva,
+            modalidad: c.modalidad,
+            verificacion_estado: c.verificacion_estado,
+          }))
         );
-      } finally {
+      } catch (err) {
+        console.error("Error obteniendo cursos del tutor:", {
+          status: err?.response?.status,
+          data: err?.response?.data,
+          message: err?.message,
+        });
+
+        const msg =
+          err?.response?.data?.detail ||
+          err?.response?.data?.message ||
+          `Error al obtener tus cursos (status ${err?.response?.status || "?"}).`;
+
+        setErrorCursos(msg);
+      }
+      finally {
         setLoadingCursos(false);
       }
     };
+
 
     const fetchSuscripcion = async () => {
       setLoadingSuscripcion(true);
@@ -104,7 +116,7 @@ const PanelTutor = () => {
     // Verificar límite de cursos
     const cursosActivos = cursos.length;
     const limiteGratuito = 3;
-    
+
     if (!suscripcion && cursosActivos >= limiteGratuito) {
       showNotification({
         type: 'warning',
@@ -115,7 +127,7 @@ const PanelTutor = () => {
       navigate("/planes");
       return;
     }
-    
+
     if (suscripcion && suscripcion.id_plan) {
       const limitePlan = suscripcion.id_plan.cantidadCursos;
       if (cursosActivos >= limitePlan) {
@@ -128,7 +140,7 @@ const PanelTutor = () => {
         return;
       }
     }
-    
+
     navigate("/tutor/curso/nuevo");
   };
 
@@ -259,16 +271,16 @@ const PanelTutor = () => {
                       const fecha = reserva.fecha ? new Date(reserva.fecha) : null;
                       const fechaTexto = fecha
                         ? fecha.toLocaleDateString(undefined, {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })
                         : "";
                       const horaTexto = fecha
                         ? fecha.toLocaleTimeString(undefined, {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
                         : "";
 
                       const est = reserva.id_usuario || {};
@@ -367,18 +379,18 @@ const PanelTutor = () => {
                       const tieneReserva = reservasDia.length > 0;
                       const tooltip = tieneReserva
                         ? reservasDia
-                            .map(
-                              (r) => {
-                                const est = r.id_usuario || {};
-                                const nombreEstudiante =
-                                  est.nombreCompleto ||
-                                  (est.nombre && est.apellido
-                                    ? `${est.nombre} ${est.apellido}`
-                                    : est.nombre || est.email || "Estudiante");
-                                return `${r.id_curso?.nombre || "Curso"} - Estudiante: ${nombreEstudiante}`;
-                              }
-                            )
-                            .join("\n")
+                          .map(
+                            (r) => {
+                              const est = r.id_usuario || {};
+                              const nombreEstudiante =
+                                est.nombreCompleto ||
+                                (est.nombre && est.apellido
+                                  ? `${est.nombre} ${est.apellido}`
+                                  : est.nombre || est.email || "Estudiante");
+                              return `${r.id_curso?.nombre || "Curso"} - Estudiante: ${nombreEstudiante}`;
+                            }
+                          )
+                          .join("\n")
                         : "";
 
                       return (

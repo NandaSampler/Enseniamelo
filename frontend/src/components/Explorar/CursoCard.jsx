@@ -1,8 +1,7 @@
-import "../../styles/Explorar/cursoCard.css";
 import { Link } from "react-router-dom";
 import api from "../../api/config";
+import "../../styles/Explorar/cursoCard.css";
 
-// Colores suaves de chips, alineados con InfoCurso (infocurso-chip-color-1..4)
 const categoryColorClasses = [
   "curso-chip-color-1",
   "curso-chip-color-2",
@@ -16,38 +15,47 @@ const tagColors = {
   Marketing: "tag-pink",
 };
 
+// ✅ helper que faltaba
+const joinUrl = (base = "", path = "") => {
+  const b = String(base || "").replace(/\/+$/, "");
+  const p = String(path || "").replace(/^\/+/, "/");
+  return b ? `${b}${p}` : p;
+};
+
 const resolvePortadaUrl = (portada) => {
   if (!portada) return "";
 
-  // Si ya es data URL o URL absoluta, se usa tal cual
   if (portada.startsWith("data:")) return portada;
   if (portada.startsWith("http://") || portada.startsWith("https://")) return portada;
 
-  // Si viene como "/static/cursos/..." desde el backend, le anteponemos la raíz del API
-  if (portada.startsWith("/")) {
-    const baseApi = api.defaults.baseURL || ""; // ej: http://localhost:3000/api
-    const root = baseApi.replace(/\/+api\/?$/, ""); // -> http://localhost:3000
-    return root + portada;
+  // ✅ en DEV baseURL suele ser "/api" (proxy). Queremos "/api" + "/curso/uploads/.."
+  if (portada.startsWith("/curso/") || portada.startsWith("/uploads/")) {
+    const base = api.defaults.baseURL || ""; // "/api" en dev
+    return joinUrl(base, portada);           // => "/api/curso/uploads/xxx.jpg"
   }
 
-  return portada;
+  return portada.startsWith("/") ? portada : `/${portada}`;
 };
 
 const CursoCard = ({ id, titulo, tag, descripcion, nivel, duracion, portada, categorias = [] }) => {
-  const tagClass = tagColors[tag] || "tag-default";
   const portadaSrc = resolvePortadaUrl(portada);
+
+  const categoryNames = (Array.isArray(categorias) ? categorias : [])
+    .map((cat) => (typeof cat === "string" ? cat : cat?.nombre))
+    .filter(Boolean);
+
+  const tagNormalized = (tag || "").trim();
+  const tagAlreadyInCategories = categoryNames.some(
+    (c) => c.toLowerCase() === tagNormalized.toLowerCase()
+  );
+
+  const showTag = tagNormalized && !tagAlreadyInCategories;
 
   return (
     <Link to={`/curso/${id}`} className="block">
       <article className="curso-card hover:shadow-md transition-shadow">
         <div className="curso-thumb">
-          {portadaSrc && (
-            <img
-              src={portadaSrc}
-              alt={titulo}
-              className="curso-thumb-img"
-            />
-          )}
+          {portadaSrc && <img src={portadaSrc} alt={titulo} className="curso-thumb-img" />}
         </div>
 
         <div className="curso-content">
@@ -57,27 +65,18 @@ const CursoCard = ({ id, titulo, tag, descripcion, nivel, duracion, portada, cat
             </div>
 
             <div className="curso-tags-row">
-              {Array.isArray(categorias) &&
-                categorias.map((cat, index) => {
-                  const nombre = typeof cat === "string" ? cat : cat.nombre;
-                  if (!nombre) return null;
-                  const categoriaClass =
-                    categoryColorClasses[
-                      index % categoryColorClasses.length
-                    ];
-                  return (
-                    <span
-                      key={nombre}
-                      className={`curso-tag ${categoriaClass}`}
-                    >
-                      {nombre}
-                    </span>
-                  );
-                })}
+              {categoryNames.map((nombre, index) => {
+                const categoriaClass = categoryColorClasses[index % categoryColorClasses.length];
+                return (
+                  <span key={nombre} className={`curso-tag ${categoriaClass}`}>
+                    {nombre}
+                  </span>
+                );
+              })}
 
-              {tag && (
-                <span className={`curso-tag ${tagClass}`}>
-                  {tag}
+              {showTag && (
+                <span className={`curso-tag ${tagColors[tagNormalized] || "tag-default"}`}>
+                  {tagNormalized}
                 </span>
               )}
             </div>
