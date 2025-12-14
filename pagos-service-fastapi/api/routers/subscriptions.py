@@ -9,6 +9,54 @@ from domain.schemas import SubsCreateMe, SubsOutEnriched
 router = APIRouter(prefix="/suscripciones", tags=["suscripciones"])
 svc = PaymentsService()
 
+@router.post(
+    "/mias",
+    response_model=SubsOut,
+    status_code=201,
+    summary="Crear suscripción para el usuario autenticado",
+)
+async def create_my_subscription(
+    payload: SubsCreateMe,
+    authorization: str | None = Header(None),
+):
+    token = extract_token_from_header(authorization)
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token requerido")
+    return await svc.create_my_sub(token, payload.id_plan, payload.inicio)
+
+
+@router.get(
+    "/enriched",
+    response_model=list[SubsOutEnriched],
+    summary="Listar suscripciones con info de usuario",
+)
+async def list_subscriptions_enriched(
+    id_usuario: str | None = Query(default=None),
+    id_plan: str | None = Query(default=None),
+    estado: SubsEstado | None = Query(default=None),
+    authorization: str | None = Header(None),
+):
+    token = extract_token_from_header(authorization)
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token requerido")
+    return await svc.list_subs_enriched(token=token, id_usuario=id_usuario, id_plan=id_plan, estado=estado)
+
+
+@router.get(
+    "/{sid}/enriched",
+    response_model=SubsOutEnriched,
+    summary="Obtener suscripción con info de usuario",
+)
+async def get_subscription_enriched(
+    sid: str,
+    authorization: str | None = Header(None),
+):
+    token = extract_token_from_header(authorization)
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token requerido")
+    return await svc.get_sub_enriched(sid, token)
+
+
 @router.get(
     "/",
     response_model=list[SubsOut],
@@ -89,49 +137,3 @@ async def list_my_subscriptions(
     return await svc.list_my_subs(token)
 
 
-@router.post(
-    "/mias",
-    response_model=SubsOut,
-    status_code=201,
-    summary="Crear suscripción para el usuario autenticado",
-)
-async def create_my_subscription(
-    payload: SubsCreateMe,
-    authorization: str | None = Header(None),
-):
-    token = extract_token_from_header(authorization)
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token requerido")
-    return await svc.create_my_sub(token, payload.id_plan, payload.inicio)
-
-
-@router.get(
-    "/enriched",
-    response_model=list[SubsOutEnriched],
-    summary="Listar suscripciones con info de usuario",
-)
-async def list_subscriptions_enriched(
-    id_usuario: str | None = Query(default=None),
-    id_plan: str | None = Query(default=None),
-    estado: SubsEstado | None = Query(default=None),
-    authorization: str | None = Header(None),
-):
-    token = extract_token_from_header(authorization)
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token requerido")
-    return await svc.list_subs_enriched(token=token, id_usuario=id_usuario, id_plan=id_plan, estado=estado)
-
-
-@router.get(
-    "/{sid}/enriched",
-    response_model=SubsOutEnriched,
-    summary="Obtener suscripción con info de usuario",
-)
-async def get_subscription_enriched(
-    sid: str,
-    authorization: str | None = Header(None),
-):
-    token = extract_token_from_header(authorization)
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token requerido")
-    return await svc.get_sub_enriched(sid, token)

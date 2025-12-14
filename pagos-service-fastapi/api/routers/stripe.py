@@ -91,8 +91,9 @@ async def create_checkout_session(payload: CheckoutIn, authorization: str | None
     suscripcion_id = str(ins.inserted_id)
 
     # 5) Crear Checkout Session
-    success_url = f"{settings.frontend_base_url}/planes/success?session_id={{CHECKOUT_SESSION_ID}}"
-    cancel_url = f"{settings.frontend_base_url}/planes/cancel"
+    success_url = f"{settings.frontend_base_url}/planes?success=1&session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url  = f"{settings.frontend_base_url}/planes?cancel=1"
+
 
     session = stripe.checkout.Session.create(
         mode="payment",

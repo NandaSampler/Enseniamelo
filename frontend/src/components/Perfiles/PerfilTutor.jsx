@@ -1,12 +1,14 @@
 // frontend/src/components/Perfiles/PerfilTutor.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import "../../styles/Perfiles/perfilEstudiante.css";
-import "../../styles/Perfiles/perfilTutor.css"; // ⬅️ aquí se suman los estilos del tutor
+import "../../styles/Perfiles/perfilTutor.css";
 import { authAPI } from "../../api/auth";
-import { planesAPI } from "../../api/planes";
+import api from "../../api/config";
 import { useNotification } from "../NotificationProvider";
-import Navbar from "../Navbar"; // ⬅️ para mostrar el navbar
+import Navbar from "../Navbar";
+
+const PAYMENTS_PREFIX = "/ms-payments/v1";
 
 const PerfilTutor = () => {
   const navigate = useNavigate();
@@ -21,7 +23,10 @@ const PerfilTutor = () => {
     descripcion: "",
   });
 
-  const [suscripcion, setSuscripcion] = useState(null);
+  const [mongoId, setMongoId] = useState(null);
+  const [planes, setPlanes] = useState([]);
+  const [suscripcionRaw, setSuscripcionRaw] = useState(null);
+
   const [cancelando, setCancelando] = useState(false);
 
   // Perfil del tutor
@@ -29,7 +34,7 @@ const PerfilTutor = () => {
     const fetchUserProfile = async () => {
       try {
         const response = await authAPI.getProfile();
-        if (response.data.success) {
+        if (response.data?.success) {
           const user = response.data.user;
           setPerfil({
             nombre: user.nombre || "",
@@ -39,97 +44,122 @@ const PerfilTutor = () => {
             foto: user.foto || "",
             descripcion: user.descripcion || "",
           });
+          return;
         }
-      } catch (error) {
-        const userData = JSON.parse(localStorage.getItem("user") || "{}");
-        setPerfil({
-          nombre: userData.nombre || "",
-          apellido: userData.apellido || "",
-          email: userData.email || "",
-          telefono: userData.telefono || "",
-          foto: userData.foto || "",
-          descripcion: userData.descripcion || "",
-        });
-      }
+      } catch {}
+
+      const userData = JSON.parse(localStorage.getItem("user") || "{}");
+      setPerfil({
+        nombre: userData.nombre || "",
+        apellido: userData.apellido || "",
+        email: userData.email || "",
+        telefono: userData.telefono || "",
+        foto: userData.foto || "",
+        descripcion: userData.descripcion || "",
+      });
     };
 
     fetchUserProfile();
   }, []);
 
-  // Suscripción del tutor
+  // /me -> mongoId
   useEffect(() => {
+    const fetchMe = async () => {
+      try {
+        const meRes = await api.get("/v1/auth/me");
+        const me = meRes?.data;
+        if (me?.id) setMongoId(me.id);
+      } catch (e) {
+        // si falla, lo dejamos null
+      }
+    };
+    fetchMe();
+  }, []);
+
+  // Planes (para enriquecer)
+  useEffect(() => {
+    const fetchPlanes = async () => {
+      try {
+        const res = await api.get(`${PAYMENTS_PREFIX}/planes/`);
+        setPlanes(Array.isArray(res.data) ? res.data : []);
+      } catch {}
+    };
+    fetchPlanes();
+  }, []);
+
+  // Suscripción del tutor (con fallback)
+  useEffect(() => {
+    if (!mongoId) return;
+
+    const fetchSubsForUser = async (userId) => {
+      // 1) intento filtrado backend
+      try {
+        const r1 = await api.get(`${PAYMENTS_PREFIX}/suscripciones/`, {
+          params: { id_usuario: userId },
+        });
+        const list1 = Array.isArray(r1.data) ? r1.data : [];
+        if (list1.length > 0) return list1;
+      } catch {}
+
+      // 2) fallback: todas y filtrar front
+      const r2 = await api.get(`${PAYMENTS_PREFIX}/suscripciones/`);
+      const list2 = Array.isArray(r2.data) ? r2.data : [];
+      return list2.filter((s) => String(s?.id_usuario) === String(userId));
+    };
+
     const fetchSuscripcion = async () => {
       try {
-        const { data } = await planesAPI.getMiSuscripcion();
-        if (data?.success) {
-          setSuscripcion(data.suscripcion || null);
-        }
+        const subs = await fetchSubsForUser(mongoId);
+
+        const found =
+          subs.find((s) => s.estado === "activa") ||
+          subs.find((s) => s.estado === "pendiente") ||
+          null;
+
+        setSuscripcionRaw(found);
       } catch (error) {
         console.error("Error obteniendo suscripción del tutor:", error);
       }
     };
 
     fetchSuscripcion();
-  }, []);
+  }, [mongoId]);
 
+  // Enriquecer id_plan (porque viene string)
+  const suscripcion = useMemo(() => {
+    if (!suscripcionRaw) return null;
+
+    // si ya viene como objeto (por si algún día cambias backend)
+    if (suscripcionRaw.id_plan && typeof suscripcionRaw.id_plan === "object") {
+      return suscripcionRaw;
+    }
+
+    const planObj = planes.find((p) => String(p.id) === String(suscripcionRaw.id_plan));
+    return {
+      ...suscripcionRaw,
+      id_plan: planObj || null,
+    };
+  }, [suscripcionRaw, planes]);
+
+  // Cancelación (aquí solo dejo UI, porque tu backend actual no mostró endpoint de cancelación)
   const handleCancelarSuscripcion = async () => {
     if (!suscripcion || cancelando) return;
 
-    // Usamos NotificationProvider en lugar del alert nativo
     showNotification({
       type: "warning",
-      title: "Cancelando suscripción",
-      message: `Se está procesando la cancelación de tu suscripción al plan "${suscripcion.id_plan.nombre}".`,
-      duration: 4000,
+      title: "Cancelación",
+      message: "Aún no hay endpoint de cancelación conectado en el frontend.",
+      duration: 5000,
     });
 
-    try {
-      setCancelando(true);
-      const { data } = await planesAPI.cancelarSuscripcion();
-
-      if (data?.success) {
-        showNotification({
-          type: "success",
-          title: "Suscripción cancelada",
-          message:
-            "Tu suscripción se cancelará al final del período actual. Seguirás teniendo acceso hasta entonces.",
-          duration: 6000,
-        });
-
-        setSuscripcion((prev) => ({
-          ...prev,
-          estado: "cancelada",
-          fechaCancelacion: new Date(),
-        }));
-      } else {
-        showNotification({
-          type: "error",
-          title: "Error al cancelar",
-          message:
-            data?.message || "No se pudo cancelar la suscripción.",
-          duration: 5000,
-        });
-      }
-    } catch (error) {
-      console.error("Error cancelando suscripción:", error);
-      showNotification({
-        type: "error",
-        title: "Error al cancelar",
-        message: "Ocurrió un error al cancelar la suscripción.",
-        duration: 5000,
-      });
-    } finally {
-      setCancelando(false);
-    }
+    setCancelando(false);
   };
 
   return (
     <>
-      {/* NAVBAR SIEMPRE VISIBLE */}
       <Navbar currentSection="planes" />
 
       <div className="edit-perfil-page">
-        {/* HEADER */}
         <div className="header">
           <div className="container">
             <div className="header-content">
@@ -141,27 +171,21 @@ const PerfilTutor = () => {
           </div>
         </div>
 
-        {/* CONTENIDO PRINCIPAL */}
         <div className="main-content">
           <div className="container">
             <div className="edit-form">
-              {/* Información Personal */}
               <div className="form-section">
                 <h3 className="section-title">Información Personal</h3>
 
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Nombre</label>
-                    <p className="form-input readonly-input">
-                      {perfil.nombre}
-                    </p>
+                    <p className="form-input readonly-input">{perfil.nombre}</p>
                   </div>
 
                   <div className="form-group">
                     <label className="form-label">Apellido</label>
-                    <p className="form-input readonly-input">
-                      {perfil.apellido}
-                    </p>
+                    <p className="form-input readonly-input">{perfil.apellido}</p>
                   </div>
                 </div>
 
@@ -173,9 +197,7 @@ const PerfilTutor = () => {
 
                   <div className="form-group">
                     <label className="form-label">Teléfono</label>
-                    <p className="form-input readonly-input">
-                      {perfil.telefono}
-                    </p>
+                    <p className="form-input readonly-input">{perfil.telefono}</p>
                   </div>
                 </div>
 
@@ -197,7 +219,6 @@ const PerfilTutor = () => {
                 </div>
               </div>
 
-              {/* --- SUSCRIPCIÓN COMO CARD --- */}
               <div className="form-section">
                 <h3 className="section-title">Suscripción</h3>
 
@@ -206,27 +227,15 @@ const PerfilTutor = () => {
                     <div className="subscription-card-header">
                       <div>
                         <p className="subscription-label">Plan actual</p>
-                        <h4 className="subscription-name">
-                          {suscripcion.id_plan.nombre}
-                        </h4>
+                        <h4 className="subscription-name">{suscripcion.id_plan.nombre}</h4>
                       </div>
-                      <span
-                        className={`subscription-status ${
-                          suscripcion.estado === "cancelada"
-                            ? "cancelled"
-                            : "active"
-                        }`}
-                      >
-                        {suscripcion.estado === "cancelada"
-                          ? "Cancelado"
-                          : "Activo"}
-                      </span>
+                      <span className="subscription-status active">{suscripcion.estado}</span>
                     </div>
 
                     <div className="subscription-card-body">
                       <div className="subscription-price-block">
                         <span className="subscription-price-amount">
-                          ${suscripcion.id_plan.precio.toFixed(2)}
+                          ${Number(suscripcion.id_plan.precio).toFixed(2)}
                         </span>
                         <span className="subscription-price-tag">USD</span>
                       </div>
@@ -234,50 +243,28 @@ const PerfilTutor = () => {
                       <div className="subscription-meta">
                         <div className="subscription-meta-item">
                           <span className="meta-label">Duración</span>
-                          <span className="meta-value">
-                            {suscripcion.id_plan.duracionDias} días
-                          </span>
+                          <span className="meta-value">{suscripcion.id_plan.duracionDias} días</span>
                         </div>
                         <div className="subscription-meta-item">
                           <span className="meta-label">Límite de cursos</span>
-                          <span className="meta-value">
-                            {suscripcion.id_plan.cantidadCursos}
-                          </span>
+                          <span className="meta-value">{suscripcion.id_plan.cantidadCursos}</span>
                         </div>
                         <div className="subscription-meta-item">
                           <span className="meta-label">Inicio</span>
                           <span className="meta-value">
-                            {new Date(
-                              suscripcion.inicio
-                            ).toLocaleDateString()}
+                            {suscripcion.inicio ? new Date(suscripcion.inicio).toLocaleDateString() : "-"}
                           </span>
                         </div>
                         <div className="subscription-meta-item">
                           <span className="meta-label">Fin</span>
                           <span className="meta-value">
-                            {new Date(
-                              suscripcion.fin
-                            ).toLocaleDateString()}
+                            {suscripcion.fin ? new Date(suscripcion.fin).toLocaleDateString() : "-"}
                           </span>
                         </div>
                       </div>
 
-                      {suscripcion.estado === "cancelada" && (
-                        <div className="subscription-cancelled-notice">
-                          <p>
-                            <strong>Suscripción cancelada</strong> - Vigente
-                            hasta el{" "}
-                            {new Date(
-                              suscripcion.fin
-                            ).toLocaleDateString()}
-                          </p>
-                        </div>
-                      )}
-
                       {suscripcion.id_plan.descripcion && (
-                        <p className="subscription-description">
-                          {suscripcion.id_plan.descripcion}
-                        </p>
+                        <p className="subscription-description">{suscripcion.id_plan.descripcion}</p>
                       )}
 
                       {suscripcion.estado === "activa" && (
@@ -287,21 +274,16 @@ const PerfilTutor = () => {
                           disabled={cancelando}
                           className="subscription-cancel-btn"
                         >
-                          {cancelando
-                            ? "Cancelando..."
-                            : "Cancelar Suscripción"}
+                          {cancelando ? "Cancelando..." : "Cancelar Suscripción"}
                         </button>
                       )}
                     </div>
                   </div>
                 ) : (
                   <div className="subscription-card subscription-card-empty">
-                    <h4 className="subscription-empty-title">
-                      Sin suscripción activa
-                    </h4>
+                    <h4 className="subscription-empty-title">Sin suscripción activa</h4>
                     <p className="subscription-empty-text">
-                      Aún no tienes un plan contratado. Explora nuestros
-                      planes para comenzar a publicar y gestionar tus cursos.
+                      Aún no tienes un plan contratado. Explora nuestros planes para comenzar.
                     </p>
                     <Link to="/planes" className="subscription-cta">
                       Ver planes disponibles
@@ -310,32 +292,21 @@ const PerfilTutor = () => {
                 )}
               </div>
 
-              {/* Descripción */}
               <div className="form-section">
                 <h3 className="section-title">Descripción</h3>
                 <div className="form-group">
                   <label className="form-label">Biografía</label>
                   <p className="form-textarea readonly-input">
-                    {perfil.descripcion ||
-                      "Aún no has agregado una biografía."}
+                    {perfil.descripcion || "Aún no has agregado una biografía."}
                   </p>
                 </div>
               </div>
 
-              {/* Acciones */}
               <div className="form-actions">
-                <button
-                  type="button"
-                  onClick={() => navigate("/mis-cursos")}
-                  className="cancel-btn"
-                >
+                <button type="button" onClick={() => navigate("/mis-cursos")} className="cancel-btn">
                   Volver
                 </button>
-                <button
-                  type="button"
-                  className="save-btn"
-                  onClick={() => navigate("/tutor/perfil/editar")}
-                >
+                <button type="button" className="save-btn" onClick={() => navigate("/tutor/perfil/editar")}>
                   Editar Perfil
                 </button>
               </div>
