@@ -120,10 +120,6 @@ public class MessageProcessorConfig {
                         LOGGER.info("Creando solicitud de verificación");
                         verificarSolicitudService.crearSolicitud(event.getData()).block();
                     }
-                    case VERIFY_REQUEST -> {
-                        LOGGER.info("Procesando verificación de solicitud: {}", id);
-                        verificarSolicitudService.procesarVerificacion(id).block();
-                    }
                     case APPROVE_REQUEST -> {
                         VerificarSolicitudDTO aprobar = event.getData();
                         LOGGER.info("Aprobando solicitud: {}", id);

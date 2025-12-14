@@ -63,13 +63,13 @@ class CursoService:
     # -----------------------
     async def create(self, payload: CursoCreate, token: Optional[str] = None) -> CursoOut:
         """
-        Crea un curso.
+        Crea un curso. La solicitud de verificación debe ser creada manualmente
+        desde el frontend usando el formulario.
 
-        Flujo correcto (estilo payments):
-        - Si no viene id_tutor:
-          1) /v1/auth/me -> obtiene usuario interno {id/_id}
-          2) /v1/tutores/usuario/{usuario_id} -> obtiene tutor {id/_id}
-          3) crea curso con id_tutor
+        Flujo:
+        1) Resolver id_tutor desde JWT
+        2) Validar tutor
+        3) Crear curso en Mongo
         """
 
         # 1) Resolver id_tutor si falta
@@ -82,11 +82,9 @@ class CursoService:
                 id_tutor = await self.usuarios_integration.resolve_tutor_id_from_token(token)
 
             except ValueError:
-                # Mensaje de negocio (usuario sin tutor, etc.)
                 raise
 
             except httpx.HTTPStatusError as e:
-                # 🔥 NO escondemos: devolvemos status/url/body real
                 msg = MsUsuariosIntegration.debug_http_error(e)
                 logger.error("Error resolviendo tutor desde JWT | %s", msg)
                 raise ValueError(msg)
@@ -103,7 +101,7 @@ class CursoService:
                 logger.exception("Error inesperado resolviendo tutor desde JWT: %s", str(e))
                 raise ValueError("Error inesperado resolviendo tutor desde JWT")
 
-        # 2) Validar tutor por id (si vino del front o de resolve_tutor_id_from_token)
+        # 2) Validar tutor por id
         try:
             perfil_val = await self.usuarios_integration.get_perfil_tutor_by_id(id_tutor, token)
 
@@ -127,13 +125,21 @@ class CursoService:
         if perfil_val is None:
             raise ValueError(f"El tutor con id {id_tutor} no existe.")
 
-        # 3) Crear (sin mutar payload original)
+        # Obtener id_usuario desde perfil de tutor
+        id_usuario = perfil_val.get("idUsuario")
+        if not id_usuario:
+            raise ValueError("No se pudo obtener idUsuario del perfil de tutor")
+
+        # 3) Crear curso
         payload_db = payload.model_copy(update={"id_tutor": id_tutor})
         try:
-            return self.repo.create(payload_db)
+            curso_creado = self.repo.create(payload_db)
         except Exception as e:
             logger.exception("Error creando curso en repo: %s", str(e))
             raise ValueError("Error interno creando el curso.")
+
+        logger.info("Curso creado exitosamente: %s. El usuario debe crear la solicitud de verificación desde el modal.", curso_creado.id)
+        return curso_creado
 
     async def update(self, curso_id: str, payload: CursoUpdate, token: Optional[str] = None) -> CursoOut:
         if payload.id_tutor is not None:

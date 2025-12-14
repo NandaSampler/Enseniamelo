@@ -21,20 +21,22 @@ public class VerificarSolicitud {
     private String id;
 
     @Field("id_usuario")
-    private String idUsuario; // usuarios._id
-
+    private String idUsuario; 
     @Field("id_perfil_tutor")
-    private String idPerfilTutor; // perfil_tutor._id
+    private String idPerfilTutor; 
+    @Field("id_curso")
+    private String idCurso; 
 
-    private String estado;
+    private String estado; 
     private String comentario;
+    
     @Field("foto_ci")
     private String fotoCi;
-
     private List<String> archivos;
 
     @Field("creado")
     private LocalDateTime creado;
+    
     private LocalDateTime decidido;
     private LocalDateTime actualizado;
 }

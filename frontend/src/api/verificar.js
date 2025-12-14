@@ -5,13 +5,18 @@ import api from './config';
 const VERIFICAR_BASE = '/v1/verificacion';
 
 export const verificarAPI = {
-  // Crear una nueva solicitud de verificación
+  // Crear una nueva solicitud de verificación (multipart) - mantenido para compatibilidad
   crearSolicitud: async (formData) => {
     return await api.post(VERIFICAR_BASE, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
+  },
+
+  // Crear solicitud para curso (JSON) — debe llamar a POST /v1/verificacion/curso
+  crearSolicitudCurso: async (payload) => {
+    return await api.post(`${VERIFICAR_BASE}/curso`, payload);
   },
 
   // Obtener todas las solicitudes (admin)
