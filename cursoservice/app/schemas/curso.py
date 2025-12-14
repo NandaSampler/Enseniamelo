@@ -1,46 +1,106 @@
 from __future__ import annotations
+
 from datetime import datetime
 from decimal import Decimal
 from typing import Literal, Optional, List
 
 from pydantic import BaseModel, Field, conint, condecimal, constr, field_validator
 
+
 Modalidad = Literal["online", "presencial", "mixto"]
 EstadoCurso = Literal["activo", "inactivo", "cancelado"]
 EstadoVerificacion = Literal["pendiente", "aceptado", "rechazado"]
+
+
 class CursoBase(BaseModel):
-    # FK obligatoria (Mongo: id_tutor)
-    id_tutor: str = Field(..., description="FK a tutor._id (ObjectId)")
+    # FK obligatoria en BD (Mongo: id_tutor). En create la resolvemos por JWT si no viene.
+    id_tutor: Optional[str] = Field(None, description="FK a tutor._id (ObjectId)")
 
     # Básicos
     nombre: constr(min_length=1, max_length=50) = Field(..., description="Nombre del curso")
     descripcion: Optional[constr(max_length=250)] = Field(None, description="Descripción breve")
     modalidad: Modalidad = Field(..., description="Cómo se imparte el curso")
 
-    # Imágenes (Mongo: portada_url, galeria_urls, fotos)
+    # Imágenes
     portada_url: Optional[str] = Field(None, description="URL de portada del curso")
     galeria_urls: Optional[List[str]] = Field(default=None, description="URLs de la galería")
     fotos: Optional[List[str]] = Field(default=None, description="URLs de imágenes del curso")
+
     # Reserva
     necesita_reserva: bool = Field(False, description="Si requiere pagar reserva")
     precio_reserva: Optional[condecimal(ge=0, max_digits=10, decimal_places=2)] = Field(
         None, description="Precio de la reserva si aplica"
     )
-    # Cupos (de tu diseño anterior; si no los usas, luego los podemos quitar)
+
+    # Cupos
     tiene_cupo: bool = Field(True, description="Controla si se limita con cupo")
     cupo: Optional[conint(ge=0)] = Field(None, description="Capacidad total si tiene_cupo=True")
     cupo_ocupado: conint(ge=0) = Field(0, description="Cupos ya reservados")
 
     # Estado del curso
     estado: EstadoCurso = Field("activo", description="Estado lógico del curso (negocio)")
-    activo: bool = Field(True, description="Indicador de activación visible (Mongo: activo)")
+    activo: bool = Field(True, description="Indicador visible (Mongo: activo)")
 
     # Clasificación y verificación
-    categorias: List[str] = Field(default_factory=list, description="Lista de ids de categorías (ObjectId)")
-    tags: List[str] = Field(default_factory=list, description="Lista de tags")
+    categorias: List[str] = Field(default_factory=list, description="IDs de categorías (ObjectId)")
+    tags: List[str] = Field(default_factory=list, description="Tags (texto)")
     verificacion_estado: EstadoVerificacion = Field(
-        "pendiente", description="Estado de verificación (Mongo: verificacion_estado)"
+        "pendiente", description="Estado de verificación"
     )
+
+    @field_validator("precio_reserva")
+    @classmethod
+    def valida_precio_reserva_si_necesita(cls, v: Optional[Decimal], info):
+        # Si necesita_reserva=True, precio_reserva debe existir y ser >= 0
+        if info.data.get("necesita_reserva") and (v is None or v < 0):
+            raise ValueError("precio_reserva es requerido y >= 0 cuando necesita_reserva=True")
+        return v
+
+    @field_validator("cupo_ocupado")
+    @classmethod
+    def valida_cupos(cls, v: int, info):
+        cupo = info.data.get("cupo")
+        tiene_cupo = info.data.get("tiene_cupo", True)
+        if tiene_cupo and cupo is not None and v > cupo:
+            raise ValueError("cupo_ocupado no puede ser mayor que cupo")
+        return v
+
+
+class CursoCreate(CursoBase):
+    """
+    Schema interno (BD):
+    - puede incluir id_tutor (si lo mandas desde back)
+    """
+    pass
+
+
+class CursoCreateIn(BaseModel):
+    """
+    Schema de ENTRADA desde el FRONTEND:
+    - NO pide id_tutor
+    - el backend lo resuelve desde el JWT
+    """
+    nombre: constr(min_length=1, max_length=50)
+    descripcion: Optional[constr(max_length=250)] = None
+    modalidad: Modalidad
+
+    portada_url: Optional[str] = None
+    galeria_urls: Optional[List[str]] = None
+    fotos: Optional[List[str]] = None
+
+    necesita_reserva: bool = False
+    precio_reserva: Optional[condecimal(ge=0, max_digits=10, decimal_places=2)] = None
+
+    tiene_cupo: bool = True
+    cupo: Optional[conint(ge=0)] = None
+    cupo_ocupado: conint(ge=0) = 0
+
+    estado: EstadoCurso = "activo"
+    activo: bool = True
+
+    categorias: List[str] = Field(default_factory=list)
+    tags: List[str] = Field(default_factory=list)
+    verificacion_estado: EstadoVerificacion = "pendiente"
 
     @field_validator("precio_reserva")
     @classmethod
@@ -59,12 +119,9 @@ class CursoBase(BaseModel):
         return v
 
 
-class CursoCreate(CursoBase):
-    pass
-
-
 class CursoUpdate(BaseModel):
     id_tutor: Optional[str] = None
+
     nombre: Optional[constr(min_length=1, max_length=50)] = None
     descripcion: Optional[constr(max_length=250)] = None
     modalidad: Optional[Modalidad] = None
@@ -105,9 +162,11 @@ class CursoUpdate(BaseModel):
             raise ValueError("cupo_ocupado no puede ser mayor que cupo")
         return v
 
+
 class CursoOut(CursoBase):
+    # Para salida: tu repo probablemente expone id o _id
     id: str = Field(..., description="Id del curso (ObjectId)")
     creado: Optional[datetime] = None
-    actualizado: Optional[datetime] = None   # igual que en Mongo
+    actualizado: Optional[datetime] = None
 
     model_config = {"from_attributes": True}

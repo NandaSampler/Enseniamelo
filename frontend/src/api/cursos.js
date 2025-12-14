@@ -1,148 +1,90 @@
 // frontend/src/api/cursos.js
-import api from './config';
+import api from "./config";
 
-// Rutas a través del gateway (según configuración)
-const CURSOS_BASE = '/curso/api/v1/cursos';
-const CATEGORIAS_BASE = '/curso/api/v1/categorias';
-const HORARIOS_BASE = '/curso/api/v1/horarios';
+// ✅ Mantén slash final SOLO en el collection endpoint (POST/GET list)
+const CURSOS_BASE = "/curso/api/v1/cursos/";
+const CATEGORIAS_BASE = "/curso/api/v1/categorias/";
+const HORARIOS_BASE = "/curso/api/v1/horarios/";
+const TUTOR_BASE = "/curso/api/v1/tutor/";
 
-// ============================================
-// API DE CURSOS
-// ============================================
 export const cursosAPI = {
-  // Obtener todos los cursos (público)
-  getCursos: async () => {
-    return await api.get(CURSOS_BASE);
-  },
+  // Público (GET)
+  getCursos: async () => api.get(CURSOS_BASE),
 
-  // Obtener un curso por ID
-  getCurso: async (id) => {
-    return await api.get(`${CURSOS_BASE}/${id}`);
-  },
+  // ⚠️ IMPORTANTE:
+  // Tu backend: @router.get("/{curso_id}") -> NO lleva slash final.
+  getCurso: async (id) => api.get(`${CURSOS_BASE}${id}`),
 
-  // Obtener curso con detalles del tutor
-  getCursoDetalles: async (id) => {
-    return await api.get(`${CURSOS_BASE}/${id}/detalles`);
-  },
+  // Si este endpoint no existe aún, bórralo o crea el endpoint backend
+  getCursoDetalles: async (id) => api.get(`${CURSOS_BASE}${id}/detalles`),
 
-  // Crear un nuevo curso (requiere autenticación de tutor)
-  createCurso: async (cursoData) => {
-    return await api.post(CURSOS_BASE, cursoData);
-  },
+  // Tutor/Admin (POST/PUT/DELETE)
+  createCurso: async (cursoData) => api.post(CURSOS_BASE, cursoData),
 
-  // Actualizar un curso existente
-  updateCurso: async (id, cursoData) => {
-    return await api.put(`${CURSOS_BASE}/${id}`, cursoData);
-  },
+  // Tu backend: @router.put("/{curso_id}") -> NO slash final
+  updateCurso: async (id, cursoData) => api.put(`${CURSOS_BASE}${id}`, cursoData),
 
-  // Eliminar un curso
-  deleteCurso: async (id) => {
-    return await api.delete(`${CURSOS_BASE}/${id}`);
-  },
+  // Tu backend: @router.delete("/{curso_id}") -> NO slash final
+  deleteCurso: async (id) => api.delete(`${CURSOS_BASE}${id}`),
 
-  // Obtener cursos del tutor autenticado
+  // Cursos del tutor autenticado
   getMisCursos: async () => {
-    return await api.get(`${CURSOS_BASE}`, {
-      params: {
-        // El backend debería filtrar por el tutor autenticado basándose en el token
-      }
-    });
+    try {
+      // si tienes /api/v1/tutor/cursos (ajusta si tu router real es mis-cursos)
+      return await api.get(`${TUTOR_BASE}cursos`);
+    } catch (err) {
+      // fallback si tienes /api/v1/cursos/mis
+      return await api.get(`${CURSOS_BASE}mis`);
+    }
   },
 
-  // Buscar cursos por query
-  buscarCursos: async (query) => {
-    return await api.get(CURSOS_BASE, {
-      params: { q: query }
-    });
-  },
+  buscarCursos: async (query) => api.get(CURSOS_BASE, { params: { q: query } }),
 
-  // Filtrar cursos por tutor
-  getCursosPorTutor: async (id_tutor) => {
-    return await api.get(CURSOS_BASE, {
-      params: { id_tutor }
-    });
-  },
+  // ✅ backend espera tutor_id (no id_tutor)
+  getCursosPorTutor: async (tutor_id) =>
+    api.get(CURSOS_BASE, { params: { tutor_id } }),
 
   // Operaciones de categorías del curso
-  addCategoria: async (cursoId, categoriaId) => {
-    return await api.post(`${CURSOS_BASE}/${cursoId}/categorias`, {
+  // backend: @router.post("/{curso_id}/categorias") -> no slash final en el decorator
+  // pero puedes llamar con slash, FastAPI suele redirigir; mejor sin.
+  addCategoria: async (cursoId, categoriaId) =>
+    api.post(`${CURSOS_BASE}${cursoId}/categorias`, {
       curso_id: cursoId,
-      categoria_id: categoriaId
-    });
-  },
+      categoria_id: categoriaId,
+    }),
 
-  getCategorias: async (cursoId) => {
-    return await api.get(`${CURSOS_BASE}/${cursoId}/categorias`);
-  },
+  getCategorias: async (cursoId) => api.get(`${CURSOS_BASE}${cursoId}/categorias`),
 
-  removeCategoria: async (cursoId, categoriaId) => {
-    return await api.delete(`${CURSOS_BASE}/${cursoId}/categorias/${categoriaId}`);
-  }
+  removeCategoria: async (cursoId, categoriaId) =>
+    api.delete(`${CURSOS_BASE}${cursoId}/categorias/${categoriaId}`),
 };
 
 // ============================================
 // API DE CATEGORÍAS
 // ============================================
 export const categoriasAPI = {
-  // Obtener todas las categorías
-  getCategorias: async () => {
-    return await api.get(CATEGORIAS_BASE);
-  },
+  getCategorias: async () => api.get(CATEGORIAS_BASE),
+  getCategoria: async (id) => api.get(`${CATEGORIAS_BASE}${id}`),
 
-  // Obtener una categoría por ID
-  getCategoria: async (id) => {
-    return await api.get(`${CATEGORIAS_BASE}/${id}`);
-  },
+  createCategoria: async (categoriaData) => api.post(CATEGORIAS_BASE, categoriaData),
+  updateCategoria: async (id, categoriaData) =>
+    api.put(`${CATEGORIAS_BASE}${id}`, categoriaData),
+  deleteCategoria: async (id) => api.delete(`${CATEGORIAS_BASE}${id}`),
 
-  // Crear una nueva categoría (admin)
-  createCategoria: async (categoriaData) => {
-    return await api.post(CATEGORIAS_BASE, categoriaData);
-  },
-
-  // Actualizar una categoría
-  updateCategoria: async (id, categoriaData) => {
-    return await api.put(`${CATEGORIAS_BASE}/${id}`, categoriaData);
-  },
-
-  // Eliminar una categoría
-  deleteCategoria: async (id) => {
-    return await api.delete(`${CATEGORIAS_BASE}/${id}`);
-  },
-
-  // Obtener cursos de una categoría
-  getCursosPorCategoria: async (categoriaId) => {
-    return await api.get(`${CATEGORIAS_BASE}/${categoriaId}/cursos`);
-  }
+  getCursosPorCategoria: async (categoriaId) =>
+    api.get(`${CATEGORIAS_BASE}${categoriaId}/cursos`),
 };
 
 // ============================================
 // API DE HORARIOS
 // ============================================
 export const horariosAPI = {
-  // Obtener todos los horarios
-  getHorarios: async (params = {}) => {
-    return await api.get(HORARIOS_BASE, { params });
-  },
+  getHorarios: async (params = {}) => api.get(HORARIOS_BASE, { params }),
+  getHorario: async (id) => api.get(`${HORARIOS_BASE}${id}`),
 
-  // Obtener un horario por ID
-  getHorario: async (id) => {
-    return await api.get(`${HORARIOS_BASE}/${id}`);
-  },
-
-  // Crear un nuevo horario
-  createHorario: async (horarioData) => {
-    return await api.post(HORARIOS_BASE, horarioData);
-  },
-
-  // Actualizar un horario
-  updateHorario: async (id, horarioData) => {
-    return await api.put(`${HORARIOS_BASE}/${id}`, horarioData);
-  },
-
-  // Eliminar un horario
-  deleteHorario: async (id) => {
-    return await api.delete(`${HORARIOS_BASE}/${id}`);
-  }
+  createHorario: async (horarioData) => api.post(HORARIOS_BASE, horarioData),
+  updateHorario: async (id, horarioData) => api.put(`${HORARIOS_BASE}${id}`, horarioData),
+  deleteHorario: async (id) => api.delete(`${HORARIOS_BASE}${id}`),
 };
 
 export default cursosAPI;
