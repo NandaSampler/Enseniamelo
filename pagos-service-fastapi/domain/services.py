@@ -103,7 +103,7 @@ class PaymentsService:
 
     async def delete_plan(self, pid: str) -> bool:
         # proteger referencial: no borrar si hay suscripciones que lo usan
-        in_use = await db().suscripcion.count_documents({"plan_id": _oid(pid)})
+        in_use = await db().suscripcion.count_documents({"id_plan": _oid(pid)})
         if in_use > 0:
             raise ConflictError("Plan en uso por suscripciones", extra={"id": pid})
         res = await db().plan.delete_one({"_id": _oid(pid)})
