@@ -1,14 +1,22 @@
+# cursoservice/app/services/curso_service.py
 from __future__ import annotations
 from typing import List, Optional
 
 from app.schemas.curso import CursoCreate, CursoUpdate, CursoOut
+
+# Repos con getters (NO singletons a nivel de módulo)
 from app.repositories.curso_repository import CursoRepository, get_curso_repo
 from app.repositories.horario_repository import HorarioRepository, get_horario_repo
 from app.repositories.reserva_repository import ReservaRepository, get_reserva_repo
 from app.repositories.curso_categoria_repository import (
     CursoCategoriaRepository, get_curso_categoria_repo
 )
-from app.external.usuario_integration import UsuarioIntegration, get_usuario_integration
+
+# Integración con microservicio de usuarios
+from app.external.MsUsuariosIntegration import get_usuarios_integration
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class CursoService:
@@ -18,13 +26,12 @@ class CursoService:
                  repo: Optional[CursoRepository] = None,
                  horario_repo: Optional[HorarioRepository] = None,
                  reserva_repo: Optional[ReservaRepository] = None,
-                 curso_categoria_repo: Optional[CursoCategoriaRepository] = None,
-                 usuario_integration: Optional[UsuarioIntegration] = None) -> None:
+                 curso_categoria_repo: Optional[CursoCategoriaRepository] = None) -> None:
         self.repo = repo or get_curso_repo()
         self.horario_repo = horario_repo or get_horario_repo()
         self.reserva_repo = reserva_repo or get_reserva_repo()
         self.curso_categoria_repo = curso_categoria_repo or get_curso_categoria_repo()
-        self.usuario_integration = usuario_integration or get_usuario_integration()
+        self.usuarios_integration = get_usuarios_integration()
 
     # Query
     def list(self, q: Optional[str] = None, id_tutor: Optional[str] = None) -> List[CursoOut]:
@@ -37,29 +44,84 @@ class CursoService:
             raise KeyError("curso no encontrado")
 
     # Commands
-    async def create(self, payload: CursoCreate) -> CursoOut:
-        id_tutor = payload.id_tutor
-        if id_tutor:
-            tutor_existe = await self.usuario_integration.verificar_tutor_existe(id_tutor)
-            if not tutor_existe:
-                raise ValueError(f"El tutor con id {id_tutor} no existe")
-            
-            # Opcional: validar que esté verificado
-            tutor_verificado = await self.usuario_integration.verificar_tutor_verificado(id_tutor)
-            if not tutor_verificado:
-                raise ValueError(f"El tutor con id {id_tutor} no está verificado")
+    async def create(self, payload: CursoCreate, token: Optional[str] = None) -> CursoOut:
+        """
+        Crea un nuevo curso validando que el tutor existe en el servicio de usuarios.
         
-        return self.repo.create(payload)
-
-    async def update(self, curso_id: str, payload: CursoUpdate) -> CursoOut:
-        if payload.id_tutor is not None:
-            tutor_existe = await self.usuario_integration.verificar_tutor_existe(payload.id_tutor)
-            if not tutor_existe:
+        Args:
+            payload: Datos del curso a crear
+            token: Token JWT para autenticación con el servicio de usuarios
+            
+        Returns:
+            CursoOut: Curso creado
+            
+        Raises:
+            ValueError: Si el tutor no existe o no está verificado
+        """
+        logger.info(f"Validando tutor {payload.id_tutor} antes de crear curso")
+        
+        try:
+            # Validar que el tutor existe en el servicio de usuarios
+            perfil_tutor = await self.usuarios_integration.get_perfil_tutor_by_id(
+                payload.id_tutor, 
+                token
+            )
+            
+            if perfil_tutor is None:
+                logger.error(f"Tutor no encontrado: {payload.id_tutor}")
                 raise ValueError(f"El tutor con id {payload.id_tutor} no existe")
             
-            tutor_verificado = await self.usuario_integration.verificar_tutor_verificado(payload.id_tutor)
-            if not tutor_verificado:
-                raise ValueError(f"El tutor con id {payload.id_tutor} no está verificado")
+            # Validar que el tutor está verificado (opcional, según tu lógica de negocio)
+            if not perfil_tutor.get("verificado"):
+                logger.warning(f"Tutor no verificado: {payload.id_tutor}")
+                # Puedes decidir si permitir o no cursos de tutores no verificados
+                # raise ValueError(f"El tutor con id {payload.id_tutor} no está verificado")
+            
+            logger.info(f"Tutor validado exitosamente: {perfil_tutor.get('id')}")
+            
+        except ValueError:
+            # Re-lanzar los errores de validación
+            raise
+        except Exception as e:
+            logger.error(f"Error al validar tutor: {str(e)}")
+            raise ValueError(f"No se pudo validar el tutor: {str(e)}")
+        
+        # Si la validación pasó, crear el curso
+        return self.repo.create(payload)
+
+    async def update(self, curso_id: str, payload: CursoUpdate, token: Optional[str] = None) -> CursoOut:
+        """
+        Actualiza un curso validando el tutor si se cambió.
+        
+        Args:
+            curso_id: ID del curso a actualizar
+            payload: Datos a actualizar
+            token: Token JWT para autenticación
+            
+        Returns:
+            CursoOut: Curso actualizado
+        """
+        # Si se está cambiando el tutor, validarlo
+        if payload.id_tutor is not None:
+            logger.info(f"Validando nuevo tutor {payload.id_tutor} para curso {curso_id}")
+            
+            try:
+                perfil_tutor = await self.usuarios_integration.get_perfil_tutor_by_id(
+                    payload.id_tutor, 
+                    token
+                )
+                
+                if perfil_tutor is None:
+                    logger.error(f"Tutor no encontrado: {payload.id_tutor}")
+                    raise ValueError(f"El tutor con id {payload.id_tutor} no existe")
+                
+                logger.info(f"Nuevo tutor validado exitosamente: {perfil_tutor.get('id')}")
+                
+            except ValueError:
+                raise
+            except Exception as e:
+                logger.error(f"Error al validar tutor: {str(e)}")
+                raise ValueError(f"No se pudo validar el tutor: {str(e)}")
         
         try:
             return self.repo.update(curso_id, payload)
@@ -69,9 +131,10 @@ class CursoService:
             raise ValueError(str(e))
 
     def delete(self, curso_id: str) -> None:
-        if self.horario_repo.list(id_curso=curso_id):
+        # Reglas: no permitir borrar si hay dependencias
+        if self.horario_repo.list(curso_id=curso_id):
             raise ValueError("no se puede eliminar: curso tiene horarios")
-        if self.reserva_repo.list(id_curso=curso_id):
+        if self.reserva_repo.list(curso_id=curso_id):
             raise ValueError("no se puede eliminar: curso tiene reservas")
         if self.curso_categoria_repo.list_category_ids_of_course(curso_id):
             raise ValueError("no se puede eliminar: curso tiene categorías vinculadas")
@@ -81,20 +144,42 @@ class CursoService:
         except KeyError:
             raise KeyError("curso no encontrado")
     
-    async def enriquecer_con_datos_tutor(self, curso: CursoOut) -> dict:
+    async def get_curso_with_tutor_info(self, curso_id: str, token: Optional[str] = None) -> dict:
+        """
+        Obtiene un curso con información enriquecida del tutor.
+        
+        Args:
+            curso_id: ID del curso
+            token: Token JWT para autenticación
+            
+        Returns:
+            Dict con datos del curso e información del tutor
+        """
+        curso = self.get(curso_id)
         curso_dict = curso.model_dump()
         
-        if curso.id_tutor:
-            tutor = await self.usuario_integration.get_tutor(curso.id_tutor)
-            if tutor:
-                curso_dict["tutor"] = {
-                    "id": tutor.get("id"),
-                    "nombreCompleto": tutor.get("nombreCompleto"),
-                    "email": tutor.get("email"),
-                    "telefono": tutor.get("telefono"),
-                    "verificado": tutor.get("verificado"),
-                    "clasificacion": tutor.get("clasificacion"),
-                    "biografia": tutor.get("biografia"),
+        try:
+            # Obtener información del tutor desde el servicio de usuarios
+            perfil_tutor = await self.usuarios_integration.get_perfil_tutor_by_id(
+                curso.id_tutor,
+                token
+            )
+            
+            if perfil_tutor:
+                curso_dict["tutor_info"] = {
+                    "id": perfil_tutor.get("id"),
+                    "nombre_completo": perfil_tutor.get("nombreCompleto"),
+                    "email": perfil_tutor.get("email"),
+                    "verificado": perfil_tutor.get("verificado"),
+                    "clasificacion": perfil_tutor.get("clasificacion"),
+                    "biografia": perfil_tutor.get("biografia"),
                 }
+            else:
+                curso_dict["tutor_info"] = None
+                logger.warning(f"No se encontró información del tutor {curso.id_tutor}")
+                
+        except Exception as e:
+            logger.error(f"Error obteniendo información del tutor: {str(e)}")
+            curso_dict["tutor_info"] = None
         
         return curso_dict

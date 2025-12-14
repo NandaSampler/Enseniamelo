@@ -1,3 +1,5 @@
-from .usuario_integration import UsuarioIntegration, get_usuario_integration
+# cursoservice/app/external/__init__.py
+"""Integraciones con otros microservicios"""
+from .MsUsuariosIntegration import MsUsuariosIntegration, get_usuarios_integration
 
-__all__ = ["UsuarioIntegration", "get_usuario_integration"]
+__all__ = ["MsUsuariosIntegration", "get_usuarios_integration"]

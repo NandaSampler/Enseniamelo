@@ -1,18 +1,44 @@
-import api from "./config";
+// frontend/src/api/auth.js
+import api from './config';
+
+// Rutas del servicio de usuarios a través del gateway
+const AUTH_BASE = '/v1/auth';
 
 export const authAPI = {
-  login: (email, password) =>
-    api.post("/auth/login", { email, password }),
+  // Registrar un nuevo usuario
+  register: async (userData) => {
+    return await api.post(`${AUTH_BASE}/register`, userData);
+  },
 
-  register: (userData) =>
-    api.post("/auth/register", userData),
+  // Login (aunque ya se hace directo a Keycloak, esto podría ser útil)
+  login: async (credentials) => {
+    return await api.post(`${AUTH_BASE}/login`, credentials);
+  },
 
-  getProfile: () => api.get("/auth/profile"),
+  // Obtener perfil del usuario autenticado
+  getProfile: async () => {
+    return await api.get(`${AUTH_BASE}/me`);
+  },
 
-  updateProfile: (data) => api.put("/auth/profile", data),
+  // Actualizar perfil del usuario autenticado
+  updateProfile: async (profileData) => {
+    return await api.put(`${AUTH_BASE}/me`, profileData);
+  },
 
-  uploadTutorDocuments: (formData) =>
-    api.post("/auth/tutor/documentos", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    }),
+  // Cambiar contraseña
+  changePassword: async (passwordData) => {
+    return await api.put(`${AUTH_BASE}/me/password`, passwordData);
+  },
+
+  // Verificar token
+  verifyToken: async () => {
+    return await api.get(`${AUTH_BASE}/verify`);
+  },
+
+  // Logout (limpiar sesión en el backend si es necesario)
+  logout: async () => {
+    return await api.post(`${AUTH_BASE}/logout`);
+  }
 };
+
+export default authAPI;

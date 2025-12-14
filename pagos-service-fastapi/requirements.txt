@@ -6,3 +6,5 @@ motor
 py-eureka-client
 httpx
 spring-config-client
+stripe
+

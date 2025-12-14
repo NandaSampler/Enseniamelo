@@ -123,6 +123,7 @@ services:
       - enseniamelo-network
 
   gateway:
+    build: ./gateway
     image: enseniamelo-gateway:latest
     mem_limit: 512m
     ports:
@@ -168,6 +169,7 @@ services:
       - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
       - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
       - SPRING_PROFILES_ACTIVE=docker
+      - USUARIOS_SERVICE_URL=http://usuarios:8081 
     ports:
       - "8000:8000"
     depends_on:
@@ -196,6 +198,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - APP_NAME=payments-service
       - EUREKA_SERVER_URL=http://eureka-server:8761/eureka
+      - USUARIOS_SERVICE_URL=http://usuarios:8081
     depends_on:
       config-server:
         condition: service_healthy
@@ -238,4 +241,3 @@ services:
 networks:
   enseniamelo-network:
     external: true
-    name: enseniamelo_microservices-net

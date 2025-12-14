@@ -1,5 +1,6 @@
+# cursoservice/app/api/v1/routers/curso_router.py
 from typing import List, Optional
-from fastapi import APIRouter, Depends, Query, status, HTTPException
+from fastapi import APIRouter, Depends, Query, status, Header
 from app.schemas.curso import CursoCreate, CursoUpdate, CursoOut
 from app.schemas.categoria import CategoriaOut
 from app.schemas.curso_categoria import CursoCategoriaLink
@@ -17,53 +18,48 @@ def get_curso_categoria_service() -> CursoCategoriaService:
 @router.get("/", response_model=List[CursoOut])
 def list_cursos(
     q: Optional[str] = Query(None, description="Buscar por nombre o descripción"),
-    id_tutor: Optional[str] = Query(None, description="Filtrar por tutor"),
+    tutor_id: Optional[str] = Query(None, description="Filtrar por tutor"),
     service: CursoService = Depends(get_curso_service),
 ):
-    return service.list(q=q, id_tutor=id_tutor)
+    return service.list(q=q, id_tutor=tutor_id)
 
 @router.get("/{curso_id}", response_model=CursoOut)
 def get_curso(curso_id: str, service: CursoService = Depends(get_curso_service)):
     return service.get(curso_id)
 
-@router.get("/{curso_id}/detalles")
-async def get_curso_con_tutor(
-    curso_id: str, 
-    service: CursoService = Depends(get_curso_service)
-):
-    try:
-        curso = service.get(curso_id)
-        curso_enriquecido = await service.enriquecer_con_datos_tutor(curso)
-        return curso_enriquecido
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 @router.post("/", response_model=CursoOut, status_code=status.HTTP_201_CREATED)
 async def create_curso(
     payload: CursoCreate, 
-    service: CursoService = Depends(get_curso_service)
+    service: CursoService = Depends(get_curso_service),
+    authorization: Optional[str] = Header(None)
 ):
-    try:
-        return await service.create(payload)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    """
+    Crea un nuevo curso validando que el tutor existe en el sistema.
+    Requiere que el id_tutor corresponda a un perfil de tutor válido.
+    """
+    # Extraer el token del header Authorization
+    token = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+    
+    return await service.create(payload, token)
 
 @router.put("/{curso_id}", response_model=CursoOut)
 async def update_curso(
     curso_id: str,
     payload: CursoUpdate,
     service: CursoService = Depends(get_curso_service),
+    authorization: Optional[str] = Header(None)
 ):
-    try:
-        return await service.update(curso_id, payload)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    """
+    Actualiza un curso. Si se cambia el tutor, valida que el nuevo tutor existe.
+    """
+    # Extraer el token del header Authorization
+    token = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+    
+    return await service.update(curso_id, payload, token)
 
 @router.delete("/{curso_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_curso(curso_id: str, service: CursoService = Depends(get_curso_service)):
