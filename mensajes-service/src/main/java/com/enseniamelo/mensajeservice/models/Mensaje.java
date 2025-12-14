@@ -23,7 +23,7 @@ public class Mensaje {
     @Id
     @JsonIgnore
     private String id;
-
+    
     private ObjectId id_chat;
 
     private ObjectId remitente;

@@ -49,7 +49,6 @@ public class MensajeController {
     })
     @PostMapping
     @ResponseStatus(code = org.springframework.http.HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('USER', 'TUTOR')")
     public Mono<MensajeDTO> createMensaje(
         @Valid @RequestBody MensajeDTO mensajeDTO) {
 
@@ -62,7 +61,6 @@ public class MensajeController {
     // ----------------Obtener todos----------------
     @Operation(summary = "Obtener todos los mensajes")
     @GetMapping
-    @PreAuthorize("hasAnyRole('USER', 'TUTOR')")
     public Flux<MensajeDTO> getMensajes() {
         return service.obtenerTodos()
             .doOnError(e -> log.error("Error al obtener mensajes: {}", e.getMessage()));
@@ -71,7 +69,6 @@ public class MensajeController {
     // ----------------Obtener mensaje por ID----------------
     @Operation(summary = "Obtener mensaje por ID")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('USER', 'TUTOR')")
     public Mono<MensajeDTO> getMensajeById(@PathVariable @NotBlank String id) {
         return service.obtenerPorId(id)
             .doOnError(e -> log.error("Error al obtener mensaje: {}", e.getMessage()));
@@ -80,7 +77,6 @@ public class MensajeController {
     // ----------------Actualizar contenido----------------
     @Operation(summary = "Actualizar el contenido del mensaje")
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('USER', 'TUTOR')")
     public Mono<MensajeDTO> updateMensaje(
         @PathVariable @NotBlank String id,
         @RequestBody Map<String, String> contenidoNuevo) {
@@ -93,9 +89,17 @@ public class MensajeController {
     @Operation(summary = "Eliminar un mensaje")
     @DeleteMapping("/{id}")
     @ResponseStatus(code = org.springframework.http.HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('USER', 'TUTOR')")
     public Mono<Void> deleteMensaje(@PathVariable @NotBlank String id) {
         return service.eliminarMensaje(id)
             .doOnError(e -> log.error("Error al eliminar mensaje: {}", e.getMessage()));
+    }
+
+    // ----------------Obtener mensajes por chat----------------
+    @Operation(summary = "Obtener mensajes de un chat específico")
+    @GetMapping("/chat/{idChat}")
+    public Flux<MensajeDTO> getMensajesPorChat(@PathVariable @NotBlank String idChat) {
+        log.info("GET /api/mensaje/chat/{} - Obtener mensajes del chat", idChat);
+        return service.obtenerMensajesPorChat(idChat)
+                .doOnError(e -> log.error("Error al obtener mensajes del chat {}: {}", idChat, e.getMessage()));
     }
 }
