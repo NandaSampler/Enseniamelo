@@ -1,97 +1,97 @@
+// frontend/src/components/Pagos/Planes.jsx
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { planesAPI } from "../../api/planes";
+import api from "../../api/config";
 import { useNotification } from "../NotificationProvider";
 import "../../styles/Explorar/explorar.css";
 
 const Planes = () => {
   const [planes, setPlanes] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [mensaje, setMensaje] = useState("");
   const [suscripcionActiva, setSuscripcionActiva] = useState(null);
-  const location = useLocation();
+  const [mongoId, setMongoId] = useState(null);
+
   const navigate = useNavigate();
   const { showNotification } = useNotification();
 
   useEffect(() => {
-    if (location.pathname.endsWith("/success")) {
-      setMensaje("Pago realizado con éxito. Tu suscripción ha sido activada.");
-    } else if (location.pathname.endsWith("/cancel")) {
-      setMensaje("El pago fue cancelado. Puedes intentar nuevamente cuando desees.");
-    } else {
-      setMensaje("");
-    }
-  }, [location.pathname]);
-
-  useEffect(() => {
-    const fetchPlanes = async () => {
+    const boot = async () => {
       setLoading(true);
-      setError("");
       try {
-        const { data } = await planesAPI.getPlanes();
-        if (data?.success && Array.isArray(data.planes)) {
-          setPlanes(data.planes);
-        } else {
-          setError("No se pudieron cargar los planes.");
-        }
+        // 1) Usuario actual (usuarios-service via gateway)
+        const meRes = await api.get("/v1/auth/me");
+        const me = meRes.data;
+        if (!me?.id) throw new Error("No se pudo obtener el id del usuario.");
+        setMongoId(me.id);
+
+        // 2) Planes (payments-service via gateway)
+        const plansRes = await planesAPI.getPlanes();
+        setPlanes(Array.isArray(plansRes.data) ? plansRes.data : []);
+
+        // 3) Suscripciones del usuario (payments-service via gateway)
+        const subsRes = await planesAPI.getSuscripciones(me.id);
+        const subs = Array.isArray(subsRes.data) ? subsRes.data : [];
+
+        // Preferimos activa, si no, pendiente
+        const found =
+          subs.find((s) => s.estado === "activa") ||
+          subs.find((s) => s.estado === "pendiente") ||
+          null;
+
+        setSuscripcionActiva(found);
       } catch (err) {
-        console.error("Error obteniendo planes:", err);
-        setError("Error al obtener los planes. Inténtalo de nuevo más tarde.");
+        console.error(err);
+        showNotification({
+          type: "error",
+          title: "Error cargando planes",
+          message: err?.message || "No se pudo cargar la información.",
+        });
       } finally {
         setLoading(false);
       }
     };
 
-    const fetchSuscripcion = async () => {
-      try {
-        const { data } = await planesAPI.getMiSuscripcion();
-        if (data?.success && data.suscripcion) {
-          setSuscripcionActiva(data.suscripcion);
-        }
-      } catch (err) {
-        // No hay suscripción activa, no es un error
-        setSuscripcionActiva(null);
-      }
-    };
-
-    fetchPlanes();
-    fetchSuscripcion();
+    boot();
   }, []);
 
-  const handleElegirPlan = async (planId) => {
+  const handleElegirPlan = async (id_plan) => {
+    if (!mongoId) return;
+
     if (suscripcionActiva) {
       showNotification({
-        type: 'warning',
-        title: 'Ya tienes una suscripción activa',
-        message: `Ya estás suscrito al plan "${suscripcionActiva.id_plan.nombre}". Para cambiar de plan, contacta al soporte.`
+        type: "warning",
+        title: "Ya tienes una suscripción",
+        message: `Ya tienes una suscripción en estado "${suscripcionActiva.estado}".`,
       });
       return;
     }
 
     try {
-      const { data } = await planesAPI.crearSesionPago(planId);
-      if (data?.success && data.url) {
-        window.location.href = data.url;
-      } else {
-        showNotification({
-          type: 'error',
-          title: 'Error al iniciar pago',
-          message: 'No se pudo iniciar el pago. Intenta nuevamente.'
-        });
-      }
-    } catch (error) {
-      console.error("Error creando sesión de pago:", error);
+      // El backend espera "YYYY-MM-DDTHH:MM:SS"
+      const inicio = new Date().toISOString().slice(0, 19);
+
+      const payload = { id_usuario: mongoId, id_plan, inicio };
+      const { data } = await planesAPI.crearSuscripcion(payload);
+
       showNotification({
-        type: 'error',
-        title: 'Error al iniciar pago',
-        message: 'Ocurrió un error al iniciar el pago.'
+        type: "success",
+        title: "Suscripción creada",
+        message: `Se creó tu suscripción (estado: "${data.estado}").`,
+      });
+
+      setSuscripcionActiva(data);
+
+      // Si quieres redirigir al perfil tutor al crear suscripción:
+      // navigate("/tutor/perfil");
+    } catch (err) {
+      console.error("Error creando suscripción:", err);
+      showNotification({
+        type: "error",
+        title: "No se pudo crear la suscripción",
+        message: err?.response?.data?.error?.message || err.message || "Error desconocido",
       });
     }
-  };
-
-  const volverAPlanes = () => {
-    navigate("/planes", { replace: true });
   };
 
   return (
@@ -99,58 +99,33 @@ const Planes = () => {
       <main className="explorar-main">
         <h2 className="explorar-title">Planes para tutores</h2>
 
-        {mensaje && (
-          <div className="mb-4 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2 flex items-center justify-between">
-            <span>{mensaje}</span>
-            {location.pathname !== "/planes" && (
-              <button
-                type="button"
-                className="text-xs font-medium text-emerald-800 hover:underline ml-4"
-                onClick={volverAPlanes}
-              >
-                Ver planes
-              </button>
-            )}
-          </div>
-        )}
+        {loading && <p className="explorar-empty">Cargando...</p>}
 
-        {loading && <p className="explorar-empty">Cargando planes...</p>}
-        {!loading && error && (
-          <p className="explorar-empty text-red-500">{error}</p>
-        )}
-
-        {!loading && !error && suscripcionActiva && (
+        {!loading && suscripcionActiva && (
           <div className="mb-4 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <strong className="font-medium">Plan activo:</strong> {suscripcionActiva.id_plan.nombre}
-                <span className="ml-2 text-xs text-emerald-600">
-                  (Válido hasta: {new Date(suscripcionActiva.fin).toLocaleDateString()})
-                </span>
-              </div>
-            </div>
+            <strong className="font-medium">Suscripción:</strong>{" "}
+            Estado: {suscripcionActiva.estado} — válida hasta{" "}
+            {new Date(suscripcionActiva.fin).toLocaleDateString()}
           </div>
         )}
 
-        {!loading && !error && (
+        {!loading && (
           <section className="explorar-grid">
             {planes.length > 0 ? (
               planes.map((plan) => (
-                <article key={plan._id} className="curso-card hover:shadow-md transition-shadow">
+                <article key={plan.id} className="curso-card hover:shadow-md transition-shadow">
                   <div className="curso-content">
                     <div>
                       <div className="curso-title-row">
                         <h3 className="curso-title">{plan.nombre}</h3>
                       </div>
-                      <p className="curso-description mt-2">
-                        Accede a más creación de cursos y beneficios para tus estudiantes.
-                      </p>
+                      <p className="curso-description mt-2">{plan.descripcion}</p>
                     </div>
 
                     <div className="mt-4 flex items-center justify-between">
                       <div className="text-sm text-slate-700">
                         <div className="text-lg font-semibold text-slate-900">
-                          {plan.precio.toFixed(2)} USD
+                          {Number(plan.precio).toFixed(2)} USD
                         </div>
                         <div className="text-[11px] text-slate-500">
                           Duración: {plan.duracionDias} días
@@ -163,21 +138,19 @@ const Planes = () => {
                       <button
                         type="button"
                         className={`infocurso-reserve-btn w-auto px-4 py-2 text-sm ${
-                          suscripcionActiva ? 'opacity-50 cursor-not-allowed' : ''
+                          suscripcionActiva ? "opacity-50 cursor-not-allowed" : ""
                         }`}
-                        onClick={() => handleElegirPlan(plan._id)}
-                        disabled={suscripcionActiva}
+                        onClick={() => handleElegirPlan(plan.id)}
+                        disabled={!!suscripcionActiva}
                       >
-                        {suscripcionActiva ? 'Ya suscrito' : 'Elegir plan'}
+                        {suscripcionActiva ? "Ya suscrito" : "Elegir plan"}
                       </button>
                     </div>
                   </div>
                 </article>
               ))
             ) : (
-              <p className="explorar-empty">
-                No hay planes disponibles por el momento.
-              </p>
+              <p className="explorar-empty">No hay planes disponibles por el momento.</p>
             )}
           </section>
         )}

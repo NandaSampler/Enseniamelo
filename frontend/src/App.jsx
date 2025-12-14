@@ -14,6 +14,7 @@ import PerfilTutor from "./components/Perfiles/PerfilTutor";
 import EditarPerfilTutor from "./components/Perfiles/EditarPerfilTutor";
 import PanelAdmin from "./components/Admin/PanelAdmin";
 import ChatPage from "./components/Chat/ChatPage";
+import Planes from "./components/Pagos/Planes";
 
 function App() {
   return (
@@ -86,7 +87,7 @@ function App() {
               <Navbar currentSection="profile" />
               <PerfilEstudiante />
             </>
-          }/>
+          } />
 
           {/* Editar Perfil */}
           <Route path="/perfil/editar" element={
@@ -94,7 +95,7 @@ function App() {
               <Navbar currentSection="profile" />
               <EditarPerfilEstudiante />
             </>
-          }/>
+          } />
 
           {/* Info de curso */}
           <Route path="/curso/:id" element={
@@ -102,7 +103,7 @@ function App() {
               <Navbar currentSection="courses" />
               <InfoCurso />
             </>
-          }/>
+          } />
 
           {/* Panel tutor */}
           <Route
@@ -120,6 +121,16 @@ function App() {
               <>
                 <Navbar currentSection="tutor-panel" />
                 <ConfigurarCurso />
+              </>
+            }
+          />
+
+          <Route
+            path="/planes"
+            element={
+              <>
+                <Navbar currentSection="planes" />
+                <Planes />
               </>
             }
           />
