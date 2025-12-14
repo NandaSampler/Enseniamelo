@@ -25,7 +25,7 @@ class ComentarioCursoServiceTest {
         @BeforeEach
         void setUp() {
                 repository = Mockito.mock(ComentarioCursoRepository.class);
-                service = new ComentarioCursoService(repository);
+                service = new ComentarioCursoService(repository, null, null);
         }
 
         @Test
@@ -42,7 +42,7 @@ class ComentarioCursoServiceTest {
 
                 when(repository.save(any(ComentarioCurso.class))).thenReturn(Mono.just(comentario));
 
-                StepVerifier.create(service.createComentario(comentario))
+                StepVerifier.create(service.createComentario(comentario, null))
                                 .expectNextMatches(c -> c.getId_curso().equals("CURSO001"))
                                 .verifyComplete();
 

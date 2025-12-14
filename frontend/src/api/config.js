@@ -1,22 +1,53 @@
 // frontend/src/api/config.js
-import axios from 'axios';
+import axios from "axios";
 
-// URL base del gateway
-const API_BASE_URL = 'https://localhost:8443';
+// En DEV usamos el proxy de Vite: /api -> gateway
+// En PROD puedes setear VITE_API_BASE_URL="https://tu-dominio.com"
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
-// Crear instancia de axios con configuración base
+// Keycloak token endpoint (mejor por env para PROD)
+const KEYCLOAK_TOKEN_URL =
+  import.meta.env.VITE_KEYCLOAK_TOKEN_URL ||
+  "http://localhost:8080/realms/enseniamelo-realm/protocol/openid-connect/token";
+
+const KEYCLOAK_CLIENT_ID =
+  import.meta.env.VITE_KEYCLOAK_CLIENT_ID || "react-web-client";
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
-// Interceptor para añadir el token a todas las peticiones
+// ✅ helper: busca token en varios lugares típicos
+function getAccessToken() {
+  return (
+    localStorage.getItem("access_token") ||
+    localStorage.getItem("token") ||
+    sessionStorage.getItem("access_token") ||
+    sessionStorage.getItem("token") ||
+    null
+  );
+}
+
+function getRefreshToken() {
+  return (
+    localStorage.getItem("refresh_token") ||
+    sessionStorage.getItem("refresh_token") ||
+    null
+  );
+}
+
+// ✅ Añade token automáticamente
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+    const token = getAccessToken();
+    config.headers = config.headers || {};
+
+    // No fuerces JSON si es FormData (axios lo detecta solo)
+    // Solo setea JSON si el caller no puso nada
+    if (!config.headers["Content-Type"]) {
+      config.headers["Content-Type"] = "application/json";
+    }
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -24,71 +55,70 @@ api.interceptors.request.use(
 
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Interceptor para manejar respuestas y refrescar token si es necesario
+// ✅ Refresh token si 401
 api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   async (error) => {
-    const originalRequest = error.config;
+    const originalRequest = error?.config;
 
-    // Si el error es 401 y no hemos intentado refrescar el token
+    // Si es error de red (cert/caído), no intentes refresh
+    if (error?.code === "ERR_NETWORK") {
+      return Promise.reject(error);
+    }
+
+    if (!originalRequest) {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      try {
-        const refreshToken = localStorage.getItem('refresh_token');
-
-        if (!refreshToken) {
-          // No hay refresh token, redirigir a login
-          localStorage.clear();
-          window.location.href = '/login';
-          return Promise.reject(error);
-        }
-
-        // Intentar refrescar el token
-        const params = new URLSearchParams();
-        params.append('grant_type', 'refresh_token');
-        params.append('client_id', 'react-web-client');
-        params.append('refresh_token', refreshToken);
-
-        const tokenResponse = await fetch(
-          'http://localhost:8080/realms/enseniamelo-realm/protocol/openid-connect/token',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: params,
-          }
-        );
-
-        if (tokenResponse.ok) {
-          const tokenData = await tokenResponse.json();
-
-          // Guardar nuevos tokens
-          localStorage.setItem('token', tokenData.access_token);
-          localStorage.setItem('access_token', tokenData.access_token);
-          localStorage.setItem('refresh_token', tokenData.refresh_token);
-
-          // Reintentar la petición original con el nuevo token
-          originalRequest.headers.Authorization = `Bearer ${tokenData.access_token}`;
-          return api(originalRequest);
-        } else {
-          // No se pudo refrescar el token, cerrar sesión
-          localStorage.clear();
-          window.location.href = '/login';
-          return Promise.reject(error);
-        }
-      } catch (refreshError) {
-        // Error al refrescar token, cerrar sesión
+      const refreshToken = getRefreshToken();
+      if (!refreshToken) {
         localStorage.clear();
-        window.location.href = '/login';
+        sessionStorage.clear();
+        window.location.href = "/login";
+        return Promise.reject(error);
+      }
+
+      try {
+        const params = new URLSearchParams();
+        params.append("grant_type", "refresh_token");
+        params.append("client_id", KEYCLOAK_CLIENT_ID);
+        params.append("refresh_token", refreshToken);
+
+        const tokenResponse = await fetch(KEYCLOAK_TOKEN_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: params,
+        });
+
+        if (!tokenResponse.ok) {
+          localStorage.clear();
+          sessionStorage.clear();
+          window.location.href = "/login";
+          return Promise.reject(error);
+        }
+
+        const tokenData = await tokenResponse.json();
+
+        // ✅ guarda tokens
+        localStorage.setItem("token", tokenData.access_token);
+        localStorage.setItem("access_token", tokenData.access_token);
+        localStorage.setItem("refresh_token", tokenData.refresh_token);
+
+        // ✅ reintenta request original con nuevo token
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers.Authorization = `Bearer ${tokenData.access_token}`;
+
+        return api(originalRequest);
+      } catch (refreshError) {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = "/login";
         return Promise.reject(refreshError);
       }
     }
