@@ -19,7 +19,6 @@ const LoginForm = () => {
         const password = formData.get("password");
 
         try {
-            // 1. Login directo con Keycloak (Password Grant)
             const params = new URLSearchParams();
             params.append('grant_type', 'password');
             params.append('client_id', 'react-web-client');
@@ -43,13 +42,9 @@ const LoginForm = () => {
             }
 
             const tokenData = await tokenResponse.json();
-            
-            // Guardar tokens - usar 'token' para compatibilidad con api/config.js
             localStorage.setItem('token', tokenData.access_token);
             localStorage.setItem('access_token', tokenData.access_token);
             localStorage.setItem('refresh_token', tokenData.refresh_token);
-
-            // 2. Obtener info del usuario desde tu backend
             const userResponse = await fetch('https://localhost:8443/v1/auth/me', {
                 headers: {
                     'Authorization': `Bearer ${tokenData.access_token}`,
@@ -59,20 +54,17 @@ const LoginForm = () => {
             if (userResponse.ok) {
                 const userData = await userResponse.json();
                 localStorage.setItem('user', JSON.stringify(userData));
+                const esAdmin = userData.rol === 'ADMIN' || userData.rolCodigo === 3;
+                const esDocente = userData.rol === 'TUTOR' || userData.rol === 'DOCENTE' || userData.rolCodigo === 2;
                 
-                // 3. Redirigir según el rol del usuario
-                // Verificar tanto 'rol' como 'rolCodigo' para mayor compatibilidad
-                const esDocente = userData.rol === 'TUTOR' || 
-                                 userData.rol === 'TUTOR' || 
-                                 userData.rolCodigo === 2;
-                
-                if (esDocente) {
+                if (esAdmin) {
+                    navigate('/admin/solicitudes-tutores');
+                } else if (esDocente) {
                     navigate('/panel-tutor');
                 } else {
                     navigate('/explorar');
                 }
             } else {
-                // Si no se puede obtener info del usuario, ir a explorar por defecto
                 navigate('/explorar');
             }
             
