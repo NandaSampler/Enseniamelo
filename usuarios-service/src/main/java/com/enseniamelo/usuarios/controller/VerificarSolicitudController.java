@@ -30,27 +30,72 @@ import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/v1/verificacion")
-@Tag(name = "Verificación Solicitud", description = "API para gestión de solicitudes de verificación de tutores")
+@Tag(name = "Verificación Solicitud", description = "API para gestión de solicitudes de verificación de cursos")
 @RequiredArgsConstructor
 @Slf4j
 public class VerificarSolicitudController {
 
         private final VerificarSolicitudService solicitudService;
 
-        @Operation(summary = "Crear solicitud de verificación", description = "Un usuario solicita verificación como tutor")
+        @Operation(summary = "Crear solicitud para un curso", description = "Curso-service llama este endpoint al crear un curso")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "201", description = "Solicitud creada exitosamente"),
-                        @ApiResponse(responseCode = "400", description = "Datos inválidos o usuario ya tiene solicitud")
+                        @ApiResponse(responseCode = "400", description = "Datos inválidos o curso ya tiene solicitud")
         })
-        @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
-        @PostMapping("/usuario/{idUsuario}")
-        public Mono<ResponseEntity<VerificarSolicitudDTO>> crearSolicitud(
-                        @Parameter(description = "ID de MongoDB del usuario", required = true) @PathVariable String idUsuario,
+        @PostMapping("/curso")
+        public Mono<ResponseEntity<VerificarSolicitudDTO>> crearSolicitudParaCurso(
                         @Valid @RequestBody VerificarSolicitudDTO solicitudDTO) {
 
-                log.info("POST /v1/verificacion/usuario/{} - Creando solicitud", idUsuario);
-                return solicitudService.crearSolicitud(idUsuario, solicitudDTO)
+                log.info("POST /v1/verificacion/curso - Creando solicitud para curso: {}", solicitudDTO.getIdCurso());
+                
+                return solicitudService.crearSolicitudParaCurso(
+                                solicitudDTO.getIdUsuario(),
+                                solicitudDTO.getIdPerfilTutor(),
+                                solicitudDTO.getIdCurso(),
+                                solicitudDTO)
                                 .map(creada -> ResponseEntity.status(HttpStatus.CREATED).body(creada));
+        }
+
+        @Operation(summary = "Obtener solicitud de un curso")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Solicitud encontrada"),
+                        @ApiResponse(responseCode = "404", description = "Curso no tiene solicitud")
+        })
+        @PreAuthorize("hasRole('ADMIN') or hasRole('TUTOR')")
+        @GetMapping("/curso/{idCurso}")
+        public Mono<ResponseEntity<VerificarSolicitudDTO>> buscarPorCurso(
+                        @Parameter(description = "ID del curso", required = true) @PathVariable String idCurso) {
+
+                log.info("GET /v1/verificacion/curso/{} - Buscando solicitud del curso", idCurso);
+                return solicitudService.buscarPorCurso(idCurso)
+                                .map(ResponseEntity::ok)
+                                .defaultIfEmpty(ResponseEntity.notFound().build());
+        }
+
+        @Operation(summary = "Obtener todas las solicitudes de un usuario")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Lista de solicitudes del usuario")
+        })
+        @PreAuthorize("hasRole('ADMIN') or #idUsuario == authentication.principal.claims['sub']")
+        @GetMapping("/usuario/{idUsuario}")
+        public Flux<VerificarSolicitudDTO> buscarPorUsuario(
+                        @Parameter(description = "ID de MongoDB del usuario", required = true) @PathVariable String idUsuario) {
+
+                log.info("GET /v1/verificacion/usuario/{} - Buscando solicitudes del usuario", idUsuario);
+                return solicitudService.buscarPorUsuario(idUsuario);
+        }
+
+        @Operation(summary = "Obtener todas las solicitudes de un tutor")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Lista de solicitudes del tutor")
+        })
+        @PreAuthorize("hasRole('ADMIN') or hasRole('TUTOR')")
+        @GetMapping("/tutor/{idPerfilTutor}")
+        public Flux<VerificarSolicitudDTO> buscarPorTutor(
+                        @Parameter(description = "ID del perfil de tutor", required = true) @PathVariable String idPerfilTutor) {
+
+                log.info("GET /v1/verificacion/tutor/{} - Buscando solicitudes del tutor", idPerfilTutor);
+                return solicitudService.buscarPorTutor(idPerfilTutor);
         }
 
         @Operation(summary = "Obtener todas las solicitudes")
@@ -80,22 +125,6 @@ public class VerificarSolicitudController {
                                 .defaultIfEmpty(ResponseEntity.notFound().build());
         }
 
-        @Operation(summary = "Buscar solicitud de un usuario")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Solicitud encontrada"),
-                        @ApiResponse(responseCode = "404", description = "Usuario no tiene solicitud")
-        })
-        @PreAuthorize("hasRole('ADMIN') or #idUsuario == authentication.principal.claims['sub']")
-        @GetMapping("/usuario/{idUsuario}")
-        public Mono<ResponseEntity<VerificarSolicitudDTO>> buscarPorUsuario(
-                        @Parameter(description = "ID de MongoDB del usuario", required = true) @PathVariable String idUsuario) {
-
-                log.info("GET /v1/verificacion/usuario/{} - Buscando solicitud del usuario", idUsuario);
-                return solicitudService.buscarPorUsuario(idUsuario)
-                                .map(ResponseEntity::ok)
-                                .defaultIfEmpty(ResponseEntity.notFound().build());
-        }
-
         @Operation(summary = "Obtener solicitudes por estado")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Lista de solicitudes obtenida")
@@ -109,7 +138,7 @@ public class VerificarSolicitudController {
                 return solicitudService.obtenerPorEstado(estado);
         }
 
-        @Operation(summary = "Aprobar solicitud", description = "Aprueba la solicitud y crea el perfil de tutor")
+        @Operation(summary = "Aprobar solicitud", description = "Aprueba la verificación del curso")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Solicitud aprobada exitosamente"),
                         @ApiResponse(responseCode = "400", description = "La solicitud ya fue procesada"),

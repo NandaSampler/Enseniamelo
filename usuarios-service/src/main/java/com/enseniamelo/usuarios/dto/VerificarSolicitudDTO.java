@@ -1,7 +1,7 @@
 package com.enseniamelo.usuarios.dto;
 
 import java.time.LocalDateTime;
-import java.util.List; // 👈 IMPORTANTE
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@Schema(description = "DTO para solicitud de verificación de tutor")
+@Schema(description = "DTO para solicitud de verificación de curso de tutor")
 public class VerificarSolicitudDTO {
 
     @Schema(description = "ID de MongoDB de la solicitud", example = "507f1f77bcf86cd799439033", accessMode = Schema.AccessMode.READ_ONLY)
@@ -36,13 +36,15 @@ public class VerificarSolicitudDTO {
     private String comentario;
 
     @NotBlank(message = "La foto del CI es obligatoria", groups = CreateSolicitud.class)
-    @Pattern(regexp = "^(https?://|data:image/).*", message = "Debe ser una URL válida (http/https) o data URI", groups = CreateSolicitud.class)
+    @Pattern(regexp = "^(https?://|data:image/|/curso/uploads/).*", message = "Debe ser una URL válida", groups = CreateSolicitud.class)
     @Size(max = 500)
     private String fotoCi;
 
-    // 👇 NUEVO: lista de archivos (urls, ids, lo que uses)
-    @Schema(description = "Lista de archivos adicionales (URLs, IDs de storage, etc.)")
+    @Schema(description = "Lista de archivos adicionales del curso (URLs)")
     private List<String> archivos;
+
+    @Schema(description = "ID de MongoDB del curso", example = "507f1f77bcf86cd799439044")
+    private String idCurso;
 
     @Schema(description = "ID de MongoDB del usuario solicitante", example = "507f1f77bcf86cd799439011", accessMode = Schema.AccessMode.READ_ONLY)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
@@ -54,7 +56,7 @@ public class VerificarSolicitudDTO {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private String emailUsuario;
 
-    @Schema(description = "ID de MongoDB del perfil de tutor creado (si fue aprobado)", example = "507f1f77bcf86cd799439022", accessMode = Schema.AccessMode.READ_ONLY)
+    @Schema(description = "ID de MongoDB del perfil de tutor", example = "507f1f77bcf86cd799439022", accessMode = Schema.AccessMode.READ_ONLY)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private String idPerfilTutor;
 
