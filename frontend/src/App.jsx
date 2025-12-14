@@ -50,7 +50,7 @@ function App() {
             }
           />
           <Route
-            path="/chats/:id"
+            path="/chats/:id?"
             element={
               <>
                 <Navbar currentSection="chats" />
@@ -82,28 +82,37 @@ function App() {
           />
 
           {/* Perfil */}
-          <Route path="/perfil" element={
-            <>
-              <Navbar currentSection="profile" />
-              <PerfilEstudiante />
-            </>
-          } />
+          <Route
+            path="/perfil"
+            element={
+              <>
+                <Navbar currentSection="profile" />
+                <PerfilEstudiante />
+              </>
+            }
+          />
 
           {/* Editar Perfil */}
-          <Route path="/perfil/editar" element={
-            <>
-              <Navbar currentSection="profile" />
-              <EditarPerfilEstudiante />
-            </>
-          } />
+          <Route
+            path="/perfil/editar"
+            element={
+              <>
+                <Navbar currentSection="profile" />
+                <EditarPerfilEstudiante />
+              </>
+            }
+          />
 
           {/* Info de curso */}
-          <Route path="/curso/:id" element={
-            <>
-              <Navbar currentSection="courses" />
-              <InfoCurso />
-            </>
-          } />
+          <Route
+            path="/curso/:id"
+            element={
+              <>
+                <Navbar currentSection="courses" />
+                <InfoCurso />
+              </>
+            }
+          />
 
           {/* Panel tutor */}
           <Route
