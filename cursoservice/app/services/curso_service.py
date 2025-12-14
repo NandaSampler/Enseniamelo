@@ -63,13 +63,13 @@ class CursoService:
     # -----------------------
     async def create(self, payload: CursoCreate, token: Optional[str] = None) -> CursoOut:
         """
-        Crea un curso y luego crea automáticamente su solicitud de verificación.
+        Crea un curso. La solicitud de verificación debe ser creada manualmente
+        desde el frontend usando el formulario.
 
         Flujo:
         1) Resolver id_tutor desde JWT
         2) Validar tutor
         3) Crear curso en Mongo
-        4) Crear solicitud de verificación en usuarios-service
         """
 
         # 1) Resolver id_tutor si falta
@@ -137,50 +137,9 @@ class CursoService:
         except Exception as e:
             logger.exception("Error creando curso en repo: %s", str(e))
             raise ValueError("Error interno creando el curso.")
-        try:
-            await self._crear_solicitud_verificacion(
-                curso_id=curso_creado.id,
-                id_usuario=id_usuario,
-                id_tutor=id_tutor,
-                foto_ci=payload.portada_url or "",  
-                archivos=payload.galeria_urls or payload.fotos or [],
-                token=token
-            )
-            logger.info("Solicitud de verificación creada para curso: %s", curso_creado.id)
-        except Exception as e:
-            logger.error("Error creando solicitud de verificación para curso %s: %s", curso_creado.id, str(e))
 
+        logger.info("Curso creado exitosamente: %s. El usuario debe crear la solicitud de verificación desde el modal.", curso_creado.id)
         return curso_creado
-
-    async def _crear_solicitud_verificacion(
-        self,
-        curso_id: str,
-        id_usuario: str,
-        id_tutor: str,
-        foto_ci: str,
-        archivos: List[str],
-        token: Optional[str] = None
-    ) -> None:
-        solicitud_data = {
-            "idUsuario": id_usuario,
-            "idPerfilTutor": id_tutor,
-            "idCurso": curso_id,
-            "fotoCi": foto_ci,
-            "archivos": archivos
-        }
-
-        headers = {}
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-
-        async with httpx.AsyncClient(timeout=httpx.Timeout(10.0)) as client:
-            response = await client.post(
-                f"{self.usuarios_integration.base_url}/v1/verificacion/curso",
-                json=solicitud_data,
-                headers=headers
-            )
-            response.raise_for_status()
-            logger.info("Solicitud de verificación creada: %s", response.json())
 
     async def update(self, curso_id: str, payload: CursoUpdate, token: Optional[str] = None) -> CursoOut:
         if payload.id_tutor is not None:

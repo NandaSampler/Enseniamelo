@@ -46,8 +46,7 @@ public class VerificarSolicitudDTO {
     @Schema(description = "ID de MongoDB del curso", example = "507f1f77bcf86cd799439044")
     private String idCurso;
 
-    @Schema(description = "ID de MongoDB del usuario solicitante", example = "507f1f77bcf86cd799439011", accessMode = Schema.AccessMode.READ_ONLY)
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Schema(description = "ID de MongoDB del usuario solicitante", example = "507f1f77bcf86cd799439011")
     private String idUsuario;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
@@ -56,8 +55,7 @@ public class VerificarSolicitudDTO {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private String emailUsuario;
 
-    @Schema(description = "ID de MongoDB del perfil de tutor", example = "507f1f77bcf86cd799439022", accessMode = Schema.AccessMode.READ_ONLY)
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Schema(description = "ID de MongoDB del perfil de tutor", example = "507f1f77bcf86cd799439022")
     private String idPerfilTutor;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
