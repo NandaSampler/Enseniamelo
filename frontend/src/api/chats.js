@@ -1,9 +1,9 @@
 // frontend/src/api/chats.js
-import api from './config';
+import api from "./config";
 
 // Rutas del servicio de mensajes a través del gateway
-const CHATS_BASE = 'api/v1/chat';
-const MENSAJES_BASE = 'api/v1/mensaje';
+const CHATS_BASE = "api/v1/chat";
+const MENSAJES_BASE = "api/v1/mensaje";
 
 export const chatsAPI = {
   // Obtener todos los chats del usuario autenticado
@@ -27,21 +27,14 @@ export const chatsAPI = {
   },
 
   // Enviar un mensaje en un chat
-  sendMensaje: async (chatId, contenido) => {
-    return await api.post(`${CHATS_BASE}/${chatId}/mensajes`, {
-      contenido
-    });
-  },
-
-  // Marcar mensajes como leídos
-  marcarComoLeido: async (chatId) => {
-    return await api.put(`${CHATS_BASE}/${chatId}/leer`);
+  sendMensaje: async (mensajeDTO) => {
+    return await api.post(`${MENSAJES_BASE}`, mensajeDTO);
   },
 
   // Eliminar un chat
   deleteChat: async (chatId) => {
     return await api.delete(`${CHATS_BASE}/${chatId}`);
-  }
+  },
 };
 
 export default chatsAPI;
