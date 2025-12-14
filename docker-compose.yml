@@ -172,6 +172,9 @@ services:
       - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
       - SPRING_PROFILES_ACTIVE=docker
       - USUARIOS_SERVICE_URL=http://usuarios:8081
+      - UPLOAD_DIR=/app/uploads
+    volumes:
+      - ./cursoservice/uploads:/app/uploads
     ports:
       - "8000:8000"
     depends_on:

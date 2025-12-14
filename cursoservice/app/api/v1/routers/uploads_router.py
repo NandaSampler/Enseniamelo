@@ -1,3 +1,4 @@
+# cursoservice/app/api/v1/routers/uploads_router.py
 from __future__ import annotations
 
 import os
@@ -11,12 +12,18 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/v1/uploads", tags=["Uploads"])
 
-UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "/app/uploads"))
+# Carpeta raíz de uploads (montada desde el host)
+UPLOAD_ROOT = Path(os.getenv("UPLOAD_DIR", "/app/uploads"))
+# Subcarpeta específica para cursos (lo que tú quieres)
+UPLOAD_COURSE_DIR = UPLOAD_ROOT / "curso"
+
 MAX_MB = int(os.getenv("UPLOAD_MAX_MB", "10"))
 ALLOWED = {"image/jpeg", "image/png", "image/webp"}
 
-def _ensure_dir():
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+def _ensure_dirs() -> None:
+    UPLOAD_COURSE_DIR.mkdir(parents=True, exist_ok=True)
+
 
 @router.post("/image", status_code=status.HTTP_201_CREATED)
 async def upload_image(image: UploadFile = File(...)):
@@ -26,7 +33,7 @@ async def upload_image(image: UploadFile = File(...)):
             detail=f"Tipo no permitido: {image.content_type}. Usa JPG/PNG/WEBP.",
         )
 
-    _ensure_dir()
+    _ensure_dirs()
 
     content = await image.read()
     max_bytes = MAX_MB * 1024 * 1024
@@ -40,14 +47,15 @@ async def upload_image(image: UploadFile = File(...)):
     }[image.content_type]
 
     filename = f"{uuid.uuid4().hex}{ext}"
-    path = UPLOAD_DIR / filename
+    path = UPLOAD_COURSE_DIR / filename
 
     with open(path, "wb") as f:
         f.write(content)
 
-    # ✅ IMPORTANTE: devolver URL RELATIVA al gateway (NO host interno)
-    # el gateway expone /curso/uploads/** y lo enruta al cursoservice /uploads/**
+    # ✅ URL que el FRONT usa vía gateway:
+    # gateway: /curso/uploads/**  -> cursoservice: /uploads/**
+    # como guardamos en uploads/curso/<file>, la ruta pública es:
     return {
         "filename": filename,
-        "url": f"/curso/uploads/{filename}",
+        "url": f"/curso/uploads/curso/{filename}",
     }

@@ -64,11 +64,6 @@ def create_app() -> FastAPI:
     setup_logging()
     logger = get_logger(__name__)
 
-    # ✅ asegurar carpeta uploads para servir archivos
-    # En docker recomiendo /app/uploads; si no está seteado, cae a "uploads" (relativo)
-    upload_dir = Path(os.getenv("UPLOAD_DIR", "/app/uploads"))
-    upload_dir.mkdir(parents=True, exist_ok=True)
-
     app = FastAPI(
         title=settings.APP_NAME,
         version="0.1.0",
@@ -79,9 +74,11 @@ def create_app() -> FastAPI:
         root_path=root_path,
     )
 
-    # ✅ Archivos estáticos: accesibles como /uploads/<file>
-    # (detrás del gateway será /curso/uploads/<file>)
+    # dentro de create_app() en main.py (lo importante)
+    upload_dir = Path(os.getenv("UPLOAD_DIR", "/app/uploads")).resolve()
+    upload_dir.mkdir(parents=True, exist_ok=True)
     app.mount("/uploads", StaticFiles(directory=str(upload_dir)), name="uploads")
+
 
     # Routers
     app.include_router(curso_router.router)
@@ -90,9 +87,8 @@ def create_app() -> FastAPI:
     app.include_router(horario_router.router)
     app.include_router(reserva_router.router)
     app.include_router(tutor_router.router)
-    app.include_router(uploads_router.router)  # ✅ NUEVO
+    app.include_router(uploads_router.router)
 
-    # Root informativo
     @app.get("/", tags=["Health"])
     def root():
         return {
@@ -114,14 +110,12 @@ def create_app() -> FastAPI:
             },
         }
 
-    # Health (Eureka/Gateway lo consultan)
     @app.get("/health", tags=["Health"])
     def health():
         return {"status": "UP", "service": settings.APP_NAME}
 
     register_exception_handlers(app)
 
-    # ---------- Startup (ASYNC) ----------
     @app.on_event("startup")
     async def on_startup():
         # -------- Registro en Eureka (async) --------
@@ -136,7 +130,6 @@ def create_app() -> FastAPI:
             except Exception:
                 instance_ip = "127.0.0.1"
 
-            # OJO: esto es para Eureka; el gateway es quien expone hacia el browser.
             base_url = f"http://{hostname}:{port}"
 
             await eureka_client.init_async(
@@ -165,7 +158,8 @@ def create_app() -> FastAPI:
         except Exception as e:
             logger.warning("No se pudieron crear índices de Mongo: %s", e)
 
-    # ---------- Shutdown (ASYNC) ----------
+        logger.info("Uploads dir en uso: %s", str(upload_dir))
+
     @app.on_event("shutdown")
     async def on_shutdown():
         try:
