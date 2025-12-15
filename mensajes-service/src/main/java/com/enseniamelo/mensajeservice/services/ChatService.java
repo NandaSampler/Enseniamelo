@@ -25,47 +25,29 @@ public class ChatService {
     private final ChatMapper chatMapper;
 
     public Mono<ChatDTO> crearChat(ChatDTO chatDTO) {
-        return Mono.defer(() -> {
-            // ✅ Validación / parseo seguro de ObjectId
-            final ObjectId idCurso;
-            try {
-                idCurso = new ObjectId(chatDTO.getId_curso());
-            } catch (Exception e) {
-                return Mono.error(new IllegalArgumentException("id_curso inválido: " + chatDTO.getId_curso()));
-            }
+        ObjectId idCurso = new ObjectId(chatDTO.getIdCurso());
+        List<ObjectId> participantes = chatDTO.getParticipantes()
+                .stream()
+                .map(ObjectId::new)
+                .toList();
 
-            final List<ObjectId> participantes;
-            try {
-                participantes = chatDTO.getParticipantes()
-                        .stream()
-                        .map(ObjectId::new)
-                        .toList();
-            } catch (Exception e) {
-                return Mono.error(new IllegalArgumentException("participantes contiene un ObjectId inválido"));
-            }
+        return chatRepository
+            .findByIdCursoAndParticipantesAll(idCurso, participantes)
+            .flatMap(chatExistente -> {
+                log.info("Chat ya existente: {}", chatExistente.getId());
+                return Mono.just(chatExistente);
+            })
+            .switchIfEmpty(
+                Mono.defer(() -> {
+                    Chat nuevoChat = chatMapper.toEntity(chatDTO);
+                    nuevoChat.setCreado(LocalDateTime.now());
+                    nuevoChat.setActualizado(LocalDateTime.now());
 
-            if (participantes == null || participantes.isEmpty()) {
-                return Mono.error(new IllegalArgumentException("El campo 'participantes' no puede estar vacío"));
-            }
-
-            return chatRepository
-                    // ✅ Usa @Query ($all) => no rompe Spring Data
-                    .findByIdCursoAndParticipantesAll(idCurso, participantes)
-                    .doOnNext(chatExistente -> log.info("Chat ya existente: {}", chatExistente.getId()))
-                    .switchIfEmpty(Mono.defer(() -> {
-                        Chat nuevoChat = chatMapper.toEntity(chatDTO);
-
-                        // ✅ timestamps
-                        nuevoChat.setCreado(LocalDateTime.now());
-                        nuevoChat.setActualizado(LocalDateTime.now());
-
-                        log.info("Creando nuevo chat (curso={}, participantes={})",
-                                chatDTO.getId_curso(), chatDTO.getParticipantes());
-
-                        return chatRepository.save(nuevoChat);
-                    }))
-                    .map(chatMapper::toDto);
-        });
+                    log.info("Creando nuevo chat");
+                    return chatRepository.save(nuevoChat);
+                })
+            )
+            .map(chatMapper::toDto);
     }
 
     public Flux<ChatDTO> obtenerTodos() {

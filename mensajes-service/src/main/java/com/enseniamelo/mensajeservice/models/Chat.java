@@ -8,6 +8,7 @@ import org.springframework.data.annotation.Id;
 //import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 //import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -27,7 +28,8 @@ public class Chat {
 
     private List<ObjectId> participantes;
 
-    private ObjectId id_curso;
+    @Field("id_curso")
+    private ObjectId idCurso;
 
     private String ultimoMensaje;
 
