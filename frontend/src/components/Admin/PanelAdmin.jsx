@@ -15,6 +15,20 @@ const mapSolicitudFromApi = (raw) => {
     .join(" ")
     .trim();
 
+  const fechaCreacion = raw.creado 
+    ? new Date(raw.creado).toLocaleDateString('es-BO', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    : "";
+
+  const precioFormateado = curso.precio_reserva 
+    ? `${curso.precio_reserva} Bs/hora`
+    : "Sin precio definido";
+
   return {
     id_verificar: raw._id,
     estado: raw.estado,
@@ -25,17 +39,21 @@ const mapSolicitudFromApi = (raw) => {
     archivos_verificacion: Array.isArray(raw.archivos)
       ? raw.archivos.map((f) => `/static/verificaciones/${f}`)
       : [],
-    creado: raw.creado,
+    creado: fechaCreacion,
     decidido: raw.decidido,
     actualizado: raw.decidido || raw.creado,
     curso: {
       id_curso: curso._id || "verificacion-" + raw._id,
       nombre: curso.nombre || nombreCompleto || "Solicitud de verificación",
+      titulo: curso.nombre || "Sin título",
       descripcion:
         curso.descripcion ||
         raw.comentario ||
         "Solicitud de verificación de documentos del tutor.",
       modalidad: curso.modalidad || "Virtual",
+      precio: precioFormateado,
+      precio_reserva: curso.precio_reserva ?? 0,
+      portada_url: curso.portada_url || "",
       fotos: raw.foto_ci
         ? [`/static/verificaciones/${raw.foto_ci}`]
         : [],
@@ -45,7 +63,6 @@ const mapSolicitudFromApi = (raw) => {
         typeof curso.necesita_reserva === "boolean"
           ? curso.necesita_reserva
           : false,
-      precio_reserva: curso.precio_reserva ?? 0,
       categoriasNombres: Array.isArray(curso.categorias)
         ? curso.categorias
             .map((c) => (typeof c === "string" ? c : c.nombre))
@@ -55,13 +72,15 @@ const mapSolicitudFromApi = (raw) => {
     },
     perfil_tutor: {
       id_tutor: perfil._id,
-      ci: perfil.ci,
-      verificado: perfil.verificado,
-      clasificacion: perfil.clasificacion,
-      biografia: perfil.biografia,
+      ci: perfil.ci || "Sin CI",
+      verificado: perfil.verificado || "pendiente",
+      clasificacion: perfil.clasificacion || 0,
+      biografia: perfil.biografia || "Sin biografía disponible",
       creacion: perfil.creacion,
       actualizado: perfil.actualizado,
       nombre_tutor: nombreCompleto || "Tutor",
+      email: user.email || "",
+      telefono: user.telefono || "",
     },
   };
 };
