@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { chatsAPI } from "../../api/chats";
+import { usuariosAPI } from "../../api/usuarios";
 import "../../styles/Chat/chat.css";
 import { useNotification } from "../NotificationProvider";
 import ReservarHorario from "./ReservarHorario";
@@ -68,6 +69,8 @@ const ChatPage = () => {
   const [mostrarModalReserva, setMostrarModalReserva] = useState(false);
   const [reservasPorChat, setReservasPorChat] = useState({});
 
+  const [nombresPorChat, setNombresPorChat] = useState({});
+
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
@@ -78,6 +81,26 @@ const ChatPage = () => {
   const usuarioActualId = normalizeId(usuarioActual?._id || usuarioActual?.id);
   const usuarioActualRol = usuarioActual?.rol;
   const usuarioActualRolCodigo = usuarioActual?.rolCodigo;
+
+  const cargarNombresUsuarios = async (chats) => {
+    const nuevos = {};
+
+    for (const chat of chats) {
+      const otroId = obtenerOtroUsuarioId(chat);
+      if (!otroId) continue;
+
+      try {
+        const { data } = await usuariosAPI.getUsuario(otroId);
+
+        nuevos[chat._id] = `${data.nombre} ${data.apellido}`;
+      } catch (e) {
+        console.error("Error cargando usuario", e);
+        nuevos[chat._id] = "Usuario";
+      }
+    }
+
+    setNombresPorChat(nuevos);
+  };
 
   const agruparMensajesPorFecha = (mensajesList) => {
     const grupos = {};
@@ -119,7 +142,8 @@ const ChatPage = () => {
 
     const onScroll = () => {
       const threshold = 140; // px
-      const distanceFromBottom = el.scrollHeight - (el.scrollTop + el.clientHeight);
+      const distanceFromBottom =
+        el.scrollHeight - (el.scrollTop + el.clientHeight);
       shouldAutoScrollRef.current = distanceFromBottom < threshold;
     };
 
@@ -142,12 +166,15 @@ const ChatPage = () => {
         const data = response?.data;
         const chatsObtenidos = Array.isArray(data) ? data : data?.chats || [];
 
-        const chatsNormalizados = (chatsObtenidos || [])
-          .filter(Boolean)
+        const chatsNormalizados = chatsObtenidos
           .map(normalizeChat)
-          .filter((c) => !!c?._id);
+          .filter(
+            (chat) =>
+              chat?._id && chat.participantes.includes(String(usuarioActualId))
+          );
 
         setChats(chatsNormalizados);
+        cargarNombresUsuarios(chatsNormalizados);
 
         // si no hay chat en la ruta, abrir el primero
         if (!routeChatId || routeChatId === "undefined") {
@@ -179,7 +206,9 @@ const ChatPage = () => {
     const fetchMensajes = async () => {
       try {
         const { data } = await chatsAPI.getMensajes(selectedChatId);
-        const mensajesRecibidos = Array.isArray(data) ? data : data?.mensajes || [];
+        const mensajesRecibidos = Array.isArray(data)
+          ? data
+          : data?.mensajes || [];
 
         const mensajesNormalizados = (mensajesRecibidos || [])
           .filter(Boolean)
@@ -250,15 +279,26 @@ const ChatPage = () => {
       showNotification({
         type: "error",
         title: "Error",
-        message: error?.response?.data?.message || "No se pudo enviar el mensaje",
+        message:
+          error?.response?.data?.message || "No se pudo enviar el mensaje",
       });
     } finally {
       setEnviandoMensaje(false);
     }
   };
 
-  // NO TOCAR: “Usuario”
-  const obtenerNombreOtroUsuario = () => "Usuario";
+  // NO TOCAR: Carga el nombre del otro usuario en el chat
+  const obtenerNombreOtroUsuario = (chat) => {
+    return nombresPorChat[chat._id] || "Usuario";
+  };
+
+  const obtenerOtroUsuarioId = (chat) => {
+    if (!chat?.participantes || !usuarioActualId) return null;
+
+    return chat.participantes.find(
+      (id) => String(id) !== String(usuarioActualId)
+    );
+  };
 
   const chatsFiltrados = chats.filter((chat) => {
     if (!busqueda.trim()) return true;
@@ -333,9 +373,7 @@ const ChatPage = () => {
 
           <div className="chat-items">
             {chatsFiltrados.length === 0 ? (
-              <div className="chat-empty">
-                No tienes conversaciones aún.
-              </div>
+              <div className="chat-empty">No tienes conversaciones aún.</div>
             ) : (
               chatsFiltrados.map((chat) => {
                 const nombreOtro = obtenerNombreOtroUsuario(chat);
@@ -376,7 +414,9 @@ const ChatPage = () => {
             <div className="chat-messages-header-main">
               <div className="chat-header-left">
                 <h2 className="chat-messages-title">
-                  {chatSeleccionado ? "Usuario" : "Selecciona un chat"}
+                  {chatSeleccionado
+                    ? nombresPorChat[chatSeleccionado._id]
+                    : "Selecciona un chat"}
                 </h2>
                 <p className="chat-messages-subtitle">
                   {chatSeleccionado ? "Chat del curso" : " "}
@@ -418,43 +458,48 @@ const ChatPage = () => {
 
           {/* MENSAJES SCROLLEABLES */}
           <div className="messages-container" ref={messagesContainerRef}>
-            {Object.entries(mensajesAgrupados).map(([fechaKey, mensajesDelDia]) => (
-              <div key={fechaKey}>
-                <div className="date-separator">
-                  <span>{formatearSeparadorFecha(fechaKey)}</span>
-                </div>
+            {Object.entries(mensajesAgrupados).map(
+              ([fechaKey, mensajesDelDia]) => (
+                <div key={fechaKey}>
+                  <div className="date-separator">
+                    <span>{formatearSeparadorFecha(fechaKey)}</span>
+                  </div>
 
-                {(mensajesDelDia || []).map((m) => {
-                  const mensajeId = m._id || m.id;
-                  const remitenteId =
-                    typeof m.remitente === "string"
-                      ? m.remitente
-                      : m.remitente?._id || m.remitente?.id;
+                  {(mensajesDelDia || []).map((m) => {
+                    const mensajeId = m._id || m.id;
+                    const remitenteId =
+                      typeof m.remitente === "string"
+                        ? m.remitente
+                        : m.remitente?._id || m.remitente?.id;
 
-                  const esPropio = String(remitenteId) === String(usuarioActualId);
+                    const esPropio =
+                      String(remitenteId) === String(usuarioActualId);
 
-                  const horaTexto = m.creado
-                    ? new Date(m.creado).toLocaleTimeString("es-BO", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: false,
-                      })
-                    : "";
+                    const horaTexto = m.creado
+                      ? new Date(m.creado).toLocaleTimeString("es-BO", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: false,
+                        })
+                      : "";
 
-                  return (
-                    <div
-                      key={mensajeId}
-                      className={`message ${esPropio ? "own-message" : ""}`}
-                    >
-                      <div className="message-bubble">
-                        <div className="message-content">{m.contenido}</div>
-                        {horaTexto && <div className="message-time">{horaTexto}</div>}
+                    return (
+                      <div
+                        key={mensajeId}
+                        className={`message ${esPropio ? "own-message" : ""}`}
+                      >
+                        <div className="message-bubble">
+                          <div className="message-content">{m.contenido}</div>
+                          {horaTexto && (
+                            <div className="message-time">{horaTexto}</div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
+                    );
+                  })}
+                </div>
+              )
+            )}
             <div ref={messagesEndRef} />
           </div>
 
@@ -467,7 +512,8 @@ const ChatPage = () => {
                 value={nuevoMensaje}
                 onChange={(e) => setNuevoMensaje(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !enviandoMensaje) manejarEnviarMensaje();
+                  if (e.key === "Enter" && !enviandoMensaje)
+                    manejarEnviarMensaje();
                 }}
                 disabled={enviandoMensaje}
               />
