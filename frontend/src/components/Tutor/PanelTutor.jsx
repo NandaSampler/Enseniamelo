@@ -2,15 +2,24 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cursosAPI } from "../../api/cursos";
 import { planesAPI } from "../../api/planes";
+import api from "../../api/config";
 import { reservasAPI } from "../../api/reservas";
 import "../../styles/Tutor/panelTutor.css";
 import { useNotification } from "../NotificationProvider";
 import CardTutor from "./CardTutor";
 
+const PAYMENTS_PREFIX = "/ms-payments/v1";
+
 const calendarDays = Array.from({ length: 31 }, (_, i) => i + 1);
 
 const PanelTutor = () => {
   const navigate = useNavigate();
+  const [mongoId, setMongoId] = useState(null);
+  const [suscripcionActiva, setSuscripcionActiva] = useState(null);
+  const [limiteCursos, setLimiteCursos] = useState(3);
+  const [planNombre, setPlanNombre] = useState(null);
+  const PAYMENTS_PREFIX = "/ms-payments/v1";
+  const FREE_COURSE_LIMIT = 3;
   const [cursos, setCursos] = useState([]);
   const [loadingCursos, setLoadingCursos] = useState(false);
   const [errorCursos, setErrorCursos] = useState("");
@@ -22,6 +31,38 @@ const PanelTutor = () => {
     return new Date(today.getFullYear(), today.getMonth(), 1);
   });
   const { showNotification } = useNotification();
+
+  const fetchMe = async () => {
+    const meRes = await api.get("/v1/auth/me");
+    const me = meRes?.data;
+    if (!me?.id) throw new Error("No se pudo obtener el id del usuario (/v1/auth/me).");
+    setMongoId(me.id);
+    return me.id;
+  };
+
+  const fetchSubsForUser = async (userId) => {
+    try {
+      const r1 = await api.get(`${PAYMENTS_PREFIX}/suscripciones/`, { params: { id_usuario: userId } });
+      const list1 = Array.isArray(r1.data) ? r1.data : [];
+      if (list1.length > 0) return list1;
+    } catch (e) { }
+
+    const r2 = await api.get(`${PAYMENTS_PREFIX}/suscripciones/`);
+    const list2 = Array.isArray(r2.data) ? r2.data : [];
+    return list2.filter((s) => String(s?.id_usuario) === String(userId));
+  };
+
+  const fetchPlanById = async (planId) => {
+    try {
+      const r = await api.get(`${PAYMENTS_PREFIX}/planes/${planId}`);
+      return r?.data;
+    } catch {
+      const r = await api.get(`${PAYMENTS_PREFIX}/planes/${planId}/`);
+      return r?.data;
+    }
+  };
+
+
 
   useEffect(() => {
     const fetchCursos = async () => {
@@ -70,17 +111,61 @@ const PanelTutor = () => {
     const fetchSuscripcion = async () => {
       setLoadingSuscripcion(true);
       try {
-        const { data } = await planesAPI.getMiSuscripcion();
-        if (data?.success && data.suscripcion) {
-          setSuscripcion(data.suscripcion);
+        const userId = await fetchMe();
+        const subs = await fetchSubsForUser(userId);
+
+        const found =
+          subs.find((s) => s.estado === "activa") ||
+          subs.find((s) => s.estado === "pendiente") ||
+          null;
+
+        setSuscripcionActiva(found);
+
+        // límite: gratis = 3
+        if (!found) {
+          setLimiteCursos(3);
+          setPlanNombre(null);
+          return;
         }
-      } catch (err) {
-        // No hay suscripción activa, no es un error
-        setSuscripcion(null);
+
+        // intentar obtener plan y límite
+        const idPlanRaw = found?.id_plan;
+        const planId =
+          typeof idPlanRaw === "object"
+            ? (idPlanRaw?.id || idPlanRaw?._id)
+            : idPlanRaw;
+
+        // si viene embebido
+        const embeddedLimit =
+          typeof idPlanRaw === "object" ? idPlanRaw?.cantidadCursos : null;
+
+        if (Number.isFinite(Number(embeddedLimit)) && Number(embeddedLimit) > 0) {
+          setLimiteCursos(Number(embeddedLimit));
+          setPlanNombre(idPlanRaw?.nombre || null);
+          return;
+        }
+
+        if (planId) {
+          const plan = await fetchPlanById(planId);
+          const lim = Number(plan?.cantidadCursos || plan?.cantidad_cursos);
+          setLimiteCursos(Number.isFinite(lim) && lim > 0 ? lim : 3);
+          setPlanNombre(plan?.nombre || null);
+          return;
+        }
+
+        // fallback
+        setLimiteCursos(3);
+        setPlanNombre(null);
+      } catch {
+        setSuscripcionActiva(null);
+        setLimiteCursos(3);
+        setPlanNombre(null);
       } finally {
         setLoadingSuscripcion(false);
       }
     };
+
+
 
     fetchCursos();
     fetchSuscripcion();
@@ -113,36 +198,26 @@ const PanelTutor = () => {
   };
 
   const createNewCourse = () => {
-    // Verificar límite de cursos
-    const cursosActivos = cursos.length;
-    const limiteGratuito = 3;
+  const cursosActivos = cursos.length;
 
-    if (!suscripcion && cursosActivos >= limiteGratuito) {
-      showNotification({
-        type: 'warning',
-        title: 'Límite de cursos alcanzado',
-        message: `Has alcanzado el límite de ${limiteGratuito} cursos gratuitos. Adquiere un plan para crear más cursos.`,
-        duration: 6000
-      });
-      navigate("/planes");
-      return;
-    }
+  if (cursosActivos >= limiteCursos) {
+    const esGratis = !suscripcionActiva;
+    showNotification({
+      type: "warning",
+      title: "Límite de cursos alcanzado",
+      message: esGratis
+        ? `Has alcanzado el límite de ${limiteCursos} cursos gratuitos. Adquiere un plan para crear más cursos.`
+        : `Has alcanzado el límite de ${limiteCursos} cursos de tu plan${planNombre ? ` "${planNombre}"` : ""}.`,
+      duration: 6000,
+    });
 
-    if (suscripcion && suscripcion.id_plan) {
-      const limitePlan = suscripcion.id_plan.cantidadCursos;
-      if (cursosActivos >= limitePlan) {
-        showNotification({
-          type: 'warning',
-          title: 'Límite de cursos del plan alcanzado',
-          message: `Has alcanzado el límite de ${limitePlan} cursos según tu plan "${suscripcion.id_plan.nombre}".`,
-          duration: 6000
-        });
-        return;
-      }
-    }
+    if (esGratis) navigate("/planes");
+    return;
+  }
 
-    navigate("/tutor/curso/nuevo");
-  };
+  navigate("/tutor/curso/nuevo");
+};
+
 
   const viewCalendar = () => {
     const section = document.getElementById("tutor-calendar-section");
