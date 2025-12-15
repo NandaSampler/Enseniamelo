@@ -1,13 +1,20 @@
+// frontend/src/components/Perfiles/EditarPerfilTutor.jsx
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/Perfiles/perfilEstudiante.css";
 import { authAPI } from "../../api/auth";
-
+import ConfirmModal from "../ConfirmModal";
+import { useNotification } from "../NotificationProvider";
 
 const EditarPerfilTutor = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const { showNotification } = useNotification();
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [userRole, setUserRole] = useState("TUTOR");
   const [form, setForm] = useState({
     nombre: "",
     apellido: "",
@@ -15,37 +22,77 @@ const EditarPerfilTutor = () => {
     telefono: "",
     foto: "",
     descripcion: "",
+    currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
 
   useEffect(() => {
     const fetchUserProfile = async () => {
+      setLoadingData(true);
+      
+      // 🔍 DEBUG: Verificar token y roles
+      const token = localStorage.getItem("access_token") || localStorage.getItem("token");
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          console.log('🔍 Token JWT payload:', payload);
+          console.log('🔍 Roles:', payload?.realm_access?.roles);
+        } catch (e) {
+          console.error('❌ Error parseando token:', e);
+        }
+      }
+      
       try {
         const response = await authAPI.getProfile();
-        if (response.data.success) {
+        
+        if (response?.data?.success && response.data.user) {
           const user = response.data.user;
+          
+          setUserId(user.id || user._id);
+          setUserRole(user.rol || "TUTOR");
+          
           setForm((prev) => ({
             ...prev,
             nombre: user.nombre || "",
             apellido: user.apellido || "",
             email: user.email || "",
-            telefono: user.telefono || "",
-            foto: user.foto || "",
-            descripcion: user.descripcion || "",
+            telefono: user.telefono || user.phone || "",
+            foto: user.foto || user.photo || user.picture || "",
+            descripcion: user.descripcion || user.biografia || user.bio || "",
+          }));
+          
+          setLoadingData(false);
+          return;
+        }
+        
+      } catch (error) {
+        console.warn('⚠️ Error desde API:', error?.message);
+      }
+      
+      try {
+        const storedUser = localStorage.getItem("user");
+        
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          
+          setUserId(userData.id || userData._id);
+          setUserRole(userData.rol || "TUTOR");
+          
+          setForm((prev) => ({
+            ...prev,
+            nombre: userData.nombre || "",
+            apellido: userData.apellido || "",
+            email: userData.email || "",
+            telefono: userData.telefono || userData.phone || "",
+            foto: userData.foto || userData.photo || userData.picture || "",
+            descripcion: userData.descripcion || userData.biografia || userData.bio || "",
           }));
         }
-      } catch (error) {
-        const userData = JSON.parse(localStorage.getItem("user") || "{}");
-        setForm((prev) => ({
-          ...prev,
-          nombre: userData.nombre || "",
-          apellido: userData.apellido || "",
-          email: userData.email || "",
-          telefono: userData.telefono || "",
-          foto: userData.foto || "",
-          descripcion: userData.descripcion || "",
-        }));
+      } catch (parseError) {
+        console.error('❌ Error parseando localStorage:', parseError);
+      } finally {
+        setLoadingData(false);
       }
     };
 
@@ -75,82 +122,164 @@ const EditarPerfilTutor = () => {
     fileInputRef.current?.click();
   };
 
-  const handleSave = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
 
-    // ¿Está intentando cambiar la contraseña?
-    const isChangingPassword = form.newPassword || form.confirmPassword;
+    const isChangingPassword =
+      form.currentPassword || form.newPassword || form.confirmPassword;
 
     if (isChangingPassword) {
+      if (!form.currentPassword) {
+        showNotification({
+          type: "warning",
+          title: "Campo requerido",
+          message: "Debes ingresar tu contraseña actual para cambiarla"
+        });
+        return;
+      }
+
       if (!form.newPassword || !form.confirmPassword) {
-        alert("Debes completar la nueva contraseña y su confirmación");
+        showNotification({
+          type: "warning",
+          title: "Campos incompletos",
+          message: "Debes completar la nueva contraseña y su confirmación"
+        });
         return;
       }
 
       if (form.newPassword !== form.confirmPassword) {
-        alert("Las contraseñas no coinciden");
+        showNotification({
+          type: "error",
+          title: "Error",
+          message: "Las contraseñas no coinciden"
+        });
         return;
       }
 
       if (form.newPassword.length < 6) {
-        alert("La nueva contraseña debe tener al menos 6 caracteres");
+        showNotification({
+          type: "warning",
+          title: "Contraseña débil",
+          message: "La nueva contraseña debe tener al menos 6 caracteres"
+        });
         return;
       }
     }
 
+    setShowConfirmModal(true);
+  };
+
+  const handleSave = async () => {
+    setShowConfirmModal(false);
+
     try {
       setLoading(true);
+
+      if (!userId) {
+        showNotification({
+          type: "error",
+          title: "Error",
+          message: "No se pudo identificar tu usuario. Intenta cerrar sesión y volver a entrar."
+        });
+        setLoading(false);
+        return;
+      }
+
+      const isChangingPassword =
+        form.currentPassword || form.newPassword || form.confirmPassword;
 
       const payload = {
         nombre: form.nombre,
         apellido: form.apellido,
         email: form.email,
-        telefono: form.telefono,
-        foto: form.foto,
-        descripcion: form.descripcion,
+        telefono: form.telefono.replace(/[^0-9+]/g, '').substring(0, 16),
+        foto: form.foto || "",
+        rol: userRole,
       };
 
       if (isChangingPassword) {
+        payload.currentPassword = form.currentPassword;
         payload.newPassword = form.newPassword;
       }
 
-      const { data } = await authAPI.updateProfile(payload);
+      const { data } = await authAPI.updateProfile(userId, payload);
 
-      if (data?.success && data.user) {
-        localStorage.setItem("user", JSON.stringify(data.user));
-        alert("Perfil de tutor actualizado exitosamente");
+      if (data) {
+        localStorage.setItem("user", JSON.stringify(data));
+        
+        showNotification({
+          type: "success",
+          title: "¡Perfil actualizado!",
+          message: "Tu información se ha guardado correctamente"
+        });
 
         setForm((prev) => ({
           ...prev,
+          currentPassword: "",
           newPassword: "",
           confirmPassword: "",
         }));
 
-        navigate("/tutor/perfil");
+        setTimeout(() => navigate("/tutor/perfil"), 1000);
       } else {
-        alert("No se pudo actualizar el perfil. Intenta nuevamente.");
+        showNotification({
+          type: "error",
+          title: "Error",
+          message: "No se pudo actualizar el perfil. Intenta nuevamente."
+        });
       }
     } catch (error) {
-      console.error("Error actualizando perfil de tutor:", error);
-      alert("Error al actualizar el perfil");
+      console.error('❌ Error actualizando:', error);
+      showNotification({
+        type: "error",
+        title: "Error",
+        message: error?.response?.data?.message || "Error al actualizar el perfil"
+      });
     } finally {
       setLoading(false);
     }
   };
 
-
   const goBack = () => {
     navigate("/tutor/perfil");
   };
 
+  if (loadingData) {
+    return (
+      <div className="edit-perfil-page">
+        <div className="header">
+          <div className="container">
+            <div className="header-content">
+              <div className="header-left">
+                <h1>Editar Perfil Tutor</h1>
+                <p className="header-subtitle">Cargando datos...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="edit-perfil-page">
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleSave}
+        title="¿Guardar cambios?"
+        message="Se actualizará tu información de perfil. Esta acción no se puede deshacer."
+        type="info"
+        confirmText="Guardar"
+        cancelText="Cancelar"
+      />
+
       <div className="header">
         <div className="container">
           <div className="header-content">
             <div className="header-left">
               <h1>Editar Perfil Tutor</h1>
-              <p className="header-subtitle">Container</p>
+              <p className="header-subtitle">Actualiza tu información</p>
             </div>
           </div>
         </div>
@@ -159,7 +288,7 @@ const EditarPerfilTutor = () => {
       <div className="main-content">
         <div className="container">
           <div className="edit-form">
-            <form onSubmit={handleSave}>
+            <form onSubmit={handleSubmit}>
               <div className="form-section">
                 <h3 className="section-title">Información Personal</h3>
 
@@ -259,11 +388,25 @@ const EditarPerfilTutor = () => {
                     placeholder="Cuéntanos sobre tu experiencia como tutor..."
                     rows={4}
                   ></textarea>
+                  <small style={{ color: '#666', fontSize: '0.85rem', marginTop: '4px', display: 'block' }}>
+                    ⚠️ Nota: La biografía aún no se guarda en el backend. Solo se guardan: nombre, apellido, email, teléfono y foto.
+                  </small>
                 </div>
               </div>
 
               <div className="form-section">
                 <h3 className="section-title">Cambiar Contraseña</h3>
+
+                <div className="form-group">
+                  <label className="form-label">Contraseña Actual</label>
+                  <input
+                    type="password"
+                    name="currentPassword"
+                    className="form-input"
+                    value={form.currentPassword}
+                    onChange={handleChange}
+                  />
+                </div>
 
                 <div className="form-row">
                   <div className="form-group">

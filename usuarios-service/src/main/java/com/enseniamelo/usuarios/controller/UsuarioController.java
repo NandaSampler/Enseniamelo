@@ -86,7 +86,7 @@ public class UsuarioController {
                         @ApiResponse(responseCode = "200", description = "${api.responseCodes.ok.description}"),
                         @ApiResponse(responseCode = "404", description = "${api.responseCodes.notFound.description}")
         })
-        @PreAuthorize("hasRole('ADMIN') or (hasRole('USER') and #id == authentication.principal.claims['sub'])")
+        @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'TUTOR')")
         @PutMapping(value = "/{id}", consumes = "application/json", produces = "application/json")
         public Mono<UsuarioDTO> updateUsuario(
                         @Parameter(description = "ID de MongoDB del usuario", required = true) @PathVariable String id,

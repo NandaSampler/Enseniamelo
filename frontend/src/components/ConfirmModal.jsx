@@ -1,13 +1,11 @@
 // frontend/src/components/ConfirmModal.jsx
-import { AlertTriangle, Trash2, X } from 'lucide-react';
-
 const ConfirmModal = ({ 
   isOpen, 
   onClose, 
   onConfirm, 
   title, 
   message, 
-  type = 'danger',
+  type = 'info',
   confirmText = 'Confirmar',
   cancelText = 'Cancelar'
 }) => {
@@ -16,29 +14,35 @@ const ConfirmModal = ({
   const typeStyles = {
     danger: {
       iconBg: 'bg-red-100',
-      iconColor: 'text-red-600',
+      icon: '❌',
       buttonBg: 'bg-red-600 hover:bg-red-700',
       shadowColor: 'shadow-red-500/25'
     },
     warning: {
       iconBg: 'bg-amber-100',
-      iconColor: 'text-amber-600',
+      icon: '⚠️',
       buttonBg: 'bg-amber-600 hover:bg-amber-700',
       shadowColor: 'shadow-amber-500/25'
     },
+    success: {
+      iconBg: 'bg-emerald-100',
+      icon: '✅',
+      buttonBg: 'bg-emerald-600 hover:bg-emerald-700',
+      shadowColor: 'shadow-emerald-500/25'
+    },
     info: {
-      iconBg: 'bg-blue-100',
-      iconColor: 'text-blue-600',
-      buttonBg: 'bg-blue-600 hover:bg-blue-700',
-      shadowColor: 'shadow-blue-500/25'
+      iconBg: 'bg-sky-100',
+      icon: 'ℹ️',
+      buttonBg: 'bg-sky-600 hover:bg-sky-700',
+      shadowColor: 'shadow-sky-500/25'
     }
   };
 
-  const styles = typeStyles[type] || typeStyles.danger;
+  const styles = typeStyles[type] || typeStyles.info;
 
-  // Cerrar con tecla Escape
   const handleKeyDown = (e) => {
     if (e.key === 'Escape') onClose();
+    if (e.key === 'Enter') onConfirm();
   };
 
   return (
@@ -47,15 +51,20 @@ const ConfirmModal = ({
       onKeyDown={handleKeyDown}
       role="dialog"
       aria-modal="true"
+      style={{ animation: 'fadeIn 0.2s ease-out' }}
     >
       {/* Overlay con blur */}
       <div 
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-fadeIn"
+        className="absolute inset-0 bg-slate-900/40"
+        style={{ backdropFilter: 'blur(4px)' }}
         onClick={onClose}
       />
       
       {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full animate-slideUp overflow-hidden">
+      <div 
+        className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+        style={{ animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}
+      >
         {/* Header */}
         <div className="relative px-6 pt-6 pb-4">
           <button
@@ -63,16 +72,12 @@ const ConfirmModal = ({
             className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-100"
             aria-label="Cerrar"
           >
-            <X className="w-5 h-5" />
+            ✕
           </button>
           
           {/* Icono */}
-          <div className={`w-14 h-14 ${styles.iconBg} rounded-2xl flex items-center justify-center mb-4 mx-auto`}>
-            {type === 'danger' ? (
-              <Trash2 className={`w-7 h-7 ${styles.iconColor}`} />
-            ) : (
-              <AlertTriangle className={`w-7 h-7 ${styles.iconColor}`} />
-            )}
+          <div className={`w-14 h-14 ${styles.iconBg} rounded-2xl flex items-center justify-center mb-4 mx-auto text-3xl`}>
+            {styles.icon}
           </div>
           
           {/* Título */}
@@ -106,7 +111,7 @@ const ConfirmModal = ({
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
@@ -121,14 +126,6 @@ const ConfirmModal = ({
             opacity: 1;
             transform: translateY(0) scale(1);
           }
-        }
-
-        .animate-fadeIn {
-          animation: fadeIn 0.2s ease-out;
-        }
-
-        .animate-slideUp {
-          animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
       `}</style>
     </div>
