@@ -33,26 +33,22 @@ public class ReservaValidationService {
     }
     
     /**
-     * Verifica si el usuario tiene una reserva completada para el curso especificado
+     * Verifica si el usuario tiene una reserva confirmada para el curso especificado
      * 
      * @param idUsuario ID del usuario
      * @param idCurso ID del curso
      * @param token Token de autenticación
-     * @return true si tiene reserva completada, false en caso contrario
+     * @return true si tiene reserva confirmada, false en caso contrario
      */
-    public Mono<Boolean> tieneReservaCompletada(String idUsuario, String idCurso, String token) {
+    public Mono<Boolean> tieneReservaConfirmada(String idUsuario, String idCurso, String token) {
         String url = cursosServiceUrl + "/api/v1/reservas";
         
         LOGGER.debug("Consultando reservas en: {} para usuario {} y curso {}", 
                 url, idUsuario, idCurso);
         
         return webClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path(url)
-                        .queryParam("id_usuario", idUsuario)
-                        .queryParam("id_curso", idCurso)
-                        .queryParam("estado", "completada")
-                        .build())
+                .uri(url + "?id_usuario={idUsuario}&id_curso={idCurso}&estado=confirmada", 
+                    idUsuario, idCurso)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .retrieve()
                 .bodyToMono(ReservaListResponse.class)
@@ -61,7 +57,7 @@ public class ReservaValidationService {
                             && response.getReservas() != null 
                             && !response.getReservas().isEmpty();
                     
-                    LOGGER.info("Usuario {} {} reserva completada para curso {}", 
+                    LOGGER.info("Usuario {} {} reserva confirmada para curso {}", 
                             idUsuario, 
                             tieneReserva ? "tiene" : "NO tiene",
                             idCurso);

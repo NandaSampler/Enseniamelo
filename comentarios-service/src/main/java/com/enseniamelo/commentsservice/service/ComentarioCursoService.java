@@ -77,17 +77,17 @@ public class ComentarioCursoService {
                                             "Curso no encontrado con id: " + comentario.getId_curso()));
                                 }
                                 
-                                // 3. NUEVA VALIDACIÓN: Verificar que el usuario tiene una reserva completada
-                                return reservaValidationService.tieneReservaCompletada(
+                                // 3. NUEVA VALIDACIÓN: Verificar que el usuario tiene una reserva confirmada
+                                return reservaValidationService.tieneReservaConfirmada(
                                         comentario.getId_usuario(), 
                                         comentario.getId_curso(), 
                                         token)
                                         .flatMap(tieneReserva -> {
                                             if (!tieneReserva) {
-                                                LOGGER.warn("Usuario {} intentó comentar curso {} sin reserva completada", 
+                                                LOGGER.warn("Usuario {} intentó comentar curso {} sin reserva confirmada", 
                                                         comentario.getId_usuario(), comentario.getId_curso());
                                                 return Mono.error(new IllegalStateException(
-                                                        "Solo puedes comentar y calificar cursos que hayas completado"));
+                                                        "Solo puedes comentar y calificar cursos con reserva confirmada"));
                                             }
                                             
                                             // 4. Verificar que el usuario no haya comentado ya este curso

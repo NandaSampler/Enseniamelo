@@ -332,7 +332,7 @@ const ReviewsSection = ({
             showNotification({
                 type: "warning",
                 title: "No puedes reseñar",
-                message: mensajeRestriccion || "Debes completar el curso antes de poder dejar una reseña",
+                message: mensajeRestriccion || "Debes tener una reserva confirmada para poder dejar una reseña",
             });
             return;
         }
@@ -425,7 +425,7 @@ const ReviewsSection = ({
                 <div className="infocurso-review-hint-container">
                     <p className="infocurso-review-hint">
                         {mensajeRestriccion || 
-                         "Solo puedes dejar una reseña por curso y únicamente cuando hayas completado la clase."}
+                         "Solo puedes dejar una reseña cuando tu reserva haya sido confirmada por el tutor."}
                     </p>
                 </div>
             )}
@@ -599,30 +599,27 @@ const InfoCurso = () => {
                 if (!reservaCurso) {
                     setPuedeResenar(false);
                     setTieneReserva(false);
-                    setMensajeRestriccion("Debes reservar y completar este curso antes de poder dejar una reseña");
+                    setMensajeRestriccion("Debes reservar este curso y esperar la confirmación del tutor antes de poder dejar una reseña");
                     return;
                 }
 
                 setTieneReserva(true);
 
-                // ✅ VALIDACIÓN CRÍTICA: Solo permite reseñar si estado === "completada"
+                // ✅ VALIDACIÓN CRÍTICA: Solo permite reseñar si estado === "confirmada" o "completada"
                 const estado = (reservaCurso.estado || "").toLowerCase();
                 
-                if (estado === "completada") {
+                if (estado === "confirmada" || estado === "completada") {
                     setPuedeResenar(true);
                     setMensajeRestriccion("");
-                } else if (estado === "confirmada") {
-                    setPuedeResenar(false);
-                    setMensajeRestriccion("Debes completar la clase antes de poder dejar una reseña. El tutor debe marcar la reserva como completada.");
                 } else if (estado === "pendiente") {
                     setPuedeResenar(false);
-                    setMensajeRestriccion("Tu reserva está pendiente de confirmación por el tutor");
+                    setMensajeRestriccion("Tu reserva está pendiente de confirmación por el tutor. Una vez confirmada, podrás dejar tu reseña.");
                 } else if (estado === "cancelada") {
                     setPuedeResenar(false);
                     setMensajeRestriccion("Tu reserva fue cancelada. No puedes dejar una reseña.");
                 } else {
                     setPuedeResenar(false);
-                    setMensajeRestriccion("Debes completar el curso antes de poder dejar una reseña");
+                    setMensajeRestriccion("Debes tener una reserva confirmada para poder dejar una reseña");
                 }
 
                 // ✅ Verificar si ya comentó
