@@ -17,8 +17,8 @@ import java.time.LocalDateTime;
 @Schema(description = "DTO para crear o actualizar comentarios de curso")
 public class ComentarioCursoDTO {
 
-    @NotBlank(message = "El id del usuario es obligatorio")
-    @Schema(example = "672c8e8b3f6c4c1c4a3e9d21", description = "Identificador del usuario")
+    // ✅ CAMBIO CRÍTICO: id_usuario NO debe tener @NotBlank porque se extrae del JWT
+    @Schema(example = "672c8e8b3f6c4c1c4a3e9d21", description = "Identificador del usuario (se extrae automáticamente del JWT)")
     private String id_usuario;
 
     @NotBlank(message = "El id del curso es obligatorio")

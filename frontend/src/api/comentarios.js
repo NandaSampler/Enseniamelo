@@ -1,7 +1,6 @@
 // frontend/src/api/comentarios.js
 import api from './config';
 
-// Ruta base del servicio de comentarios a través del gateway
 const COMENTARIOS_BASE = '/api/comentario-curso';
 
 export const comentariosAPI = {
