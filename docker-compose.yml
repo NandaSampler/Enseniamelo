@@ -3,6 +3,7 @@ version: '3.8'
 services:
   eureka-server:
     image: enseniamelo-eureka-server:latest
+    build: ./eureka-server
     ports:
       - "8761:8761"
     mem_limit: 512m
