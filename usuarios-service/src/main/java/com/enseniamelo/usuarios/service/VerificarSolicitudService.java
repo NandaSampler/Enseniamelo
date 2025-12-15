@@ -53,6 +53,7 @@ public class VerificarSolicitudService {
                                 solicitud.setIdPerfilTutor(idPerfilTutor);
                                 solicitud.setIdCurso(idCurso); 
                                 solicitud.setFotoCi(solicitudDTO.getFotoCi());
+                                solicitud.setComentario(solicitudDTO.getComentario());
                                 if (solicitudDTO.getArchivos() != null && !solicitudDTO.getArchivos().isEmpty()) {
                                     solicitud.setArchivos(solicitudDTO.getArchivos());
                                 } else {
