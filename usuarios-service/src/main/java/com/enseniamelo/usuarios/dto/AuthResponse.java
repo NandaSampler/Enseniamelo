@@ -28,10 +28,15 @@ public class AuthResponse {
     @Schema(description = "Apellido del usuario", example = "Pérez", accessMode = Schema.AccessMode.READ_ONLY)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private String apellido;
+
+    @Schema(description = "Teléfono del usuario", example = "+59112345678", accessMode = Schema.AccessMode.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String telefono;
     
     @Schema(description = "Correo electrónico del usuario", example = "juan.perez@mail.com", accessMode = Schema.AccessMode.READ_ONLY)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private String email;
+    
     
     @Schema(description = "Rol del usuario", example = "ESTUDIANTE", allowableValues = {"ADMIN", "DOCENTE", "ESTUDIANTE"}, accessMode = Schema.AccessMode.READ_ONLY)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
@@ -49,7 +54,21 @@ public class AuthResponse {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private String token;
     
-    public AuthResponse(String id, Integer idUsuario, String nombre, String apellido, String email, String rol, String message) {
+    public AuthResponse(String id, Integer idUsuario, String nombre, String apellido, 
+                       String telefono, String email , String rol, String foto, String message) {
+        this.id = id;
+        this.idUsuario = idUsuario;
+        this.nombre = nombre;
+        this.apellido = apellido;
+        this.telefono = telefono;
+        this.email = email;
+        this.rol = rol;
+        this.foto = foto;
+        this.message = message;
+    }
+    
+    public AuthResponse(String id, Integer idUsuario, String nombre, String apellido, 
+                       String email, String rol, String message) {
         this.id = id;
         this.idUsuario = idUsuario;
         this.nombre = nombre;
