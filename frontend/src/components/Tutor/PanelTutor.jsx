@@ -377,7 +377,12 @@ const SolicitudesReservasModal = ({
         )}
 
         <div className="chat-modal-actions">
-          <button type="button" className="chat-modal-btn-secondary" onClick={onClose} disabled={saving}>
+          <button
+            type="button"
+            className="chat-modal-btn-secondary"
+            onClick={onClose}
+            disabled={saving}
+          >
             Cerrar
           </button>
 
@@ -445,6 +450,11 @@ const PanelTutor = () => {
     return m;
   }, [cursos]);
 
+  // ✅ set de ids de cursos del tutor (para filtrar todo)
+  const cursosIdsTutor = useMemo(() => {
+    return new Set((cursos || []).map((c) => String(c.id)));
+  }, [cursos]);
+
   // --------- Fetch cursos + reservas ----------
   useEffect(() => {
     const fetchCursos = async () => {
@@ -487,10 +497,12 @@ const PanelTutor = () => {
 
     const fetchReservas = async () => {
       try {
+        // Ideal: backend devuelve SOLO del tutor.
         const { data: conf } = await reservasAPI.getReservasConfirmadasTutor();
         if (conf?.success && Array.isArray(conf.reservas)) setReservasConfirmadas(conf.reservas);
         else setReservasConfirmadas([]);
 
+        // Pendientes: si tu endpoint aún devuelve global, filtramos luego por cursos del tutor
         const { data: pend } = await reservasAPI.getReservas({ estado: "pendiente" });
         const list = pend?.success ? pend?.reservas || [] : Array.isArray(pend) ? pend : [];
         setReservasPendientes(list);
@@ -504,10 +516,26 @@ const PanelTutor = () => {
     fetchCursos().then(fetchReservas);
   }, []);
 
-  // ✅ Hidratar nombres para confirmadas (igual que tu versión buena)
+  // ✅ Confirmadas SOLO de cursos del tutor (fallback si conf viene global)
+  const reservasConfirmadasTutor = useMemo(() => {
+    return (reservasConfirmadas || []).filter((r) => {
+      const cursoId = getCursoIdFromReserva(r);
+      return cursoId && cursosIdsTutor.has(String(cursoId));
+    });
+  }, [reservasConfirmadas, cursosIdsTutor]);
+
+  // ✅ Pendientes SOLO de cursos del tutor
+  const reservasPendientesTutor = useMemo(() => {
+    return (reservasPendientes || []).filter((r) => {
+      const cursoId = getCursoIdFromReserva(r);
+      return cursoId && cursosIdsTutor.has(String(cursoId));
+    });
+  }, [reservasPendientes, cursosIdsTutor]);
+
+  // ✅ Hidratar nombres para confirmadas (solo del tutor)
   useEffect(() => {
     const run = async () => {
-      const list = Array.isArray(reservasConfirmadas) ? reservasConfirmadas : [];
+      const list = Array.isArray(reservasConfirmadasTutor) ? reservasConfirmadasTutor : [];
 
       // 1) Embebidos
       const dict = {};
@@ -545,16 +573,7 @@ const PanelTutor = () => {
     };
 
     run();
-  }, [reservasConfirmadas]);
-
-  // Filtrar pendientes SOLO de cursos del tutor
-  const reservasPendientesTutor = useMemo(() => {
-    const ids = new Set((cursos || []).map((c) => String(c.id)));
-    return (reservasPendientes || []).filter((r) => {
-      const cursoId = getCursoIdFromReserva(r);
-      return cursoId && ids.has(String(cursoId));
-    });
-  }, [reservasPendientes, cursos]);
+  }, [reservasConfirmadasTutor]);
 
   // --------- UI actions ----------
   const handleLogout = () => {
@@ -579,7 +598,11 @@ const PanelTutor = () => {
       return;
     }
 
-    if (suscripcionActiva && Number.isFinite(Number(limiteCursos)) && cursosActivos >= limiteCursos) {
+    if (
+      suscripcionActiva &&
+      Number.isFinite(Number(limiteCursos)) &&
+      cursosActivos >= limiteCursos
+    ) {
       showNotification({
         type: "warning",
         title: "Límite de cursos alcanzado",
@@ -610,11 +633,11 @@ const PanelTutor = () => {
     setCurrentMonthDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
   };
 
-  // --------- Calendario + próximas clases ----------
+  // --------- Calendario + próximas clases (SOLO del tutor) ----------
   const currentMonthIndex = currentMonthDate.getMonth();
   const currentYear = currentMonthDate.getFullYear();
 
-  const reservasPorDia = reservasConfirmadas.reduce((acc, reserva) => {
+  const reservasPorDia = reservasConfirmadasTutor.reduce((acc, reserva) => {
     if (!reserva.fecha) return acc;
     const fecha = new Date(reserva.fecha);
 
@@ -626,7 +649,10 @@ const PanelTutor = () => {
     return acc;
   }, {});
 
-  const monthLabel = currentMonthDate.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const monthLabel = currentMonthDate.toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
 
   const todayLabel = new Date().toLocaleDateString(undefined, {
     weekday: "long",
@@ -635,7 +661,7 @@ const PanelTutor = () => {
   });
 
   const ahora = new Date();
-  const proximasClases = reservasConfirmadas
+  const proximasClases = reservasConfirmadasTutor
     .filter((r) => r.fecha && new Date(r.fecha) >= ahora)
     .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
     .slice(0, 5);
@@ -644,7 +670,8 @@ const PanelTutor = () => {
   const refreshReservas = async () => {
     try {
       const { data: conf } = await reservasAPI.getReservasConfirmadasTutor();
-      setReservasConfirmadas(conf?.success && Array.isArray(conf.reservas) ? conf.reservas : []);
+      const confList = conf?.success && Array.isArray(conf.reservas) ? conf.reservas : [];
+      setReservasConfirmadas(confList);
 
       const { data: pend } = await reservasAPI.getReservas({ estado: "pendiente" });
       const list = pend?.success ? pend?.reservas || [] : Array.isArray(pend) ? pend : [];
@@ -747,7 +774,7 @@ const PanelTutor = () => {
                 </div>
               </div>
 
-              {/* Próximas clases */}
+              {/* Próximas clases (SOLO del tutor) */}
               <div className="clases-section">
                 <h3 className="clases-title">Próximas clases confirmadas</h3>
 
@@ -775,13 +802,11 @@ const PanelTutor = () => {
                           })
                         : "";
 
-                      // ✅ CURSO: map + fallback
                       const cursoId = getCursoIdFromReserva(reserva);
                       const curso = cursosMap.get(String(cursoId));
                       const cursoNombre =
                         curso?.titulo || curso?.nombre || reserva?.id_curso?.nombre || "Curso";
 
-                      // ✅ ESTUDIANTE: obj o string (cache)
                       const rawU = reserva?.id_usuario;
                       const estId = getEstudianteIdFromReserva(reserva);
                       const nombreEstudiante =
@@ -794,7 +819,9 @@ const PanelTutor = () => {
                           <div className="clase-info">
                             <h3>{cursoNombre}</h3>
                             <p className="clase-details">
-                              {fechaTexto && horaTexto ? `${fechaTexto} · ${horaTexto}` : "Sin fecha definida"}
+                              {fechaTexto && horaTexto
+                                ? `${fechaTexto} · ${horaTexto}`
+                                : "Sin fecha definida"}
                             </p>
                             <p className="clase-description">Estudiante: {nombreEstudiante}</p>
                           </div>
@@ -812,7 +839,9 @@ const PanelTutor = () => {
               >
                 <h3 style={{ margin: 0 }}>Mis cursos</h3>
 
-                {loadingCursos && <p style={{ fontSize: 14, color: "#7f8c8d" }}>Cargando cursos...</p>}
+                {loadingCursos && (
+                  <p style={{ fontSize: 14, color: "#7f8c8d" }}>Cargando cursos...</p>
+                )}
 
                 {!loadingCursos && errorCursos && (
                   <p style={{ fontSize: 14, color: "#e74c3c" }}>{errorCursos}</p>
@@ -832,7 +861,7 @@ const PanelTutor = () => {
               </div>
             </div>
 
-            {/* Calendario */}
+            {/* Calendario (SOLO del tutor) */}
             <div className="right-content" id="tutor-calendar-section">
               <div className="calendar-widget">
                 <h3>Seleccionar una fecha</h3>
@@ -871,14 +900,16 @@ const PanelTutor = () => {
                             .map((r) => {
                               const cId = getCursoIdFromReserva(r);
                               const c = cursosMap.get(String(cId));
-                              const cursoNombre = c?.titulo || c?.nombre || r?.id_curso?.nombre || "Curso";
+                              const cursoNombre =
+                                c?.titulo || c?.nombre || r?.id_curso?.nombre || "Curso";
 
                               const rawU = r?.id_usuario;
                               const estId = getEstudianteIdFromReserva(r);
                               const nombreEstudiante =
                                 rawU && typeof rawU === "object"
                                   ? getNombreFromUsuario(rawU)
-                                  : (estId ? nombresUsuariosConfirmadas?.[estId] : null) || "Estudiante";
+                                  : (estId ? nombresUsuariosConfirmadas?.[estId] : null) ||
+                                    "Estudiante";
 
                               return `${cursoNombre} - Estudiante: ${nombreEstudiante}`;
                             })
