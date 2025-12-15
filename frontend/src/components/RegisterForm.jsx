@@ -94,7 +94,14 @@ const RegisterForm = () => {
 
   return (
     <section className="register-container">
+      {/* Fondo animado */}
+      <div className="register-bg">
+        <span className="blob blob-1"></span>
+        <span className="blob blob-2"></span>
+        <span className="blob blob-3"></span>
+      </div>
       <div className="register-card">
+        <div className="register-glow" />
         <div className="register-header">
           <div className="register-logo-icon">E</div>
           <div>
