@@ -39,6 +39,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 
+    // ⚠️ Manejo de reglas de negocio violadas (nuevo)
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", HttpStatus.FORBIDDEN.value());
+        response.put("error", "Operación no permitida");
+        response.put("mensaje", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
     // ⚠️ Manejo genérico de errores inesperados
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
