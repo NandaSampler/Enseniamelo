@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cursosAPI } from "../../api/cursos";
 import { reservasAPI } from "../../api/reservas";
+import { usuariosAPI } from "../../api/usuarios";
 import "../../styles/Tutor/panelTutor.css";
 import { useNotification } from "../NotificationProvider";
 import CardTutor from "./CardTutor";
@@ -21,8 +22,7 @@ const normalizeId = (x) => {
   return String(x);
 };
 
-const getUsuarioActual = () =>
-  JSON.parse(localStorage.getItem("user") || "{}");
+const getUsuarioActual = () => JSON.parse(localStorage.getItem("user") || "{}");
 
 const getUsuarioId = () => {
   const u = getUsuarioActual();
@@ -43,30 +43,31 @@ const formatDate = (d) => {
 };
 
 const getCursoIdFromReserva = (r) => {
-  const raw = r?.id_curso;
-  if (!raw) return normalizeId(r?.cursoId || r?.idCurso);
+  const raw = r?.id_curso ?? r?.cursoId ?? r?.idCurso ?? null;
+  if (!raw) return null;
   if (typeof raw === "string") return raw;
-  return normalizeId(raw?._id || raw?.id);
+  return normalizeId(raw?._id || raw?.id || raw);
 };
 
+// ✅ En TU sistema el estudiante es id_usuario (string u objeto)
 const getEstudianteIdFromReserva = (r) => {
-  const raw = r?.id_usuario;
-  if (!raw) return normalizeId(r?.estudianteId || r?.idEstudiante);
+  const raw = r?.id_usuario ?? r?.usuarioId ?? r?.idUsuario ?? null;
+  if (!raw) return null;
   if (typeof raw === "string") return raw;
-  return normalizeId(raw?._id || raw?.id);
+  return normalizeId(raw?._id || raw?.id || raw);
 };
 
 const getNombreFromUsuario = (u) => {
   if (!u) return "Estudiante";
-  const nombreCompleto = u?.nombreCompleto;
-  if (nombreCompleto) return nombreCompleto;
-
   const nombre = u?.nombre || u?.name || "";
   const apellido = u?.apellido || u?.last_name || "";
-  const combo = `${nombre} ${apellido}`.trim();
-  if (combo) return combo;
+  const full = `${nombre} ${apellido}`.trim();
+  return full || u?.email || "Estudiante";
+};
 
-  return u?.email || "Estudiante";
+// Normaliza respuesta de usuarios-service: puede venir usuario directo o envuelto
+const getUsuarioFromResp = (data) => {
+  return data?.usuario ?? data?.user ?? data?.data ?? data ?? null;
 };
 
 // =====================================================
@@ -85,7 +86,7 @@ const SolicitudesReservasModal = ({
   const [selectedReservaId, setSelectedReservaId] = useState("");
   const [fechaHora, setFechaHora] = useState("");
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
-  const [nombresUsuarios, setNombresUsuarios] = useState({});
+  const [nombresUsuarios, setNombresUsuarios] = useState({}); // { userId: "Nombre Apellido" }
   const [saving, setSaving] = useState(false);
 
   // Reset cuando se abre
@@ -95,39 +96,46 @@ const SolicitudesReservasModal = ({
     setFechaHora("");
   }, [open, reservasPendientes]);
 
-  // Cargar nombres de usuarios (solo los que estén como string id)
+  // ✅ Cargar nombres reales (pendientes)
   useEffect(() => {
     const run = async () => {
       if (!open) return;
+
       const list = Array.isArray(reservasPendientes) ? reservasPendientes : [];
-      const ids = Array.from(
-        new Set(
-          list
-            .map(getEstudianteIdFromReserva)
-            .filter(Boolean)
-        )
+
+      // 1) Embebidos
+      const dict = {};
+      list.forEach((r) => {
+        const rawU = r?.id_usuario;
+        if (rawU && typeof rawU === "object") {
+          const id = normalizeId(rawU?._id || rawU?.id);
+          if (id) dict[id] = getNombreFromUsuario(rawU);
+        }
+      });
+
+      // 2) Strings -> fetch
+      const ids = Array.from(new Set(list.map(getEstudianteIdFromReserva).filter(Boolean))).filter(
+        (id) => !dict[id]
       );
 
-      if (ids.length === 0) return;
+      if (ids.length === 0) {
+        setNombresUsuarios(dict);
+        return;
+      }
 
       setLoadingUsuarios(true);
       try {
-        const dict = {};
-        // Intento: si el backend ya embebe usuario como objeto, úsalo sin pegarle a usuarios-service
-        list.forEach((r) => {
-          const rawU = r?.id_usuario;
-          if (rawU && typeof rawU === "object") {
-            const id = normalizeId(rawU?._id || rawU?.id);
-            if (id) dict[id] = getNombreFromUsuario(rawU);
-          }
-        });
-
-        // Fallback: pedir usuarios que falten (si tienes endpoint usuariosAPI.getUsuario, puedes usarlo)
-        // Como aquí no lo importaste en PanelTutor, hacemos fallback suave: si no está embebido, mostramos "Estudiante (id)"
-        ids.forEach((id) => {
-          if (!dict[id]) dict[id] = `Estudiante (${String(id).slice(-6)})`;
-        });
-
+        await Promise.all(
+          ids.map(async (id) => {
+            try {
+              const resp = await usuariosAPI.getUsuario(id);
+              const u = getUsuarioFromResp(resp?.data);
+              dict[id] = getNombreFromUsuario(u);
+            } catch {
+              dict[id] = "Estudiante";
+            }
+          })
+        );
         setNombresUsuarios(dict);
       } finally {
         setLoadingUsuarios(false);
@@ -145,14 +153,16 @@ const SolicitudesReservasModal = ({
   const cursoTitulo = useMemo(() => {
     if (!selectedReserva) return "—";
     const cursoId = getCursoIdFromReserva(selectedReserva);
-    const c = cursosMap?.get?.(cursoId);
+    const c = cursosMap?.get?.(String(cursoId));
     return c?.titulo || c?.nombre || selectedReserva?.id_curso?.nombre || "Curso";
   }, [selectedReserva, cursosMap]);
 
   const estudianteNombre = useMemo(() => {
     if (!selectedReserva) return "—";
     const rawU = selectedReserva?.id_usuario;
+
     if (rawU && typeof rawU === "object") return getNombreFromUsuario(rawU);
+
     const estId = getEstudianteIdFromReserva(selectedReserva);
     return nombresUsuarios?.[estId] || "Estudiante";
   }, [selectedReserva, nombresUsuarios]);
@@ -186,14 +196,17 @@ const SolicitudesReservasModal = ({
       const inicioISO = new Date(fechaHora).toISOString();
 
       const resp = await reservasAPI.aceptarReserva({
-        cursoId,
-        estudianteId,
+        cursoId: String(cursoId),
+        estudianteId: String(estudianteId),
         inicio: inicioISO,
         duracion_min: 60,
       });
 
-      const ok = resp?.data?.success === true;
-      if (!ok) throw new Error(resp?.data?.detail || "No se pudo aceptar la reserva.");
+      const ok = resp?.data?.success === true || resp?.status === 200;
+      if (!ok)
+        throw new Error(
+          resp?.data?.detail || resp?.data?.message || "No se pudo aceptar la reserva."
+        );
 
       showNotification({
         type: "success",
@@ -207,7 +220,11 @@ const SolicitudesReservasModal = ({
       showNotification({
         type: "error",
         title: "Error",
-        message: e?.response?.data?.detail || e?.message || "No se pudo aceptar la reserva.",
+        message:
+          e?.response?.data?.detail ||
+          e?.response?.data?.message ||
+          e?.message ||
+          "No se pudo aceptar la reserva.",
       });
     } finally {
       setSaving(false);
@@ -231,9 +248,16 @@ const SolicitudesReservasModal = ({
 
     setSaving(true);
     try {
-      const resp = await reservasAPI.rechazarReserva({ cursoId, estudianteId });
-      const ok = resp?.data?.success === true;
-      if (!ok) throw new Error(resp?.data?.detail || "No se pudo rechazar la reserva.");
+      const resp = await reservasAPI.rechazarReserva({
+        cursoId: String(cursoId),
+        estudianteId: String(estudianteId),
+      });
+
+      const ok = resp?.data?.success === true || resp?.status === 200;
+      if (!ok)
+        throw new Error(
+          resp?.data?.detail || resp?.data?.message || "No se pudo rechazar la reserva."
+        );
 
       showNotification({
         type: "info",
@@ -247,7 +271,11 @@ const SolicitudesReservasModal = ({
       showNotification({
         type: "error",
         title: "Error",
-        message: e?.response?.data?.detail || e?.message || "No se pudo rechazar la reserva.",
+        message:
+          e?.response?.data?.detail ||
+          e?.response?.data?.message ||
+          e?.message ||
+          "No se pudo rechazar la reserva.",
       });
     } finally {
       setSaving(false);
@@ -270,9 +298,7 @@ const SolicitudesReservasModal = ({
           </div>
         ) : (
           <>
-            <label style={{ display: "block", fontSize: 13, marginBottom: 6 }}>
-              Solicitud
-            </label>
+            <label style={{ display: "block", fontSize: 13, marginBottom: 6 }}>Solicitud</label>
 
             <select
               className="chat-modal-input"
@@ -284,16 +310,17 @@ const SolicitudesReservasModal = ({
               {reservasPendientes.map((r) => {
                 const id = String(r?.id || r?._id);
                 const cursoId = getCursoIdFromReserva(r);
-                const curso = cursosMap?.get?.(cursoId);
+                const curso = cursosMap?.get?.(String(cursoId));
+
+                const rawU = r?.id_usuario;
                 const estId = getEstudianteIdFromReserva(r);
 
                 const estNombre =
-                  (r?.id_usuario && typeof r.id_usuario === "object"
-                    ? getNombreFromUsuario(r.id_usuario)
-                    : nombresUsuarios?.[estId]) || "Estudiante";
+                  (rawU && typeof rawU === "object"
+                    ? getNombreFromUsuario(rawU)
+                    : (estId ? nombresUsuarios?.[estId] : null)) || "Estudiante";
 
-                const cursoNombre =
-                  curso?.titulo || curso?.nombre || r?.id_curso?.nombre || "Curso";
+                const cursoNombre = curso?.titulo || curso?.nombre || r?.id_curso?.nombre || "Curso";
 
                 return (
                   <option key={id} value={id}>
@@ -303,7 +330,6 @@ const SolicitudesReservasModal = ({
               })}
             </select>
 
-            {/* Card de detalles (muy claro) */}
             {selectedReserva && (
               <div
                 style={{
@@ -317,8 +343,7 @@ const SolicitudesReservasModal = ({
                 }}
               >
                 <div style={{ fontSize: 13 }}>
-                  <span style={{ opacity: 0.75 }}>Curso:</span>{" "}
-                  <strong>{cursoTitulo}</strong>
+                  <span style={{ opacity: 0.75 }}>Curso:</span> <strong>{cursoTitulo}</strong>
                 </div>
 
                 <div style={{ fontSize: 13 }}>
@@ -352,12 +377,7 @@ const SolicitudesReservasModal = ({
         )}
 
         <div className="chat-modal-actions">
-          <button
-            type="button"
-            className="chat-modal-btn-secondary"
-            onClick={onClose}
-            disabled={saving}
-          >
+          <button type="button" className="chat-modal-btn-secondary" onClick={onClose} disabled={saving}>
             Cerrar
           </button>
 
@@ -383,9 +403,7 @@ const SolicitudesReservasModal = ({
         </div>
 
         {loadingUsuarios && (
-          <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75 }}>
-            Cargando nombres...
-          </div>
+          <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75 }}>Cargando nombres...</div>
         )}
       </div>
     </div>
@@ -393,7 +411,7 @@ const SolicitudesReservasModal = ({
 };
 
 // =====================================================
-// PanelTutor (actualizado con popup de solicitudes)
+// PanelTutor
 // =====================================================
 const PanelTutor = () => {
   const navigate = useNavigate();
@@ -403,9 +421,6 @@ const PanelTutor = () => {
   const [loadingCursos, setLoadingCursos] = useState(false);
   const [errorCursos, setErrorCursos] = useState("");
 
-  // En tu versión actual usas suscripción vía payments-service (/ms-payments/v1 + /v1/auth/me).
-  // Dejamos esa lógica como estaba en tu proyecto actual (la del mensaje largo),
-  // pero no la vuelvo a reinventar aquí: solo mantenemos el límite FREE=3 como fallback.
   const [suscripcionActiva, setSuscripcionActiva] = useState(null);
   const [limiteCursos, setLimiteCursos] = useState(3);
   const [planNombre, setPlanNombre] = useState(null);
@@ -413,15 +428,17 @@ const PanelTutor = () => {
   const [reservasConfirmadas, setReservasConfirmadas] = useState([]);
   const [reservasPendientes, setReservasPendientes] = useState([]);
 
+  // ✅ nombres para confirmadas
+  const [nombresUsuariosConfirmadas, setNombresUsuariosConfirmadas] = useState({});
+
   const [currentMonthDate, setCurrentMonthDate] = useState(() => {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), 1);
   });
 
-  // Modal solicitudes
   const [openSolicitudes, setOpenSolicitudes] = useState(false);
 
-  // Map rápido de cursos por id
+  // Map cursos por id
   const cursosMap = useMemo(() => {
     const m = new Map();
     (cursos || []).forEach((c) => m.set(String(c.id), c));
@@ -437,7 +454,6 @@ const PanelTutor = () => {
       try {
         const { data } = await cursosAPI.getMisCursos();
 
-        // ✅ FastAPI: data es Array[CursoOut]
         const cursosRaw = Array.isArray(data)
           ? data
           : data?.success && Array.isArray(data.cursos)
@@ -456,11 +472,7 @@ const PanelTutor = () => {
           }))
         );
       } catch (err) {
-        console.error("Error obteniendo cursos del tutor:", {
-          status: err?.response?.status,
-          data: err?.response?.data,
-          message: err?.message,
-        });
+        console.error("Error obteniendo cursos del tutor:", err);
 
         const msg =
           err?.response?.data?.detail ||
@@ -475,16 +487,12 @@ const PanelTutor = () => {
 
     const fetchReservas = async () => {
       try {
-        // Confirmadas (para calendario / próximas clases)
         const { data: conf } = await reservasAPI.getReservasConfirmadasTutor();
         if (conf?.success && Array.isArray(conf.reservas)) setReservasConfirmadas(conf.reservas);
         else setReservasConfirmadas([]);
 
-        // Pendientes (para popup): como no existe endpoint del tutor, usamos list con estado=pendiente
-        // y filtramos por cursos del tutor en frontend.
         const { data: pend } = await reservasAPI.getReservas({ estado: "pendiente" });
         const list = pend?.success ? pend?.reservas || [] : Array.isArray(pend) ? pend : [];
-
         setReservasPendientes(list);
       } catch (err) {
         console.error("Error obteniendo reservas:", err);
@@ -496,7 +504,50 @@ const PanelTutor = () => {
     fetchCursos().then(fetchReservas);
   }, []);
 
-  // Filtrar pendientes SOLO de cursos del tutor (porque el endpoint /reservas?estado=pendiente trae de todo)
+  // ✅ Hidratar nombres para confirmadas (igual que tu versión buena)
+  useEffect(() => {
+    const run = async () => {
+      const list = Array.isArray(reservasConfirmadas) ? reservasConfirmadas : [];
+
+      // 1) Embebidos
+      const dict = {};
+      list.forEach((r) => {
+        const rawU = r?.id_usuario;
+        if (rawU && typeof rawU === "object") {
+          const id = normalizeId(rawU?._id || rawU?.id);
+          if (id) dict[id] = getNombreFromUsuario(rawU);
+        }
+      });
+
+      // 2) Strings -> fetch
+      const ids = Array.from(new Set(list.map(getEstudianteIdFromReserva).filter(Boolean))).filter(
+        (id) => !dict[id]
+      );
+
+      if (ids.length === 0) {
+        setNombresUsuariosConfirmadas(dict);
+        return;
+      }
+
+      await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const resp = await usuariosAPI.getUsuario(id);
+            const u = getUsuarioFromResp(resp?.data);
+            dict[id] = getNombreFromUsuario(u);
+          } catch {
+            dict[id] = "Estudiante";
+          }
+        })
+      );
+
+      setNombresUsuariosConfirmadas(dict);
+    };
+
+    run();
+  }, [reservasConfirmadas]);
+
+  // Filtrar pendientes SOLO de cursos del tutor
   const reservasPendientesTutor = useMemo(() => {
     const ids = new Set((cursos || []).map((c) => String(c.id)));
     return (reservasPendientes || []).filter((r) => {
@@ -521,7 +572,7 @@ const PanelTutor = () => {
       showNotification({
         type: "warning",
         title: "Límite de cursos alcanzado",
-        message: `Has alcanzado el límite de 3 cursos gratuitos. Adquiere un plan para crear más cursos.`,
+        message: "Has alcanzado el límite de 3 cursos gratuitos. Adquiere un plan para crear más cursos.",
         duration: 6000,
       });
       navigate("/planes");
@@ -556,9 +607,7 @@ const PanelTutor = () => {
   };
 
   const changeMonth = (delta) => {
-    setCurrentMonthDate((prev) =>
-      new Date(prev.getFullYear(), prev.getMonth() + delta, 1)
-    );
+    setCurrentMonthDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
   };
 
   // --------- Calendario + próximas clases ----------
@@ -577,10 +626,7 @@ const PanelTutor = () => {
     return acc;
   }, {});
 
-  const monthLabel = currentMonthDate.toLocaleDateString(undefined, {
-    month: "long",
-    year: "numeric",
-  });
+  const monthLabel = currentMonthDate.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
   const todayLabel = new Date().toLocaleDateString(undefined, {
     weekday: "long",
@@ -594,7 +640,7 @@ const PanelTutor = () => {
     .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
     .slice(0, 5);
 
-  // --------- Handlers del modal (actualiza listas en pantalla) ----------
+  // --------- Refresh reservas ----------
   const refreshReservas = async () => {
     try {
       const { data: conf } = await reservasAPI.getReservasConfirmadasTutor();
@@ -664,7 +710,7 @@ const PanelTutor = () => {
                         Cursos
                       </button>
 
-                      {/* ✅ NUEVO: abrir solicitudes */}
+                      {/* Solicitudes */}
                       <button
                         className="action-btn"
                         type="button"
@@ -729,25 +775,28 @@ const PanelTutor = () => {
                           })
                         : "";
 
-                      const est = reserva.id_usuario || {};
+                      // ✅ CURSO: map + fallback
+                      const cursoId = getCursoIdFromReserva(reserva);
+                      const curso = cursosMap.get(String(cursoId));
+                      const cursoNombre =
+                        curso?.titulo || curso?.nombre || reserva?.id_curso?.nombre || "Curso";
+
+                      // ✅ ESTUDIANTE: obj o string (cache)
+                      const rawU = reserva?.id_usuario;
+                      const estId = getEstudianteIdFromReserva(reserva);
                       const nombreEstudiante =
-                        getNombreFromUsuario(est) ||
-                        (typeof est === "string"
-                          ? `Estudiante (${String(est).slice(-6)})`
-                          : "Estudiante");
+                        rawU && typeof rawU === "object"
+                          ? getNombreFromUsuario(rawU)
+                          : (estId ? nombresUsuariosConfirmadas?.[estId] : null) || "Estudiante";
 
                       return (
                         <div className="clase-item" key={reserva.id || reserva._id}>
                           <div className="clase-info">
-                            <h3>{reserva.id_curso?.nombre || "Curso"}</h3>
+                            <h3>{cursoNombre}</h3>
                             <p className="clase-details">
-                              {fechaTexto && horaTexto
-                                ? `${fechaTexto} · ${horaTexto}`
-                                : "Sin fecha definida"}
+                              {fechaTexto && horaTexto ? `${fechaTexto} · ${horaTexto}` : "Sin fecha definida"}
                             </p>
-                            <p className="clase-description">
-                              Estudiante: {nombreEstudiante}
-                            </p>
+                            <p className="clase-description">Estudiante: {nombreEstudiante}</p>
                           </div>
                         </div>
                       );
@@ -759,31 +808,18 @@ const PanelTutor = () => {
               {/* Mis cursos */}
               <div
                 id="tutor-cursos-section"
-                style={{
-                  marginTop: 32,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 16,
-                }}
+                style={{ marginTop: 32, display: "flex", flexDirection: "column", gap: 16 }}
               >
                 <h3 style={{ margin: 0 }}>Mis cursos</h3>
 
-                {loadingCursos && (
-                  <p style={{ fontSize: 14, color: "#7f8c8d" }}>
-                    Cargando cursos...
-                  </p>
-                )}
+                {loadingCursos && <p style={{ fontSize: 14, color: "#7f8c8d" }}>Cargando cursos...</p>}
 
                 {!loadingCursos && errorCursos && (
-                  <p style={{ fontSize: 14, color: "#e74c3c" }}>
-                    {errorCursos}
-                  </p>
+                  <p style={{ fontSize: 14, color: "#e74c3c" }}>{errorCursos}</p>
                 )}
 
                 {!loadingCursos && !errorCursos && cursos.length === 0 && (
-                  <p style={{ fontSize: 14, color: "#7f8c8d" }}>
-                    Aún no tienes cursos creados.
-                  </p>
+                  <p style={{ fontSize: 14, color: "#7f8c8d" }}>Aún no tienes cursos creados.</p>
                 )}
 
                 {!loadingCursos && !errorCursos && cursos.length > 0 && (
@@ -833,9 +869,18 @@ const PanelTutor = () => {
                       const tooltip = tieneReserva
                         ? reservasDia
                             .map((r) => {
-                              const est = r.id_usuario || {};
-                              const nombreEstudiante = getNombreFromUsuario(est);
-                              return `${r.id_curso?.nombre || "Curso"} - Estudiante: ${nombreEstudiante}`;
+                              const cId = getCursoIdFromReserva(r);
+                              const c = cursosMap.get(String(cId));
+                              const cursoNombre = c?.titulo || c?.nombre || r?.id_curso?.nombre || "Curso";
+
+                              const rawU = r?.id_usuario;
+                              const estId = getEstudianteIdFromReserva(r);
+                              const nombreEstudiante =
+                                rawU && typeof rawU === "object"
+                                  ? getNombreFromUsuario(rawU)
+                                  : (estId ? nombresUsuariosConfirmadas?.[estId] : null) || "Estudiante";
+
+                              return `${cursoNombre} - Estudiante: ${nombreEstudiante}`;
                             })
                             .join("\n")
                         : "";
@@ -843,9 +888,7 @@ const PanelTutor = () => {
                       return (
                         <div
                           key={day}
-                          className={
-                            "calendar-day" + (tieneReserva ? " calendar-day-reservado" : "")
-                          }
+                          className={"calendar-day" + (tieneReserva ? " calendar-day-reservado" : "")}
                           title={tooltip}
                         >
                           {day}
@@ -864,7 +907,6 @@ const PanelTutor = () => {
                   </button>
                 </div>
 
-                {/* Extras opcionales */}
                 <div style={{ marginTop: 12, display: "flex", gap: 10 }}>
                   <button className="calendar-btn" type="button" onClick={handleProfile}>
                     Perfil
@@ -877,7 +919,7 @@ const PanelTutor = () => {
             </div>
           </div>
 
-          {/* Botón flotante opcional (si quieres más acceso al modal) */}
+          {/* Botón flotante */}
           {reservasPendientesTutor.length > 0 && (
             <button
               type="button"
