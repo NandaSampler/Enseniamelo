@@ -35,11 +35,8 @@ public class MsCursoIntegration {
         this.mapper = mapper;
     }
 
-    /**
-     * Obtiene información de un curso por su ID
-     */
     public Mono<CursoDTO> getCurso(String cursoId) {
-        String url = CURSO_SERVICE_URL + "/v1/cursos/" + cursoId;
+        String url = CURSO_SERVICE_URL + "/api/v1/cursos/" + cursoId;
         LOGGER.debug("Llamando getCurso API en URL: {}", url);
 
         return webClient.get()
@@ -50,11 +47,8 @@ public class MsCursoIntegration {
                 .onErrorMap(WebClientResponseException.class, this::handleException);
     }
 
-    /**
-     * Obtiene todos los cursos de un tutor
-     */
     public Flux<CursoDTO> getCursosByTutor(String tutorId) {
-        String url = CURSO_SERVICE_URL + "/v1/cursos/tutor/" + tutorId;
+        String url = CURSO_SERVICE_URL + "/api/v1/cursos?tutor_id=" + tutorId;
         LOGGER.debug("Llamando getCursosByTutor API en URL: {}", url);
 
         return webClient.get()
@@ -65,11 +59,8 @@ public class MsCursoIntegration {
                 .onErrorMap(WebClientResponseException.class, this::handleException);
     }
 
-    /**
-     * Actualiza el estado de verificación de un curso mediante llamada HTTP directa
-     */
     public Mono<Void> updateCursoVerificacion(String cursoId, String estadoVerificacion) {
-        String url = CURSO_SERVICE_URL + "/v1/cursos/" + cursoId + "/verificacion";
+        String url = CURSO_SERVICE_URL + "/api/v1/cursos/" + cursoId + "/verificacion";
         LOGGER.debug("Actualizando verificación del curso {} a estado: {}", cursoId, estadoVerificacion);
 
         CursoVerificacionUpdate update = new CursoVerificacionUpdate(estadoVerificacion);
@@ -85,9 +76,6 @@ public class MsCursoIntegration {
                 .onErrorMap(WebClientResponseException.class, this::handleException);
     }
 
-    /**
-     * Maneja excepciones de WebClient
-     */
     private Throwable handleException(Throwable ex) {
         if (!(ex instanceof WebClientResponseException)) {
             LOGGER.warn("Error inesperado: {}", ex.toString());
@@ -115,9 +103,6 @@ public class MsCursoIntegration {
         }
     }
 
-    /**
-     * Extrae mensaje de error de la respuesta
-     */
     private String getErrorMessage(WebClientResponseException ex) {
         try {
             return mapper.readValue(ex.getResponseBodyAsString(), HttpErrorInfo.class)
@@ -127,9 +112,6 @@ public class MsCursoIntegration {
         }
     }
 
-    /**
-     * DTO interno para actualizar verificación de curso
-     */
     private static class CursoVerificacionUpdate {
         private final String estadoVerificacion;
 
