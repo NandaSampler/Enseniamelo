@@ -5,69 +5,106 @@ import AdminDetalle from "./AdminDetalle";
 import { verificarAPI } from "../../api/verificar";
 import PlanesAdmin from "../Pagos/PlanesAdmin";
 
-const mapSolicitudFromApi = (raw) => {
-  const user = raw.id_usuario || {};
-  const perfil = raw.id_perfil_tutor || {};
-  const curso = raw.id_curso || {};
 
-  const nombreCompleto = [user.nombre, user.apellido]
+const mapSolicitudCompletaFromApi = (raw) => {
+  const solicitud = raw.solicitud || {};
+  const usuario = raw.usuario || {};
+  const tutor = raw.tutor || {};
+  const curso = raw.curso || {};
+
+  const nombreCompleto = [usuario.nombre, usuario.apellido]
     .filter(Boolean)
     .join(" ")
     .trim();
 
+  const fechaCreacion = solicitud.creado
+    ? new Date(solicitud.creado).toLocaleDateString("es-BO", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
+
+  const precioReserva = curso.precio_reserva || 0;
+  const verificacion_estado = curso.verificacion_estado || "pendiente";
+  const precioFormateado = precioReserva > 0
+    ? `${precioReserva} Bs/hora`
+    : "Sin precio definido";
+  const portadaUrl = curso.portada_url ;
+  const fotos = Array.isArray(curso.fotos) 
+    ? curso.fotos 
+    : [];
+
+
   return {
-    id_verificar: raw._id,
-    estado: raw.estado,
-    comentario: raw.comentario || "",
-    foto_ci: raw.foto_ci
-      ? `/static/verificaciones/${raw.foto_ci}`
-      : "",
-    archivos_verificacion: Array.isArray(raw.archivos)
-      ? raw.archivos.map((f) => `/static/verificaciones/${f}`)
+    id_verificar: solicitud.id,
+    estado: solicitud.estado,
+    comentario: solicitud.comentario || "",
+    foto_ci: solicitud.fotoCi || solicitud.foto_ci || "",
+    archivos_verificacion: Array.isArray(solicitud.archivos)
+      ? solicitud.archivos
       : [],
-    creado: raw.creado,
-    decidido: raw.decidido,
-    actualizado: raw.decidido || raw.creado,
+    creado: fechaCreacion,
+    decidido: solicitud.decidido,
+    actualizado: solicitud.actualizado || solicitud.creado,
+    
+    // Información del curso completa
     curso: {
-      id_curso: curso._id || "verificacion-" + raw._id,
-      nombre: curso.nombre || nombreCompleto || "Solicitud de verificación",
-      descripcion:
-        curso.descripcion ||
-        raw.comentario ||
-        "Solicitud de verificación de documentos del tutor.",
+      id_curso: curso.id || solicitud.idCurso || "Sin ID",
+      nombre: curso.nombre || curso.titulo || `Curso - ID: ${curso.id || solicitud.idCurso}`,
+      titulo: curso.titulo || curso.nombre || "Sin título",
+      descripcion: curso.descripcion || "Sin descripción disponible",
       modalidad: curso.modalidad || "Virtual",
-      fotos: raw.foto_ci
-        ? [`/static/verificaciones/${raw.foto_ci}`]
-        : [],
-      creado: curso.creado || raw.creado,
-      actualizado: curso.actualizado || raw.decidido || raw.creado,
+      precio: precioFormateado,
+      precio_reserva: precioReserva,
+      portada_url: portadaUrl,
+      fotos: fotos,
+      creado: curso.creado || solicitud.creado,
+      actualizado: curso.actualizado || solicitud.actualizado,
       necesita_reserva:
-        typeof curso.necesita_reserva === "boolean"
-          ? curso.necesita_reserva
-          : false,
-      precio_reserva: curso.precio_reserva ?? 0,
+        typeof curso.necesitaReserva === "boolean"
+          ? curso.necesitaReserva
+          : curso.necesita_reserva === true,
       categoriasNombres: Array.isArray(curso.categorias)
-        ? curso.categorias
-            .map((c) => (typeof c === "string" ? c : c.nombre))
-            .filter(Boolean)
+        ? curso.categorias.map((c) => (typeof c === "string" ? c : c.nombre || c))
         : [],
-      attribute_10: 0,
+      verificacion_estado: verificacion_estado,
+      estado: curso.estado || "activo",
+      activo: typeof curso.activo === "boolean" ? curso.activo : true,
     },
+    
+    // Información del tutor completa
     perfil_tutor: {
-      id_tutor: perfil._id,
-      ci: perfil.ci,
-      verificado: perfil.verificado,
-      clasificacion: perfil.clasificacion,
-      biografia: perfil.biografia,
-      creacion: perfil.creacion,
-      actualizado: perfil.actualizado,
-      nombre_tutor: nombreCompleto || "Tutor",
+      id_tutor: tutor.id || solicitud.idPerfilTutor,
+      ci: tutor.ci || "Sin CI",
+      verificado: tutor.verificado || "pendiente",
+      clasificacion: tutor.clasificacion || 0,
+      biografia: tutor.biografia || "Sin biografía disponible",
+      creacion: tutor.creacion,
+      actualizado: tutor.actualizado,
+      nombre_tutor: tutor.nombreCompleto || nombreCompleto || "Tutor",
+      email: tutor.email || usuario.email || "",
+      telefono: tutor.telefono || usuario.telefono || "",
+      foto: tutor.foto || usuario.foto || "",
+    },
+    
+    // Información del usuario
+    usuario: {
+      id: usuario.id || solicitud.idUsuario,
+      nombre: usuario.nombre || "",
+      apellido: usuario.apellido || "",
+      email: usuario.email || "",
+      telefono: usuario.telefono || "",
+      foto: usuario.foto || "",
+      rol: usuario.rol || "",
     },
   };
 };
 
 const PanelAdmin = () => {
-  const [activeTab, setActiveTab] = useState("solicitudes"); // 'solicitudes' | 'planes'
+  const [activeTab, setActiveTab] = useState("solicitudes");
   const [filter, setFilter] = useState("todos");
   const [solicitudes, setSolicitudes] = useState([]);
   const [selectedSolicitud, setSelectedSolicitud] = useState(null);
@@ -75,48 +112,72 @@ const PanelAdmin = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchSolicitudes = async () => {
-      setLoading(true);
-      setError("");
-      try {
-        const { data } = await verificarAPI.getSolicitudes();
-        if (data?.success && Array.isArray(data.solicitudes)) {
-          setSolicitudes(data.solicitudes.map(mapSolicitudFromApi));
-        } else {
-          setError("No se pudieron cargar las solicitudes.");
+    if (activeTab === "solicitudes") {
+      fetchSolicitudes();
+    }
+  }, [activeTab]);
+
+  const fetchSolicitudes = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const { data } = await verificarAPI.getSolicitudesCompletas();
+      
+      if (data?.success && Array.isArray(data.solicitudes)) {
+        const solicitudesMapeadas = data.solicitudes.map(mapSolicitudCompletaFromApi);
+        setSolicitudes(solicitudesMapeadas);
+        console.log("Solicitudes completas cargadas:", solicitudesMapeadas);
+      } else {
+        setError("No se pudieron cargar las solicitudes.");
+      }
+    } catch (err) {
+      console.error("Error cargando solicitudes de verificación:", err);
+      if (err?.response?.status === 404) {
+        console.warn("Endpoint /completas no disponible, usando endpoint básico como fallback");
+        try {
+          const { data } = await verificarAPI.getSolicitudes();
+          if (data?.success && Array.isArray(data.solicitudes)) {
+            setSolicitudes(data.solicitudes);
+          }
+        } catch (fallbackErr) {
+          setError("Error al obtener las solicitudes de verificación.");
         }
-      } catch (err) {
-        console.error("Error cargando solicitudes de verificación:", err);
+      } else {
         setError(
           err?.response?.data?.message ||
             "Error al obtener las solicitudes de verificación."
         );
-      } finally {
-        setLoading(false);
       }
-    };
-
-    fetchSolicitudes();
-  }, []);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChangeEstado = async (id_verificar, nuevoEstado, nuevoComentario) => {
     try {
-      const payload = { estado: nuevoEstado };
-      if (typeof nuevoComentario === "string") {
-        payload.comentario = nuevoComentario;
+      let response;
+      const estadoNormalizado = nuevoEstado.toLowerCase();
+      if (estadoNormalizado === "aceptado" || estadoNormalizado === "aprobado") {
+        response = await verificarAPI.aprobarSolicitud(id_verificar, nuevoComentario || "");
+      } else if (estadoNormalizado === "rechazado") {
+        response = await verificarAPI.rechazarSolicitud(
+          id_verificar,
+          nuevoComentario || "Solicitud rechazada"
+        );
+      } else {
+        throw new Error("Estado no válido");
       }
 
-      const { data } = await verificarAPI.cambiarEstado(id_verificar, payload);
-      if (data?.success && data.solicitud) {
-        const actualizada = mapSolicitudFromApi(data.solicitud);
-
-        setSolicitudes((prev) =>
-          prev.map((s) => (s.id_verificar === id_verificar ? actualizada : s))
-        );
-
-        setSelectedSolicitud((prev) =>
-          prev && prev.id_verificar === id_verificar ? actualizada : prev
-        );
+      if (response?.data?.success) {
+        await fetchSolicitudes();
+        if (selectedSolicitud?.id_verificar === id_verificar) {
+          setSelectedSolicitud(null);
+        }
+        const mensaje = estadoNormalizado === "aceptado" || estadoNormalizado === "aprobado"
+          ? "Solicitud aprobada exitosamente"
+          : "Solicitud rechazada exitosamente";
+        
+        alert(mensaje);
       }
     } catch (err) {
       console.error("Error actualizando estado de solicitud:", err);
@@ -127,9 +188,26 @@ const PanelAdmin = () => {
     }
   };
 
-  const filteredSolicitudes = solicitudes.filter((sol) =>
-    filter === "todos" ? true : sol.estado === filter
-  );
+  const filteredSolicitudes = solicitudes.filter((sol) => {
+    if (filter === "todos") return true;
+    
+    // Normalizar estados para la comparación
+    const estadoNormalizado = sol.estado?.toLowerCase();
+    const filterNormalizado = filter.toLowerCase();
+    
+    // Manejar variaciones de estados
+    if (filterNormalizado === "aceptado" || filterNormalizado === "aprobado") {
+      return estadoNormalizado === "aceptado" || estadoNormalizado === "aprobado";
+    }
+    if (filterNormalizado === "pendiente") {
+      return estadoNormalizado === "pendiente";
+    }
+    if (filterNormalizado === "rechazado") {
+      return estadoNormalizado === "rechazado";
+    }
+    
+    return estadoNormalizado === filterNormalizado;
+  });
 
   return (
     <div className="admin-panel-page">
@@ -182,7 +260,7 @@ const PanelAdmin = () => {
               }
               onClick={() => setFilter("todos")}
             >
-              Todos
+              Todos {solicitudes.length > 0 && `(${solicitudes.length})`}
             </button>
 
             <button
@@ -193,6 +271,9 @@ const PanelAdmin = () => {
               onClick={() => setFilter("pendiente")}
             >
               Pendientes
+              {solicitudes.length > 0 && ` (${
+                solicitudes.filter((s) => s.estado?.toLowerCase() === "pendiente").length
+              })`}
             </button>
             <button
               className={
@@ -202,6 +283,13 @@ const PanelAdmin = () => {
               onClick={() => setFilter("aceptado")}
             >
               Aceptados
+              {solicitudes.length > 0 && ` (${
+                solicitudes.filter(
+                  (s) =>
+                    s.estado?.toLowerCase() === "aceptado" ||
+                    s.estado?.toLowerCase() === "aprobado"
+                ).length
+              })`}
             </button>
             <button
               className={
@@ -211,6 +299,9 @@ const PanelAdmin = () => {
               onClick={() => setFilter("rechazado")}
             >
               Rechazados
+              {solicitudes.length > 0 && ` (${
+                solicitudes.filter((s) => s.estado?.toLowerCase() === "rechazado").length
+              })`}
             </button>
           </div>
         )}
@@ -233,7 +324,6 @@ const PanelAdmin = () => {
                 "Ver documentos de solicitud",
                 selectedSolicitud.id_verificar
               );
-              // aquí luego vas a abrir modal / nueva vista con documentos
             }}
             onAddComment={() => {
               const nuevoComentario = window.prompt(
@@ -254,13 +344,22 @@ const PanelAdmin = () => {
         {activeTab === "solicitudes" && !selectedSolicitud && (
           <section className="admin-panel-list">
             {loading && (
-              <p className="text-center text-sm text-slate-500 py-6">
-                Cargando solicitudes...
-              </p>
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <p className="ml-4 text-slate-600">Cargando solicitudes...</p>
+              </div>
             )}
 
             {!loading && error && (
-              <p className="text-center text-sm text-red-500 py-6">{error}</p>
+              <div className="text-center py-8">
+                <p className="text-red-500 mb-4">{error}</p>
+                <button
+                  onClick={fetchSolicitudes}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Reintentar
+                </button>
+              </div>
             )}
 
             {!loading && !error && (
@@ -280,9 +379,24 @@ const PanelAdmin = () => {
                     />
                   ))
                 ) : (
-                  <p className="text-center text-sm text-slate-500 py-6">
-                    No hay solicitudes en esta categoría.
-                  </p>
+                  <div className="text-center py-12">
+                    <svg
+                      className="mx-auto h-12 w-12 text-slate-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    <p className="mt-4 text-slate-500">
+                      No hay solicitudes en esta categoría.
+                    </p>
+                  </div>
                 )}
               </>
             )}

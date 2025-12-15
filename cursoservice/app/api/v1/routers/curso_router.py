@@ -4,6 +4,8 @@ from __future__ import annotations
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query, status, Header, HTTPException
+from pydantic import BaseModel
+from app.core.course_quota_guard import enforce_course_quota  
 
 from app.schemas.curso import CursoCreate, CursoCreateIn, CursoUpdate, CursoOut
 from app.schemas.categoria import CategoriaOut
@@ -37,6 +39,10 @@ def list_cursos(
 
 @router.get("/{curso_id}", response_model=CursoOut)
 def get_curso(curso_id: str, service: CursoService = Depends(get_curso_service)):
+    """
+    Obtiene un curso por su ID.
+    Este endpoint es usado por usuarios-service para obtener información del curso.
+    """
     try:
         return service.get(curso_id)
     except KeyError:
@@ -46,6 +52,7 @@ def get_curso(curso_id: str, service: CursoService = Depends(get_curso_service))
 @router.post("/", response_model=CursoOut, status_code=status.HTTP_201_CREATED)
 async def create_curso(
     payload: CursoCreateIn,
+    _quota: None = Depends(enforce_course_quota),
     service: CursoService = Depends(get_curso_service),
     authorization: Optional[str] = Header(None),
 ):
@@ -85,6 +92,51 @@ async def update_curso(
     except Exception as e:
         logger.exception("update_curso unexpected error: %s", str(e))
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+class CursoVerificacionUpdate(BaseModel):
+    estadoVerificacion: str 
+
+
+@router.put("/{curso_id}/verificacion", status_code=status.HTTP_204_NO_CONTENT)
+async def update_verificacion_estado(
+    curso_id: str,
+    payload: CursoVerificacionUpdate,
+    service: CursoService = Depends(get_curso_service),
+):
+
+    try:
+        estado_map = {
+            "APROBADO": "aceptado",
+            "RECHAZADO": "rechazado",
+            "aceptado": "aceptado",
+            "rechazado": "rechazado",
+        }
+        
+        nuevo_estado = estado_map.get(payload.estadoVerificacion)
+        if not nuevo_estado:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Estado de verificación inválido: {payload.estadoVerificacion}"
+            )
+        
+        update_payload = CursoUpdate(verificacion_estado=nuevo_estado)
+        await service.update(curso_id, update_payload, token=None)
+        
+        logger.info(
+            "Estado de verificación actualizado para curso %s: %s", 
+            curso_id, 
+            nuevo_estado
+        )
+        return None
+        
+    except KeyError:
+        raise HTTPException(status_code=404, detail="curso no encontrado")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Error actualizando verificación del curso %s: %s", curso_id, str(e))
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 
 @router.delete("/{curso_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -1,43 +1,73 @@
 .admin-card {
-    @apply w-full bg-white border border-slate-200 rounded-xl shadow-sm flex items-center justify-between px-4 py-3 transition hover:shadow-md;
+    @apply w-full bg-white border border-slate-200 rounded-xl shadow-sm 
+           flex items-start justify-between px-4 py-3 gap-4
+           transition hover:shadow-md;
 }
 
 /* Columna izquierda (avatar + info) */
 .admin-card-left {
-    @apply flex items-center gap-4 min-w-0;
+    @apply flex items-start gap-3 min-w-0 flex-1;
 }
 
 .admin-card-avatar {
-    @apply w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center;
+    @apply w-10 h-10 rounded-full bg-gradient-to-br from-sky-400 to-sky-600 
+           flex items-center justify-center flex-shrink-0 shadow-sm;
 }
 
 .admin-card-avatar-icon {
-    @apply text-xl text-slate-400;
+    @apply text-lg text-white;
 }
 
 .admin-card-info {
-    @apply flex flex-col gap-1 min-w-0;
+    @apply flex flex-col gap-1 min-w-0 flex-1;
+}
+
+.admin-card-header {
+    @apply flex items-center gap-2 mb-0.5;
 }
 
 .admin-card-title {
-    @apply text-sm md:text-base font-semibold text-slate-900;
+    @apply text-base font-semibold text-slate-900 m-0;
+}
+
+.admin-card-status {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full 
+           text-[10px] font-medium whitespace-nowrap;
+}
+
+.admin-card-status-pendiente {
+    @apply bg-amber-100 text-amber-700 border border-amber-300;
+}
+
+.admin-card-status-aceptado {
+    @apply bg-emerald-100 text-emerald-700 border border-emerald-300;
+}
+
+.admin-card-status-rechazado {
+    @apply bg-red-100 text-red-700 border border-red-300;
 }
 
 .admin-card-meta {
-    @apply text-[11px] md:text-xs text-slate-500;
+    @apply text-xs text-slate-600 m-0;
 }
 
 .admin-card-description {
-    @apply text-[11px] md:text-xs text-slate-600;
+    @apply text-xs text-slate-500 line-clamp-1 m-0;
+}
+
+.admin-card-date {
+    @apply text-[10px] text-slate-400 m-0;
 }
 
 /* Acciones derecha */
 .admin-card-actions {
-    @apply flex items-center gap-2 ml-4;
+    @apply flex items-center gap-2 flex-shrink-0;
 }
 
 .admin-card-btn {
-    @apply px-4 py-1.5 rounded-full text-[11px] md:text-xs font-medium focus:outline-none focus:ring-2 focus:ring-offset-1 transition whitespace-nowrap;
+    @apply px-3 py-1.5 rounded-full text-xs font-medium 
+           focus:outline-none focus:ring-2 focus:ring-offset-1 
+           transition whitespace-nowrap;
 }
 
 .admin-card-btn-secondary {
@@ -50,4 +80,14 @@
 
 .admin-card-btn-primary {
     @apply bg-slate-900 text-white border border-slate-900 hover:bg-slate-800;
+}
+
+@media (max-width: 768px) {
+    .admin-card {
+        @apply flex-col items-start;
+    }
+
+    .admin-card-actions {
+        @apply w-full justify-end;
+    }
 }

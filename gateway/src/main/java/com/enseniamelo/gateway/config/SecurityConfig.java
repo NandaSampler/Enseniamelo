@@ -50,6 +50,8 @@ public class SecurityConfig {
         }) // habilita CORS (se apoya en CorsWebFilter)
         .csrf(csrf -> csrf.disable())
         .authorizeExchange(auth -> auth
+            //Stripe
+            .pathMatchers(HttpMethod.POST, "/ms-payments/v1/stripe/webhook").permitAll()
             // Públicos generales
             .pathMatchers("/*/swagger-ui/**", "/*/swagger-ui.html").permitAll()
             .pathMatchers("/*/webjars/**").permitAll()
@@ -98,6 +100,8 @@ public class SecurityConfig {
             .pathMatchers("/ms-payments/v1/pagos/**").hasRole("ADMIN")
             .pathMatchers("/ms-payments/v1/planes/**").hasAnyRole("USER", "TUTOR", "ADMIN")
             .pathMatchers("/ms-payments/v1/suscripciones/**").hasAnyRole("USER", "TUTOR", "ADMIN")
+
+            
 
             // Documentación de cursos pública
             .pathMatchers("/curso/docs", "/curso/redoc", "/curso/openapi.json").permitAll()

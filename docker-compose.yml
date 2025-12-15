@@ -3,6 +3,7 @@ version: '3.8'
 services:
   eureka-server:
     image: enseniamelo-eureka-server:latest
+    build: ./eureka-server
     ports:
       - "8761:8761"
     mem_limit: 512m
@@ -53,6 +54,7 @@ services:
       - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
       - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
       - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - CURSOS_SERVICE_URL=http://cursoservice:8000
     depends_on:
       config-server:
         condition: service_healthy
@@ -173,6 +175,10 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - USUARIOS_SERVICE_URL=http://usuarios:8081
       - UPLOAD_DIR=/app/uploads
+      - PAYMENTS_SERVICE_URL=http://payments-service:8002
+      - FREE_COURSE_LIMIT=3
+      - COURSE_QUOTA_FAIL_OPEN=true
+      - PAYMENTS_VERIFY_TLS=false
     volumes:
       - ./cursoservice/uploads:/app/uploads
     ports:
