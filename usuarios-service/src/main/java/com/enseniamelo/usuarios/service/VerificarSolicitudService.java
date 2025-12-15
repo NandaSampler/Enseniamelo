@@ -35,9 +35,6 @@ public class VerificarSolicitudService {
     private final PerfilTutorMapper perfilTutorMapper;
     private final MsCursoIntegration cursoIntegration;
 
-    /**
-     * Crea solicitud para un curso - llamado por curso-service
-     */
     public Mono<VerificarSolicitudDTO> crearSolicitudParaCurso(
             String idUsuario,
             String idPerfilTutor,
@@ -86,10 +83,6 @@ public class VerificarSolicitudService {
                 });
     }
 
-    /**
-     * Obtiene todas las solicitudes con información completa (usuario, tutor y curso)
-     * Para el panel de administración
-     */
     public Flux<VerificarSolicitudCompleta> obtenerTodasCompletas() {
         log.info("Obteniendo todas las solicitudes con información completa");
         
@@ -98,9 +91,6 @@ public class VerificarSolicitudService {
                 .doOnComplete(() -> log.info("Listado completo de solicitudes completado"));
     }
 
-    /**
-     * Busca solicitud por ID con información completa
-     */
     public Mono<VerificarSolicitudCompleta> buscarPorIdCompleta(String id) {
         log.info("Buscando solicitud completa con id: {}", id);
         
@@ -112,10 +102,6 @@ public class VerificarSolicitudService {
                 }));
     }
 
-    /**
-     * Enriquece una solicitud con información de usuario, tutor y curso
-     * El curso es OPCIONAL - si no se puede obtener, se devuelve un DTO vacío
-     */
     private Mono<VerificarSolicitudCompleta> enrichSolicitud(VerificarSolicitud solicitud) {
         Mono<UsuarioDTO> usuarioMono = usuarioRepository.findById(solicitud.getIdUsuario())
                 .map(usuarioMapper::entityToDto)
@@ -129,35 +115,51 @@ public class VerificarSolicitudService {
                         solicitud.getIdPerfilTutor(), error.getMessage()))
                 .onErrorReturn(new PerfilTutorDTO());
 
-        // IMPORTANTE: El curso es opcional - si falla, devolvemos un DTO vacío
         Mono<CursoDTO> cursoMono = cursoIntegration.getCurso(solicitud.getIdCurso())
+                .doOnSuccess(curso -> {
+                    log.debug("Curso obtenido exitosamente: {} - {} - {}", 
+                            curso.getId(), 
+                            curso.getNombre(), 
+                            curso.getDescripcion());
+                })
                 .doOnError(error -> log.warn("No se pudo obtener información del curso {}: {}. " +
                         "Esto es normal si el servicio de cursos no tiene el endpoint implementado.", 
                         solicitud.getIdCurso(), error.getMessage()))
                 .onErrorResume(error -> {
-                    // Crear un DTO básico con la información que tenemos
-                    CursoDTO cursoBasico = new CursoDTO();
-                    cursoBasico.setId(solicitud.getIdCurso());
-                    cursoBasico.setNombre("Curso - ID: " + solicitud.getIdCurso());
-                    cursoBasico.setEstadoVerificacion(solicitud.getEstado());
+                    // Crear un DTO básico con la información que tenemos de la solicitud
+                    CursoDTO cursoBasico = CursoDTO.builder()
+                            .id(solicitud.getIdCurso())
+                            .nombre("Curso (información no disponible)")
+                            .descripcion("No se pudo obtener la descripción del curso")
+                            .modalidad("Virtual")
+                            .precioReserva(0.0f)
+                            .estadoVerificacion(solicitud.getEstado())
+                            .activo(true)
+                            .build();
+                    
+                    log.info("Usando información básica para curso {}", solicitud.getIdCurso());
                     return Mono.just(cursoBasico);
                 });
 
         return Mono.zip(usuarioMono, tutorMono, cursoMono)
                 .map(tuple -> {
                     VerificarSolicitudDTO solicitudDTO = solicitudMapper.entityToDto(solicitud);
+                    
+                    CursoDTO curso = tuple.getT3();
+                    log.debug("Mapeando solicitud completa - Curso: {} | Nombre: {} | Descripción: {}", 
+                            curso.getId(), 
+                            curso.getNombre(), 
+                            curso.getDescripcion());
+                    
                     return new VerificarSolicitudCompleta(
                             solicitudDTO,
-                            tuple.getT1(), // usuario
-                            tuple.getT2(), // tutor
-                            tuple.getT3()  // curso (puede estar vacío)
+                            tuple.getT1(), 
+                            tuple.getT2(), 
+                            curso          
                     );
                 });
     }
 
-    /**
-     * Aprueba una solicitud y notifica al servicio de cursos
-     */
     public Mono<VerificarSolicitudDTO> aprobarSolicitud(String id, String comentario) {
         log.info("Aprobando solicitud: {}", id);
 
@@ -204,9 +206,7 @@ public class VerificarSolicitudService {
                 });
     }
 
-    /**
-     * Rechaza una solicitud y notifica al servicio de cursos
-     */
+
     public Mono<VerificarSolicitudDTO> rechazarSolicitud(String id, String comentario) {
         log.info("Rechazando solicitud: {}", id);
 
@@ -240,7 +240,6 @@ public class VerificarSolicitudService {
                 });
     }
 
-    // Métodos originales sin cambios
     public Mono<VerificarSolicitudDTO> buscarPorCurso(String idCurso) {
         log.info("Buscando solicitud del curso: {}", idCurso);
         return solicitudRepository.findByIdCurso(idCurso)
@@ -313,9 +312,6 @@ public class VerificarSolicitudService {
         return crearSolicitudParaCurso(idUsuario, idPerfilTutor, idCurso, solicitudDTO);
     }
 
-    /**
-     * Clase interna para solicitud completa con toda la información
-     */
     @lombok.Data
     @lombok.AllArgsConstructor
     @lombok.NoArgsConstructor

@@ -56,6 +56,12 @@ public class CursoDTO {
 
     @Schema(description = "Estado de verificación del curso")
     private String estadoVerificacion;
+    
+    @Schema(description = "Estado del curso", example = "activo")
+    private String estado;
+    
+    @Schema(description = "Si el curso está activo")
+    private Boolean activo;
 
     @Schema(description = "Fecha de creación del curso")
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)

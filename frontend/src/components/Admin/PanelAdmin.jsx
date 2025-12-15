@@ -5,11 +5,17 @@ import AdminDetalle from "./AdminDetalle";
 import { verificarAPI } from "../../api/verificar";
 import PlanesAdmin from "../Pagos/PlanesAdmin";
 
+/**
+ * Mapea la respuesta del endpoint /completas al formato esperado por el frontend
+ */
 const mapSolicitudCompletaFromApi = (raw) => {
+  // Extraer los objetos anidados
   const solicitud = raw.solicitud || {};
   const usuario = raw.usuario || {};
   const tutor = raw.tutor || {};
   const curso = raw.curso || {};
+
+  console.log("🔍 Datos raw recibidos:", { solicitud, usuario, tutor, curso });
 
   const nombreCompleto = [usuario.nombre, usuario.apellido]
     .filter(Boolean)
@@ -26,8 +32,10 @@ const mapSolicitudCompletaFromApi = (raw) => {
       })
     : "";
 
-  const precioFormateado = curso.precioReserva
-    ? `${curso.precioReserva} Bs/hora`
+  // ✅ Verificar ambos formatos: camelCase y el valor del curso
+  const precioReserva = curso.precioReserva || curso.precio_reserva || 0;
+  const precioFormateado = precioReserva > 0
+    ? `${precioReserva} Bs/hora`
     : "Sin precio definido";
 
   return {
@@ -42,29 +50,30 @@ const mapSolicitudCompletaFromApi = (raw) => {
     decidido: solicitud.decidido,
     actualizado: solicitud.actualizado || solicitud.creado,
     
+    // Información del curso completa
     curso: {
-      id_curso: curso.id || solicitud.idCurso,
-      nombre: curso.nombre || nombreCompleto || "Solicitud de verificación",
+      id_curso: curso.id || solicitud.idCurso || "Sin ID",
+      // ✅ Priorizar el nombre del curso sobre el del usuario
+      nombre: curso.nombre || curso.titulo || `Curso - ID: ${curso.id || solicitud.idCurso}`,
       titulo: curso.titulo || curso.nombre || "Sin título",
-      descripcion:
-        curso.descripcion ||
-        solicitud.comentario ||
-        "Solicitud de verificación de documentos del tutor.",
+      // ✅ Descripción del curso, no del comentario de solicitud
+      descripcion: curso.descripcion || "Sin descripción disponible",
       modalidad: curso.modalidad || "Virtual",
       precio: precioFormateado,
-      precio_reserva: curso.precioReserva ?? 0,
-      portada_url: curso.portadaUrl || "",
+      precio_reserva: precioReserva,
+      portada_url: curso.portadaUrl || curso.portada_url || "",
       fotos: Array.isArray(curso.fotos) ? curso.fotos : [],
       creado: curso.creado || solicitud.creado,
       actualizado: curso.actualizado || solicitud.actualizado,
       necesita_reserva:
         typeof curso.necesitaReserva === "boolean"
           ? curso.necesitaReserva
-          : false,
+          : curso.necesita_reserva === true,
       categoriasNombres: Array.isArray(curso.categorias)
         ? curso.categorias.map((c) => (typeof c === "string" ? c : c.nombre || c))
         : [],
-      estadoVerificacion: curso.estadoVerificacion || solicitud.estado,
+      // ✅ Estado de verificación del curso
+      estadoVerificacion: curso.estadoVerificacion || curso.verificacion_estado || solicitud.estado,
     },
     
     // Información del tutor completa
@@ -113,22 +122,37 @@ const PanelAdmin = () => {
     setLoading(true);
     setError("");
     try {
-      // Usar el nuevo endpoint que devuelve información completa
+      // Intentar usar el nuevo endpoint con información completa
       const { data } = await verificarAPI.getSolicitudesCompletas();
       
       if (data?.success && Array.isArray(data.solicitudes)) {
         const solicitudesMapeadas = data.solicitudes.map(mapSolicitudCompletaFromApi);
         setSolicitudes(solicitudesMapeadas);
-        console.log("Solicitudes cargadas:", solicitudesMapeadas);
+        console.log("Solicitudes completas cargadas:", solicitudesMapeadas);
       } else {
         setError("No se pudieron cargar las solicitudes.");
       }
     } catch (err) {
       console.error("Error cargando solicitudes de verificación:", err);
-      setError(
-        err?.response?.data?.message ||
-          "Error al obtener las solicitudes de verificación."
-      );
+      
+      // Si el endpoint nuevo falla, intentar con el antiguo como fallback
+      if (err?.response?.status === 404) {
+        console.warn("Endpoint /completas no disponible, usando endpoint básico como fallback");
+        try {
+          const { data } = await verificarAPI.getSolicitudes();
+          if (data?.success && Array.isArray(data.solicitudes)) {
+            // Aquí usarías tu mapeo antiguo si lo tuvieras
+            setSolicitudes(data.solicitudes);
+          }
+        } catch (fallbackErr) {
+          setError("Error al obtener las solicitudes de verificación.");
+        }
+      } else {
+        setError(
+          err?.response?.data?.message ||
+            "Error al obtener las solicitudes de verificación."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -152,26 +176,22 @@ const PanelAdmin = () => {
         throw new Error("Estado no válido");
       }
 
-      if (response?.data?.success && response.data.solicitud) {
+      if (response?.data?.success) {
         // Recargar solicitudes para obtener datos actualizados
         await fetchSolicitudes();
         
-        // Si hay una solicitud seleccionada, actualizarla también
+        // Si hay una solicitud seleccionada, cerrar el detalle
         if (selectedSolicitud?.id_verificar === id_verificar) {
-          const solicitudActualizada = solicitudes.find(
-            (s) => s.id_verificar === id_verificar
-          );
-          if (solicitudActualizada) {
-            setSelectedSolicitud(solicitudActualizada);
-          }
+          setSelectedSolicitud(null);
         }
         
         // Mostrar mensaje de éxito
-        alert(
-          estadoNormalizado === "aceptado" || estadoNormalizado === "aprobado"
-            ? "Solicitud aprobada exitosamente"
-            : "Solicitud rechazada exitosamente"
-        );
+        const mensaje = estadoNormalizado === "aceptado" || estadoNormalizado === "aprobado"
+          ? "Solicitud aprobada exitosamente"
+          : "Solicitud rechazada exitosamente";
+        
+        // Puedes reemplazar alert con un toast notification si lo prefieres
+        alert(mensaje);
       }
     } catch (err) {
       console.error("Error actualizando estado de solicitud:", err);
@@ -254,7 +274,7 @@ const PanelAdmin = () => {
               }
               onClick={() => setFilter("todos")}
             >
-              Todos ({solicitudes.length})
+              Todos {solicitudes.length > 0 && `(${solicitudes.length})`}
             </button>
 
             <button
@@ -264,8 +284,10 @@ const PanelAdmin = () => {
               }
               onClick={() => setFilter("pendiente")}
             >
-              Pendientes (
-              {solicitudes.filter((s) => s.estado?.toLowerCase() === "pendiente").length})
+              Pendientes
+              {solicitudes.length > 0 && ` (${
+                solicitudes.filter((s) => s.estado?.toLowerCase() === "pendiente").length
+              })`}
             </button>
             <button
               className={
@@ -274,12 +296,14 @@ const PanelAdmin = () => {
               }
               onClick={() => setFilter("aceptado")}
             >
-              Aceptados (
-              {solicitudes.filter(
-                (s) =>
-                  s.estado?.toLowerCase() === "aceptado" ||
-                  s.estado?.toLowerCase() === "aprobado"
-              ).length})
+              Aceptados
+              {solicitudes.length > 0 && ` (${
+                solicitudes.filter(
+                  (s) =>
+                    s.estado?.toLowerCase() === "aceptado" ||
+                    s.estado?.toLowerCase() === "aprobado"
+                ).length
+              })`}
             </button>
             <button
               className={
@@ -288,8 +312,10 @@ const PanelAdmin = () => {
               }
               onClick={() => setFilter("rechazado")}
             >
-              Rechazados (
-              {solicitudes.filter((s) => s.estado?.toLowerCase() === "rechazado").length})
+              Rechazados
+              {solicitudes.length > 0 && ` (${
+                solicitudes.filter((s) => s.estado?.toLowerCase() === "rechazado").length
+              })`}
             </button>
           </div>
         )}
@@ -344,7 +370,7 @@ const PanelAdmin = () => {
                 <p className="text-red-500 mb-4">{error}</p>
                 <button
                   onClick={fetchSolicitudes}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Reintentar
                 </button>
