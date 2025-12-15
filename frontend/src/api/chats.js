@@ -14,8 +14,6 @@ export const chatsAPI = {
     return await api.get(`${CHATS_BASE}/${id}`);
   },
 
-  // ✅ FIX: el backend espera { id_curso, participantes }
-  // pero aceptamos que te llamen con { cursoId } también
   createChat: async (payload) => {
     const body = payload || {};
 
