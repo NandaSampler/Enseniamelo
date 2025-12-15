@@ -1,13 +1,20 @@
+// frontend/src/components/Perfiles/EditarPerfilEstudiante.jsx
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/Perfiles/perfilEstudiante.css";
 import { authAPI } from "../../api/auth";
+import ConfirmModal from "../ConfirmModal";
+import { useNotification } from "../NotificationProvider";
 
 const EditarPerfilEstudiante = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const { showNotification } = useNotification();
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [userId, setUserId] = useState(null); // 🔹 NUEVO: guardar el userId
+  const [userRole, setUserRole] = useState("ESTUDIANTE"); // 🔹 NUEVO: guardar el rol del usuario
   const [form, setForm] = useState({
     nombre: "",
     apellido: "",
@@ -24,14 +31,27 @@ const EditarPerfilEstudiante = () => {
     const fetchUserProfile = async () => {
       setLoadingData(true);
       
+      // 🔍 DEBUG: Verificar token y roles
+      const token = localStorage.getItem("access_token") || localStorage.getItem("token");
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          console.log('🔍 Token JWT payload:', payload);
+          console.log('🔍 Roles:', payload?.realm_access?.roles);
+        } catch (e) {
+          console.error('❌ Error parseando token:', e);
+        }
+      }
+      
       try {
-        // ✅ Intentar desde el API
         const response = await authAPI.getProfile();
-        
-        console.log('✅ [EditarPerfil] Respuesta API:', response);
         
         if (response?.data?.success && response.data.user) {
           const user = response.data.user;
+          
+          // 🔹 NUEVO: guardar el userId y el rol
+          setUserId(user.id || user._id);
+          setUserRole(user.rol || "ESTUDIANTE");
           
           setForm((prev) => ({
             ...prev,
@@ -43,22 +63,23 @@ const EditarPerfilEstudiante = () => {
             descripcion: user.descripcion || user.biografia || user.bio || "",
           }));
           
-          console.log('✅ [EditarPerfil] Datos cargados desde API:', user);
           setLoadingData(false);
           return;
         }
         
       } catch (error) {
-        console.warn('⚠️ [EditarPerfil] Error desde API:', error?.message);
+        console.warn('⚠️ Error desde API:', error?.message);
       }
       
-      // ✅ FALLBACK: localStorage
       try {
         const storedUser = localStorage.getItem("user");
         
         if (storedUser) {
           const userData = JSON.parse(storedUser);
-          console.log('📦 [EditarPerfil] Datos desde localStorage:', userData);
+          
+          // 🔹 NUEVO: guardar el userId y rol del localStorage
+          setUserId(userData.id || userData._id);
+          setUserRole(userData.rol || "ESTUDIANTE");
           
           setForm((prev) => ({
             ...prev,
@@ -69,13 +90,9 @@ const EditarPerfilEstudiante = () => {
             foto: userData.foto || userData.photo || userData.picture || "",
             descripcion: userData.descripcion || userData.biografia || userData.bio || "",
           }));
-          
-          console.log('✅ [EditarPerfil] Formulario actualizado desde localStorage');
-        } else {
-          console.error('❌ [EditarPerfil] No hay datos en localStorage');
         }
       } catch (parseError) {
-        console.error('❌ [EditarPerfil] Error parseando localStorage:', parseError);
+        console.error('❌ Error parseando localStorage:', parseError);
       } finally {
         setLoadingData(false);
       }
@@ -107,68 +124,104 @@ const EditarPerfilEstudiante = () => {
     fileInputRef.current?.click();
   };
 
-  const handleSave = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
 
-    // ¿El usuario está intentando cambiar la contraseña?
     const isChangingPassword =
       form.currentPassword || form.newPassword || form.confirmPassword;
 
     if (isChangingPassword) {
       if (!form.currentPassword) {
-        alert("Debes ingresar tu contraseña actual para cambiarla");
+        showNotification({
+          type: "warning",
+          title: "Campo requerido",
+          message: "Debes ingresar tu contraseña actual para cambiarla"
+        });
         return;
       }
 
       if (!form.newPassword || !form.confirmPassword) {
-        alert("Debes completar la nueva contraseña y su confirmación");
+        showNotification({
+          type: "warning",
+          title: "Campos incompletos",
+          message: "Debes completar la nueva contraseña y su confirmación"
+        });
         return;
       }
 
       if (form.newPassword !== form.confirmPassword) {
-        alert("Las contraseñas no coinciden");
+        showNotification({
+          type: "error",
+          title: "Error",
+          message: "Las contraseñas no coinciden"
+        });
         return;
       }
 
       if (form.newPassword.length < 6) {
-        alert("La nueva contraseña debe tener al menos 6 caracteres");
+        showNotification({
+          type: "warning",
+          title: "Contraseña débil",
+          message: "La nueva contraseña debe tener al menos 6 caracteres"
+        });
         return;
       }
     }
 
+    setShowConfirmModal(true);
+  };
+
+  const handleSave = async () => {
+    setShowConfirmModal(false);
+
     try {
       setLoading(true);
 
-      // Siempre puedes actualizar datos de perfil
+      // 🔹 NUEVO: Validar que tengamos el userId
+      if (!userId) {
+        showNotification({
+          type: "error",
+          title: "Error",
+          message: "No se pudo identificar tu usuario. Intenta cerrar sesión y volver a entrar."
+        });
+        setLoading(false);
+        return;
+      }
+
+      const isChangingPassword =
+        form.currentPassword || form.newPassword || form.confirmPassword;
+
       const payload = {
         nombre: form.nombre,
         apellido: form.apellido,
         email: form.email,
-        telefono: form.telefono,
-        foto: form.foto,
-        descripcion: form.descripcion,
+        // 🔹 FIX: Limpiar el teléfono - solo números (la regex del backend es ^[+]?[0-9]{8,15}$)
+        telefono: form.telefono.replace(/[^0-9+]/g, '').substring(0, 16), // máximo 15 dígitos + el +
+        foto: form.foto || "",
+        // 🔹 CRÍTICO: El backend requiere el campo 'rol' (@NotBlank)
+        rol: userRole,
       };
 
-      // Solo añadimos datos de contraseña si realmente la está cambiando
       if (isChangingPassword) {
         payload.currentPassword = form.currentPassword;
         payload.newPassword = form.newPassword;
       }
 
-      console.log('📤 [EditarPerfil] Enviando payload:', payload);
+      // 🔹 CAMBIADO: Pasar el userId al método updateProfile
+      const { data } = await authAPI.updateProfile(userId, payload);
 
-      const { data } = await authAPI.updateProfile(payload);
-
-      console.log('✅ [EditarPerfil] Respuesta del servidor:', data);
-
-      if (data?.success && data.user) {
-        // ✅ Actualizar localStorage con los nuevos datos
-        localStorage.setItem("user", JSON.stringify(data.user));
-        console.log('✅ [EditarPerfil] localStorage actualizado');
+      // 🔹 CAMBIADO: El backend devuelve directamente el UsuarioDTO, no un objeto {success, user}
+      if (data) {
+        // Actualizar el localStorage con los datos actualizados
+        localStorage.setItem("user", JSON.stringify(data));
         
-        alert("Perfil actualizado exitosamente");
+        showNotification({
+          type: "success",
+          title: "¡Perfil actualizado!",
+          message: "Tu información se ha guardado correctamente"
+        });
 
-        // Limpiamos campos de contraseña después de guardar
+        // Limpiar los campos de contraseña
         setForm((prev) => ({
           ...prev,
           currentPassword: "",
@@ -176,13 +229,21 @@ const EditarPerfilEstudiante = () => {
           confirmPassword: "",
         }));
 
-        navigate("/perfil");
+        setTimeout(() => navigate("/perfil"), 1000);
       } else {
-        alert("No se pudo actualizar el perfil. Intenta nuevamente.");
+        showNotification({
+          type: "error",
+          title: "Error",
+          message: "No se pudo actualizar el perfil. Intenta nuevamente."
+        });
       }
     } catch (error) {
-      console.error('❌ [EditarPerfil] Error actualizando:', error);
-      alert("Error al actualizar el perfil");
+      console.error('❌ Error actualizando:', error);
+      showNotification({
+        type: "error",
+        title: "Error",
+        message: error?.response?.data?.message || "Error al actualizar el perfil"
+      });
     } finally {
       setLoading(false);
     }
@@ -211,12 +272,23 @@ const EditarPerfilEstudiante = () => {
 
   return (
     <div className="edit-perfil-page">
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleSave}
+        title="¿Guardar cambios?"
+        message="Se actualizará tu información de perfil. Esta acción no se puede deshacer."
+        type="info"
+        confirmText="Guardar"
+        cancelText="Cancelar"
+      />
+
       <div className="header">
         <div className="container">
           <div className="header-content">
             <div className="header-left">
               <h1>Editar Perfil Estudiante</h1>
-              <p className="header-subtitle">Container</p>
+              <p className="header-subtitle">Actualiza tu información</p>
             </div>
           </div>
         </div>
@@ -225,8 +297,7 @@ const EditarPerfilEstudiante = () => {
       <div className="main-content">
         <div className="container">
           <div className="edit-form">
-            <form onSubmit={handleSave}>
-              {/* Información Personal */}
+            <form onSubmit={handleSubmit}>
               <div className="form-section">
                 <h3 className="section-title">Información Personal</h3>
 
@@ -314,7 +385,6 @@ const EditarPerfilEstudiante = () => {
                 </div>
               </div>
 
-              {/* Descripción */}
               <div className="form-section">
                 <h3 className="section-title">Descripción</h3>
                 <div className="form-group">
@@ -327,10 +397,12 @@ const EditarPerfilEstudiante = () => {
                     placeholder="Cuéntanos sobre ti..."
                     rows={4}
                   ></textarea>
+                  <small style={{ color: '#666', fontSize: '0.85rem', marginTop: '4px', display: 'block' }}>
+                    ⚠️ Nota: La biografía aún no se guarda en el backend. Solo se guardan: nombre, apellido, email, teléfono y foto.
+                  </small>
                 </div>
               </div>
 
-              {/* Cambiar contraseña */}
               <div className="form-section">
                 <h3 className="section-title">Cambiar Contraseña</h3>
 

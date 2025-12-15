@@ -55,6 +55,7 @@ const Navbar = ({ currentSection, adminMode = false }) => {
       : "");
 
   const isTutor = user?.rolCodigo === 2 || user?.rol === "TUTOR";
+  const isAdmin = user?.rolCodigo === 3 || user?.rol === "ADMIN";
   const isOnTutorPanel = location.pathname === "/panel-tutor";
 
   const handleLogout = () => {
@@ -68,6 +69,8 @@ const Navbar = ({ currentSection, adminMode = false }) => {
     setProfileOpen(false);
     if (isTutor) {
       navigate("/tutor/perfil");
+    } else if (isAdmin) {
+      navigate("/admin/perfil");
     } else {
       navigate("/perfil");
     }
@@ -100,7 +103,32 @@ const Navbar = ({ currentSection, adminMode = false }) => {
         <div className="flex items-center gap-3 relative">
           {/* Desktop links */}
           <nav className="hidden md:flex items-center gap-3">
-            {!isTutor && (
+            {/* ✅ ADMIN MODE */}
+            {isAdmin && adminMode && (
+              <>
+                <Link to="/admin/solicitudes-tutores" className={linkClasses("admin")}>
+                  Panel Admin
+                </Link>
+                <Link to="/admin/planes" className={linkClasses("planes")}>
+                  Gestión de Planes
+                </Link>
+              </>
+            )}
+
+            {/* ✅ TUTOR MODE */}
+            {isTutor && !adminMode && (
+              <>
+                <Link to="/chats" className={linkClasses("chats")}>
+                  Chats
+                </Link>
+                <Link to="/planes" className={linkClasses("planes")}>
+                  Planes
+                </Link>
+              </>
+            )}
+
+            {/* ✅ ESTUDIANTE MODE */}
+            {!isTutor && !isAdmin && (
               <>
                 <Link to="/mis-cursos" className={linkClasses("courses")}>
                   Mis cursos
@@ -114,18 +142,8 @@ const Navbar = ({ currentSection, adminMode = false }) => {
               </>
             )}
 
-            {isTutor && (
-              <>
-                <Link to="/chats" className={linkClasses("chats")}>
-                  Chats
-                </Link>
-                <Link to="/planes" className={linkClasses("planes")}>
-                  Planes
-                </Link>
-              </>
-            )}
-
-            {isTutor && !isOnTutorPanel && (
+            {/* Volver al panel tutor (si es tutor y no está en el panel) */}
+            {isTutor && !isOnTutorPanel && !adminMode && (
               <button
                 className={linkClasses("tutor-panel")}
                 onClick={() => navigate("/panel-tutor")}
@@ -186,7 +204,48 @@ const Navbar = ({ currentSection, adminMode = false }) => {
       {/* Mobile menu */}
       {open && (
         <nav className="md:hidden px-4 py-3 flex flex-col gap-2 bg-sky-800 border-t border-white/20 animate-slide-down">
-          {!isTutor && (
+          {/* Admin Mobile */}
+          {isAdmin && adminMode && (
+            <>
+              <Link
+                to="/admin/solicitudes-tutores"
+                className={linkClasses("admin")}
+                onClick={() => setOpen(false)}
+              >
+                Panel Admin
+              </Link>
+              <Link
+                to="/admin/planes"
+                className={linkClasses("planes")}
+                onClick={() => setOpen(false)}
+              >
+                Gestión de Planes
+              </Link>
+            </>
+          )}
+
+          {/* Tutor Mobile */}
+          {isTutor && !adminMode && (
+            <>
+              <Link
+                to="/chats"
+                className={linkClasses("chats")}
+                onClick={() => setOpen(false)}
+              >
+                Chats
+              </Link>
+              <Link
+                to="/planes"
+                className={linkClasses("planes")}
+                onClick={() => setOpen(false)}
+              >
+                Planes
+              </Link>
+            </>
+          )}
+
+          {/* Estudiante Mobile */}
+          {!isTutor && !isAdmin && (
             <>
               <Link
                 to="/mis-cursos"
@@ -208,24 +267,6 @@ const Navbar = ({ currentSection, adminMode = false }) => {
                 onClick={() => setOpen(false)}
               >
                 Explorar
-              </Link>
-            </>
-          )}
-          {isTutor && (
-            <>
-              <Link
-                to="/chats"
-                className={linkClasses("chats")}
-                onClick={() => setOpen(false)}
-              >
-                Chats
-              </Link>
-              <Link
-                to="/planes"
-                className={linkClasses("planes")}
-                onClick={() => setOpen(false)}
-              >
-                Planes
               </Link>
             </>
           )}

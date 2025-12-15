@@ -16,6 +16,8 @@ import PanelAdmin from "./components/Admin/PanelAdmin";
 import ChatPage from "./components/Chat/ChatPage";
 import Planes from "./components/Pagos/Planes";
 import PlanesAdmin from "./components/Pagos/PlanesAdmin";
+import PerfilAdmin from "./components/Perfiles/PerfilAdmin";
+import EditarPerfilAdmin from "./components/Perfiles/EditarPerfilAdmin";
 import { hasRole } from "./api/auth";
 
 
@@ -164,6 +166,10 @@ function App() {
           {/* Perfil tutor */}
           <Route path="/tutor/perfil" element={<PerfilTutor />} />
           <Route path="/tutor/perfil/editar" element={<EditarPerfilTutor />} />
+
+          {/* Perfil Admin */}
+          <Route path="/admin/perfil" element={<PerfilAdmin />} />
+          <Route path="/admin/perfil/editar" element={<EditarPerfilAdmin />} />
 
           {/* Default */}
           <Route path="*" element={<Navigate to="/login" replace />} />
