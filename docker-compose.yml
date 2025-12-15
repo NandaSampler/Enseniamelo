@@ -53,6 +53,7 @@ services:
       - CONFIG_SERVER_USR=${CONFIG_SERVER_USR}
       - CONFIG_SERVER_PWD=${CONFIG_SERVER_PWD}
       - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - CURSOS_SERVICE_URL=http://cursoservice:8000
     depends_on:
       config-server:
         condition: service_healthy

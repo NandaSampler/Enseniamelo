@@ -46,17 +46,16 @@ public class VerificarSolicitudController {
                         @Valid @RequestBody VerificarSolicitudDTO solicitudDTO) {
 
                 log.info("POST /v1/verificacion/curso - Creando solicitud para curso: {}", solicitudDTO.getIdCurso());
-                
+
                 return solicitudService.crearSolicitudParaCurso(
                                 solicitudDTO.getIdUsuario(),
                                 solicitudDTO.getIdPerfilTutor(),
                                 solicitudDTO.getIdCurso(),
                                 solicitudDTO)
                                 .map(creada -> ResponseEntity.status(HttpStatus.CREATED)
-                                        .body(Map.of(
-                                                "success", true,
-                                                "solicitud", creada
-                                        )));
+                                                .body(Map.of(
+                                                                "success", true,
+                                                                "solicitud", creada)));
         }
 
         @Operation(summary = "Obtener solicitud de un curso")
@@ -72,9 +71,8 @@ public class VerificarSolicitudController {
                 log.info("GET /v1/verificacion/curso/{} - Buscando solicitud del curso", idCurso);
                 return solicitudService.buscarPorCurso(idCurso)
                                 .map(solicitud -> ResponseEntity.ok(Map.of(
-                                        "success", true,
-                                        "solicitud", solicitud
-                                )))
+                                                "success", true,
+                                                "solicitud", solicitud)))
                                 .defaultIfEmpty(ResponseEntity.notFound().build());
         }
 
@@ -91,9 +89,8 @@ public class VerificarSolicitudController {
                 return solicitudService.buscarPorUsuario(idUsuario)
                                 .collectList()
                                 .map(solicitudes -> ResponseEntity.ok(Map.of(
-                                        "success", true,
-                                        "solicitudes", solicitudes
-                                )));
+                                                "success", true,
+                                                "solicitudes", solicitudes)));
         }
 
         @Operation(summary = "Obtener todas las solicitudes de un tutor")
@@ -109,12 +106,11 @@ public class VerificarSolicitudController {
                 return solicitudService.buscarPorTutor(idPerfilTutor)
                                 .collectList()
                                 .map(solicitudes -> ResponseEntity.ok(Map.of(
-                                        "success", true,
-                                        "solicitudes", solicitudes
-                                )));
+                                                "success", true,
+                                                "solicitudes", solicitudes)));
         }
 
-        @Operation(summary = "Obtener todas las solicitudes")
+        @Operation(summary = "Obtener todas las solicitudes (solo básico)")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Lista de solicitudes obtenida")
         })
@@ -127,9 +123,27 @@ public class VerificarSolicitudController {
                                 .map(solicitudes -> {
                                         log.info("Solicitudes encontradas: {}", solicitudes.size());
                                         return ResponseEntity.ok(Map.of(
-                                                "success", true,
-                                                "solicitudes", solicitudes
-                                        ));
+                                                        "success", true,
+                                                        "solicitudes", solicitudes));
+                                });
+        }
+
+        @Operation(summary = "Obtener todas las solicitudes con información completa", 
+                   description = "Devuelve solicitudes con información de usuario, tutor y curso. Para panel de administración")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Lista completa de solicitudes obtenida")
+        })
+        @PreAuthorize("hasRole('ADMIN')")
+        @GetMapping("/completas")
+        public Mono<ResponseEntity<Map<String, Object>>> obtenerTodasCompletas() {
+                log.info("GET /v1/verificacion/completas - Obteniendo solicitudes con información completa");
+                return solicitudService.obtenerTodasCompletas()
+                                .collectList()
+                                .map(solicitudes -> {
+                                        log.info("Solicitudes completas encontradas: {}", solicitudes.size());
+                                        return ResponseEntity.ok(Map.of(
+                                                        "success", true,
+                                                        "solicitudes", solicitudes));
                                 });
         }
 
@@ -146,9 +160,27 @@ public class VerificarSolicitudController {
                 log.info("GET /v1/verificacion/{} - Buscando solicitud", id);
                 return solicitudService.buscarPorId(id)
                                 .map(solicitud -> ResponseEntity.ok(Map.of(
-                                        "success", true,
-                                        "solicitud", solicitud
-                                )))
+                                                "success", true,
+                                                "solicitud", solicitud)))
+                                .defaultIfEmpty(ResponseEntity.notFound().build());
+        }
+
+        @Operation(summary = "Buscar solicitud completa por ID", 
+                   description = "Incluye información de usuario, tutor y curso")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Solicitud completa encontrada"),
+                        @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
+        })
+        @PreAuthorize("hasRole('ADMIN')")
+        @GetMapping("/{id}/completa")
+        public Mono<ResponseEntity<Map<String, Object>>> buscarPorIdCompleta(
+                        @Parameter(description = "ID de MongoDB de la solicitud", required = true) @PathVariable String id) {
+
+                log.info("GET /v1/verificacion/{}/completa - Buscando solicitud completa", id);
+                return solicitudService.buscarPorIdCompleta(id)
+                                .map(solicitud -> ResponseEntity.ok(Map.of(
+                                                "success", true,
+                                                "data", solicitud)))
                                 .defaultIfEmpty(ResponseEntity.notFound().build());
         }
 
@@ -165,9 +197,8 @@ public class VerificarSolicitudController {
                 return solicitudService.obtenerPorEstado(estado)
                                 .collectList()
                                 .map(solicitudes -> ResponseEntity.ok(Map.of(
-                                        "success", true,
-                                        "solicitudes", solicitudes
-                                )));
+                                                "success", true,
+                                                "solicitudes", solicitudes)));
         }
 
         @Operation(summary = "Aprobar solicitud", description = "Aprueba la verificación del curso")
@@ -186,9 +217,8 @@ public class VerificarSolicitudController {
                 log.info("PUT /v1/verificacion/{}/aprobar - Aprobando solicitud", id);
                 return solicitudService.aprobarSolicitud(id, comentario)
                                 .map(solicitud -> ResponseEntity.ok(Map.of(
-                                        "success", true,
-                                        "solicitud", solicitud
-                                )));
+                                                "success", true,
+                                                "solicitud", solicitud)));
         }
 
         @Operation(summary = "Rechazar solicitud")
@@ -207,9 +237,8 @@ public class VerificarSolicitudController {
                 log.info("PUT /v1/verificacion/{}/rechazar - Rechazando solicitud", id);
                 return solicitudService.rechazarSolicitud(id, comentario)
                                 .map(solicitud -> ResponseEntity.ok(Map.of(
-                                        "success", true,
-                                        "solicitud", solicitud
-                                )));
+                                                "success", true,
+                                                "solicitud", solicitud)));
         }
 
         @Operation(summary = "Eliminar solicitud")
