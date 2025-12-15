@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { cursosAPI } from "../../api/cursos";
 import { useNotification } from "../NotificationProvider";
+import ConfirmModal from "../ConfirmModal"; // Importar el modal mejorado
 import "../../styles/Admin/gestionCursos.css";
 
 const GestionCursos = () => {
@@ -12,6 +13,12 @@ const GestionCursos = () => {
   const [busqueda, setBusqueda] = useState("");
   const [cursoSeleccionado, setCursoSeleccionado] = useState(null);
   const [modalAbierto, setModalAbierto] = useState(false);
+  
+  // Nuevo estado para el modal de confirmación de eliminación
+  const [modalEliminar, setModalEliminar] = useState({
+    isOpen: false,
+    curso: null
+  });
 
   useEffect(() => {
     fetchCursos();
@@ -78,13 +85,20 @@ const GestionCursos = () => {
     }
   };
 
-  const handleEliminarCurso = async (id) => {
-    if (!window.confirm("¿Estás seguro de eliminar este curso? Esta acción no se puede deshacer.")) {
-      return;
-    }
+  // Nueva función para abrir el modal de confirmación
+  const abrirModalEliminar = (curso) => {
+    setModalEliminar({
+      isOpen: true,
+      curso: curso
+    });
+  };
 
+  // Nueva función para confirmar eliminación
+  const confirmarEliminarCurso = async () => {
+    const curso = modalEliminar.curso;
+    
     try {
-      await cursosAPI.deleteCurso(id);
+      await cursosAPI.deleteCurso(curso.id || curso._id);
       
       showNotification({
         type: "success",
@@ -100,6 +114,8 @@ const GestionCursos = () => {
         title: "Error",
         message: error?.response?.data?.message || "No se pudo eliminar el curso",
       });
+    } finally {
+      setModalEliminar({ isOpen: false, curso: null });
     }
   };
 
@@ -325,7 +341,7 @@ const GestionCursos = () => {
                       </button>
                       <button
                         className="btn-accion btn-eliminar"
-                        onClick={() => handleEliminarCurso(curso.id || curso._id)}
+                        onClick={() => abrirModalEliminar(curso)}
                         title="Eliminar curso"
                       >
                         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -347,6 +363,7 @@ const GestionCursos = () => {
         </div>
       )}
 
+      {/* Modal de cambio de verificación (existente) */}
       {modalAbierto && cursoSeleccionado && (
         <div className="modal-overlay" onClick={() => setModalAbierto(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -399,6 +416,18 @@ const GestionCursos = () => {
           </div>
         </div>
       )}
+
+      {/* Nuevo modal de confirmación de eliminación */}
+      <ConfirmModal
+        isOpen={modalEliminar.isOpen}
+        onClose={() => setModalEliminar({ isOpen: false, curso: null })}
+        onConfirm={confirmarEliminarCurso}
+        title="¿Eliminar este curso?"
+        message={`Esta acción no se puede deshacer. El curso "${modalEliminar.curso?.nombre || ''}" y toda su información serán eliminados permanentemente del sistema.`}
+        type="danger"
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+      />
     </div>
   );
 };

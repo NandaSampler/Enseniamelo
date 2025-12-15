@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../api/config";
 import { useNotification } from "../NotificationProvider";
+import ConfirmModal from "../ConfirmModal"; // Importar el nuevo modal
 import "../../styles/Admin/gestionUsuarios.css";
 
 const GestionUsuarios = () => {
@@ -11,6 +12,12 @@ const GestionUsuarios = () => {
   const [busqueda, setBusqueda] = useState("");
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
   const [modalAbierto, setModalAbierto] = useState(false);
+  
+  // Nuevo estado para el modal de confirmación
+  const [modalEliminar, setModalEliminar] = useState({
+    isOpen: false,
+    usuario: null
+  });
 
   useEffect(() => {
     fetchUsuarios();
@@ -19,7 +26,6 @@ const GestionUsuarios = () => {
   const fetchUsuarios = async () => {
     setLoading(true);
     try {
-      // CORREGIDO: Usar /v1/usuario (singular) en lugar de /v1/usuarios
       const { data } = await api.get("/v1/usuario");
       const usuariosArray = Array.isArray(data) ? data : data?.usuarios || [];
       setUsuarios(usuariosArray);
@@ -78,13 +84,20 @@ const GestionUsuarios = () => {
     }
   };
 
-  const handleEliminarUsuario = async (id) => {
-    if (!window.confirm("¿Estás seguro de eliminar este usuario? Esta acción no se puede deshacer.")) {
-      return;
-    }
+  // Nueva función para abrir el modal de confirmación
+  const abrirModalEliminar = (usuario) => {
+    setModalEliminar({
+      isOpen: true,
+      usuario: usuario
+    });
+  };
 
+  // Nueva función para confirmar eliminación
+  const confirmarEliminar = async () => {
+    const usuario = modalEliminar.usuario;
+    
     try {
-      await api.delete(`/v1/usuario/${id}`);
+      await api.delete(`/v1/usuario/${usuario.id || usuario._id}`);
       
       showNotification({
         type: "success",
@@ -100,6 +113,8 @@ const GestionUsuarios = () => {
         title: "Error",
         message: error?.response?.data?.message || "No se pudo eliminar el usuario",
       });
+    } finally {
+      setModalEliminar({ isOpen: false, usuario: null });
     }
   };
 
@@ -282,7 +297,7 @@ const GestionUsuarios = () => {
                       </button>
                       <button
                         className="btn-accion btn-eliminar"
-                        onClick={() => handleEliminarUsuario(usuario.id || usuario._id)}
+                        onClick={() => abrirModalEliminar(usuario)}
                         title="Eliminar usuario"
                       >
                         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -304,6 +319,7 @@ const GestionUsuarios = () => {
         </div>
       )}
 
+      {/* Modal de cambio de rol (existente) */}
       {modalAbierto && usuarioSeleccionado && (
         <div className="modal-overlay" onClick={() => setModalAbierto(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -347,6 +363,18 @@ const GestionUsuarios = () => {
           </div>
         </div>
       )}
+
+      {/* Nuevo modal de confirmación de eliminación */}
+      <ConfirmModal
+        isOpen={modalEliminar.isOpen}
+        onClose={() => setModalEliminar({ isOpen: false, usuario: null })}
+        onConfirm={confirmarEliminar}
+        title="¿Eliminar este usuario?"
+        message={`Esta acción no se puede deshacer. El usuario ${modalEliminar.usuario?.nombre || ''} ${modalEliminar.usuario?.apellido || ''} y toda su información serán eliminados permanentemente del sistema.`}
+        type="danger"
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+      />
     </div>
   );
 };
