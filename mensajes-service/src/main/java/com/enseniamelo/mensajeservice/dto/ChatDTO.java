@@ -63,4 +63,12 @@ public class ChatDTO {
     )
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private LocalDateTime actualizado;
+
+    public String getId_curso() {
+        return id_curso;
+    }
+
+    public List<String> getParticipantes() {
+        return participantes;
+    }
 }

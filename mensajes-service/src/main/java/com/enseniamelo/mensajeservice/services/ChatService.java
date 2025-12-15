@@ -1,7 +1,9 @@
 package com.enseniamelo.mensajeservice.services;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
+import org.bson.types.ObjectId;
 import org.springframework.stereotype.Service;
 
 import com.enseniamelo.mensajeservice.mapper.ChatMapper;
@@ -23,17 +25,31 @@ public class ChatService {
     private final ChatMapper chatMapper;
 
     public Mono<ChatDTO> crearChat(ChatDTO chatDTO) {
-        log.info("Creando un nuevo chat: {}", chatDTO);
+        ObjectId idCurso = new ObjectId(chatDTO.getId_curso());
+        List<ObjectId> participantes = chatDTO.getParticipantes()
+                .stream()
+                .map(ObjectId::new)
+                .toList();
 
-        Chat chat = chatMapper.toEntity(chatDTO);
-        chat.setCreado(LocalDateTime.now());
-        chat.setActualizado(LocalDateTime.now());
+        return chatRepository
+            .findByIdCursoAndParticipantesAll(idCurso, participantes)
+            .flatMap(chatExistente -> {
+                log.info("Chat ya existente: {}", chatExistente.getId());
+                return Mono.just(chatExistente);
+            })
+            .switchIfEmpty(
+                Mono.defer(() -> {
+                    Chat nuevoChat = chatMapper.toEntity(chatDTO);
+                    nuevoChat.setCreado(LocalDateTime.now());
+                    nuevoChat.setActualizado(LocalDateTime.now());
 
-        return chatRepository.save(chat)
-            .map(chatMapper::toDto)
-            .doOnSuccess(c -> log.info("Chat creado exitosamente: {}", c))
-            .doOnError(err -> log.error("Error al crear chat: {}", err.getMessage()));
+                    log.info("Creando nuevo chat");
+                    return chatRepository.save(nuevoChat);
+                })
+            )
+            .map(chatMapper::toDto);
     }
+
 
     public Flux<ChatDTO> obtenerTodos() {
         return chatRepository.findAll()
