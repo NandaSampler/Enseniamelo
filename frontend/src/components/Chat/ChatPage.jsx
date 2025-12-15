@@ -70,11 +70,10 @@ const ChatPage = () => {
   const [reservasPorChat, setReservasPorChat] = useState({});
 
   const [nombresPorChat, setNombresPorChat] = useState({});
+  const [perfilTutorUsuario, setPerfilTutorUsuario] = useState(null);
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
-
-  // Auto-scroll inteligente (solo si estás abajo)
   const shouldAutoScrollRef = useRef(true);
 
   const usuarioActual = JSON.parse(localStorage.getItem("user") || "{}");
@@ -82,19 +81,107 @@ const ChatPage = () => {
   const usuarioActualRol = usuarioActual?.rol;
   const usuarioActualRolCodigo = usuarioActual?.rolCodigo;
 
+  const esTutor = usuarioActualRolCodigo === 2 || usuarioActualRol === "TUTOR";
+
+  //Cargar perfil tutor si el usuario es tutor
+  useEffect(() => {
+    if (!esTutor || !usuarioActualId) return;
+
+    const cargarPerfilTutor = async () => {
+      try {
+        const { data } = await usuariosAPI.obtenerPerfilTutorPorUsuario(
+          usuarioActualId
+        );
+        setPerfilTutorUsuario(data);
+      } catch (error) {
+        console.error("Error cargando perfil tutor del usuario actual:", error);
+      }
+    };
+
+    cargarPerfilTutor();
+  }, [esTutor, usuarioActualId]);
+
+  //Función para obtener id_usuario desde perfil_tutor
+  const obtenerIdUsuarioDesdePerfil = async (perfilTutorId) => {
+    console.log("Obteniendo id_usuario desde perfil_tutor ID:", perfilTutorId);
+    try {
+      const { data } = await usuariosAPI.obtenerPerfilTutor(perfilTutorId);
+      return normalizeId(data?.id_usuario);
+    } catch (error) {
+      console.error("Error obteniendo perfil tutor:", error);
+      return null;
+    }
+  };
+
+  //Verificar si el chat pertenece al usuario actual
+  const chatPerteneceAlUsuario = (chat) => {
+    const participantes = chat.participantes;
+
+    // Caso 1: Usuario tutor - su perfil_tutor._id está en participantes
+    if (esTutor && perfilTutorUsuario) {
+      const perfilTutorId = normalizeId(perfilTutorUsuario.id);
+      if (participantes.includes(String(perfilTutorId))) {
+        return true;
+      }
+    }
+
+    // Caso 2: Usuario normal - su ID está directamente en participantes
+    if (participantes.includes(String(usuarioActualId))) {
+      return true;
+    }
+
+    return false;
+  };
+
+  const obtenerOtroUsuarioId = async (chat) => {
+    if (!chat?.participantes || chat.participantes.length < 2) return null;
+
+    const participantes = chat.participantes.map(String);
+
+    let miIdEnChat = null;
+
+    // Caso tutor
+    if (esTutor && perfilTutorUsuario?.id) {
+      miIdEnChat = String(perfilTutorUsuario.id);
+    }
+    // Caso usuario normal
+    else {
+      miIdEnChat = String(usuarioActualId);
+    }
+
+    const otroId = participantes.find((id) => id !== miIdEnChat);
+    console.log("Otro ID en chat:", otroId);
+    if (!otroId) return null;
+
+    if (esTutor) {
+      // Tutor siempre chatea con usuario
+      return otroId;
+    }
+
+    // Usuario normal
+    try {
+      // Intentar resolver como perfil tutor
+      const { data } = await usuariosAPI.obtenerPerfilTutor(otroId);
+      return normalizeId(data?.idUsuario);
+    } catch {
+      // Si no es perfil tutor, es usuario directo
+      return otroId;
+    }
+  };
+
+  //Cargar nombres de usuarios (considerando tutores)
   const cargarNombresUsuarios = async (chats) => {
     const nuevos = {};
 
     for (const chat of chats) {
-      const otroId = obtenerOtroUsuarioId(chat);
-      if (!otroId) continue;
-
       try {
-        const { data } = await usuariosAPI.getUsuario(otroId);
+        const usuarioId = await obtenerOtroUsuarioId(chat);
+        if (!usuarioId) continue;
 
+        const { data } = await usuariosAPI.getUsuario(usuarioId);
         nuevos[chat._id] = `${data.nombre} ${data.apellido}`;
-      } catch (e) {
-        console.error("Error cargando usuario", e);
+      } catch (error) {
+        console.error("Error cargando usuario para chat:", chat._id, error);
         nuevos[chat._id] = "Usuario";
       }
     }
@@ -135,13 +222,12 @@ const ChatPage = () => {
     });
   };
 
-  // Detectar si el usuario está “abajo” (para autoscroll)
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
 
     const onScroll = () => {
-      const threshold = 140; // px
+      const threshold = 140;
       const distanceFromBottom =
         el.scrollHeight - (el.scrollTop + el.clientHeight);
       shouldAutoScrollRef.current = distanceFromBottom < threshold;
@@ -151,16 +237,19 @@ const ChatPage = () => {
     return () => el.removeEventListener("scroll", onScroll);
   }, []);
 
-  // ✅ selectedChatId desde URL
   useEffect(() => {
     if (routeChatId && routeChatId !== "undefined") {
       setSelectedChatId(routeChatId);
     }
   }, [routeChatId]);
 
-  // ✅ Cargar chats (sin filtros agresivos para no romper UI)
+  //Cargar chats con filtrado correcto
   useEffect(() => {
+    // Esperar a que se cargue el perfil tutor si el usuario es tutor
+    if (esTutor && !perfilTutorUsuario) return;
+
     const fetchChats = async () => {
+      let chatsPropios = [];
       try {
         const response = await chatsAPI.getChats();
         const data = response?.data;
@@ -168,18 +257,28 @@ const ChatPage = () => {
 
         const chatsNormalizados = chatsObtenidos
           .map(normalizeChat)
-          .filter(
-            (chat) =>
-              chat?._id && chat.participantes.includes(String(usuarioActualId))
+          .filter((chat) => chat?._id);
+
+        if (usuarioActualRol == "ESTUDIANTE") {
+          // Filtrar chats que pertenecen al usuario actual
+          chatsPropios = chatsNormalizados.filter((chat) =>
+            chatPerteneceAlUsuario(chat)
           );
+          setChats(chatsPropios);
+          await cargarNombresUsuarios(chatsPropios);
+        } else if (usuarioActualRol == "TUTOR") {
+          // Filtrar chats que pertenecen al tutor actual
+          chatsPropios = chatsNormalizados.filter((chat) =>
+            chatPerteneceAlUsuario(chat)
+          );
+          setChats(chatsPropios);
+          await cargarNombresUsuarios(chatsPropios);
+        }
 
-        setChats(chatsNormalizados);
-        cargarNombresUsuarios(chatsNormalizados);
-
-        // si no hay chat en la ruta, abrir el primero
+        // Si no hay chat seleccionado, abrir el primero
         if (!routeChatId || routeChatId === "undefined") {
-          if (chatsNormalizados.length > 0) {
-            navigate(`/chats/${chatsNormalizados[0]._id}`, { replace: true });
+          if (chatsPropios.length > 0) {
+            navigate(`/chats/${chatsPropios[0]._id}`, { replace: true });
           }
         }
       } catch (error) {
@@ -194,9 +293,8 @@ const ChatPage = () => {
 
     fetchChats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [esTutor, perfilTutorUsuario, routeChatId]);
 
-  // ✅ Cargar mensajes
   useEffect(() => {
     if (!selectedChatId || selectedChatId === "undefined") {
       setMensajes([]);
@@ -217,7 +315,6 @@ const ChatPage = () => {
 
         setMensajes(mensajesNormalizados);
 
-        // al cambiar de chat -> baja al final
         requestAnimationFrame(() => {
           messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
           shouldAutoScrollRef.current = true;
@@ -236,7 +333,6 @@ const ChatPage = () => {
     fetchMensajes();
   }, [selectedChatId, showNotification]);
 
-  // ✅ Autoscroll solo si estás abajo
   useEffect(() => {
     if (!mensajes || mensajes.length === 0) return;
     if (!shouldAutoScrollRef.current) return;
@@ -287,17 +383,8 @@ const ChatPage = () => {
     }
   };
 
-  // NO TOCAR: Carga el nombre del otro usuario en el chat
   const obtenerNombreOtroUsuario = (chat) => {
     return nombresPorChat[chat._id] || "Usuario";
-  };
-
-  const obtenerOtroUsuarioId = (chat) => {
-    if (!chat?.participantes || !usuarioActualId) return null;
-
-    return chat.participantes.find(
-      (id) => String(id) !== String(usuarioActualId)
-    );
   };
 
   const chatsFiltrados = chats.filter((chat) => {
@@ -314,21 +401,14 @@ const ChatPage = () => {
     ? reservasPorChat[chatSeleccionado._id] || null
     : null;
 
-  const esTutorEnChatSeleccionado = !!(
-    chatSeleccionado &&
-    usuarioActualId &&
-    (usuarioActualRolCodigo === 2 || usuarioActualRol === "docente")
-  );
+  const esTutorEnChatSeleccionado = esTutor && chatSeleccionado;
 
   const manejarAbrirModalReserva = () => setMostrarModalReserva(true);
   const manejarCerrarModalReserva = () => setMostrarModalReserva(false);
 
-  // SOLO UI: botones visibles y fijos (la lógica reserva la dejamos como estaba en tu app)
   const manejarAceptarReserva = async (fechaHoraReserva) => {
     if (!chatSeleccionado) return;
 
-    // OJO: si tu backend depende de cursoId/estudianteId aquí,
-    // eso se arregla en la capa de datos (no en UI).
     if (!fechaHoraReserva) {
       showNotification({
         type: "warning",
@@ -338,8 +418,6 @@ const ChatPage = () => {
       return;
     }
 
-    // Aquí solo cerramos modal y mostramos notificación para no romper el render/UI.
-    // (La lógica real de guardar la reserva la ajustamos en el siguiente paso si quieres)
     setMostrarModalReserva(false);
 
     showNotification({
@@ -360,7 +438,6 @@ const ChatPage = () => {
   return (
     <div className="chat-page">
       <div className="chat-container">
-        {/* LISTA IZQUIERDA */}
         <div className="chat-list">
           <div className="search-bar">
             <input
@@ -407,9 +484,7 @@ const ChatPage = () => {
           </div>
         </div>
 
-        {/* PANEL DERECHO */}
         <div className="chat-messages">
-          {/* HEADER STICKY (siempre visible) */}
           <div className="chat-messages-header">
             <div className="chat-messages-header-main">
               <div className="chat-header-left">
@@ -423,7 +498,6 @@ const ChatPage = () => {
                 </p>
               </div>
 
-              {/* Botones fijos arriba (no dependen del scroll) */}
               {chatSeleccionado && (
                 <div className="chat-reserva-actions">
                   {esTutorEnChatSeleccionado && (
@@ -456,7 +530,6 @@ const ChatPage = () => {
             </div>
           </div>
 
-          {/* MENSAJES SCROLLEABLES */}
           <div className="messages-container" ref={messagesContainerRef}>
             {Object.entries(mensajesAgrupados).map(
               ([fechaKey, mensajesDelDia]) => (
@@ -503,7 +576,6 @@ const ChatPage = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* INPUT FIJO ABAJO */}
           {selectedChatId && (
             <div className="message-input">
               <input

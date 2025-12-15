@@ -25,7 +25,7 @@ public class ChatService {
     private final ChatMapper chatMapper;
 
     public Mono<ChatDTO> crearChat(ChatDTO chatDTO) {
-        ObjectId idCurso = new ObjectId(chatDTO.getId_curso());
+        ObjectId idCurso = new ObjectId(chatDTO.getIdCurso());
         List<ObjectId> participantes = chatDTO.getParticipantes()
                 .stream()
                 .map(ObjectId::new)
