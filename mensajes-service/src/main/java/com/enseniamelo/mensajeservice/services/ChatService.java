@@ -6,10 +6,10 @@ import java.util.List;
 import org.bson.types.ObjectId;
 import org.springframework.stereotype.Service;
 
+import com.enseniamelo.mensajeservice.dto.ChatDTO;
 import com.enseniamelo.mensajeservice.mapper.ChatMapper;
 import com.enseniamelo.mensajeservice.models.Chat;
 import com.enseniamelo.mensajeservice.repository.ChatRepository;
-import com.enseniamelo.mensajeservice.dto.ChatDTO;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,34 +50,35 @@ public class ChatService {
             .map(chatMapper::toDto);
     }
 
-
     public Flux<ChatDTO> obtenerTodos() {
         return chatRepository.findAll()
-            .map(chatMapper::toDto)
-            .doOnError(err -> log.error("Error al obtener chats: {}", err.getMessage()));
+                .map(chatMapper::toDto)
+                .doOnError(err -> log.error("Error al obtener chats: {}", err.getMessage()));
     }
 
     public Mono<ChatDTO> obtenerPorId(String id) {
         return chatRepository.findById(id)
-            .map(chatMapper::toDto)
-            .doOnError(err -> log.error("Error al obtener chat: {}", err.getMessage()));
+                .map(chatMapper::toDto)
+                .doOnError(err -> log.error("Error al obtener chat: {}", err.getMessage()));
     }
 
     public Mono<ChatDTO> actualizarChat(String id, ChatDTO chatDTO) {
         return chatRepository.findById(id)
-            .flatMap(existing -> {
-                chatMapper.updateEntityFromDto(chatDTO, existing);
-                existing.setActualizado(LocalDateTime.now());
-                return chatRepository.save(existing);
-            })
-            .map(chatMapper::toDto)
-            .doOnError(err -> log.error("Error al actualizar chat: {}", err.getMessage()));
+                .switchIfEmpty(Mono.error(new RuntimeException("Chat no encontrado con ID: " + id)))
+                .flatMap(existing -> {
+                    chatMapper.updateEntityFromDto(chatDTO, existing);
+                    existing.setActualizado(LocalDateTime.now());
+                    return chatRepository.save(existing);
+                })
+                .map(chatMapper::toDto)
+                .doOnError(err -> log.error("Error al actualizar chat: {}", err.getMessage()));
     }
 
     public Mono<Void> eliminarChat(String id) {
         return chatRepository.findById(id)
-            .flatMap(chatRepository::delete)
-            .doOnSuccess(v -> log.info("Chat eliminado con ID {}", id))
-            .doOnError(err -> log.error("Error al eliminar chat: {}", err.getMessage()));
+                .switchIfEmpty(Mono.error(new RuntimeException("Chat no encontrado con ID: " + id)))
+                .flatMap(chatRepository::delete)
+                .doOnSuccess(v -> log.info("Chat eliminado con ID {}", id))
+                .doOnError(err -> log.error("Error al eliminar chat: {}", err.getMessage()));
     }
 }

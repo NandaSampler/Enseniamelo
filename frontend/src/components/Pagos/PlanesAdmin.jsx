@@ -1,33 +1,59 @@
-import { useEffect, useState } from "react";
+// frontend/src/components/Pagos/PlanesAdmin.jsx
+import { useEffect, useMemo, useState } from "react";
 import { planesAPI } from "../../api/planes";
-import "../../styles/Explorar/explorar.css";
+import "../../styles/Pagos/planAdmin.css";
+
+function pickApiErrorMessage(err) {
+  const data = err?.response?.data;
+
+  if (data?.detail) {
+    if (typeof data.detail === "string") return data.detail;
+    if (Array.isArray(data.detail)) {
+      const first = data.detail[0];
+      const msg = first?.msg || "Error de validación (422).";
+      const loc = Array.isArray(first?.loc) ? first.loc.join(" → ") : "";
+      return loc ? `${loc}: ${msg}` : msg;
+    }
+  }
+
+  if (data?.error?.message) return data.error.message;
+  if (data?.message) return data.message;
+
+  return err?.message || "Ocurrió un error inesperado.";
+}
 
 const PlanesAdmin = () => {
   const [planes, setPlanes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
   const [form, setForm] = useState({
     nombre: "",
     descripcion: "",
     precio: "",
     duracionDias: "",
-    cantidadCursos: "1"  // Nuevo campo
+    cantidadCursos: "1",
+    estado: "activo",
   });
+
   const [saving, setSaving] = useState(false);
+  const [estadoDraft, setEstadoDraft] = useState({});
+  const [savingRow, setSavingRow] = useState({});
 
   const fetchPlanes = async () => {
     setLoading(true);
     setError("");
     try {
       const { data } = await planesAPI.getPlanes();
-      if (data?.success && Array.isArray(data.planes)) {
-        setPlanes(data.planes);
-      } else {
-        setError("No se pudieron cargar los planes.");
-      }
+      const list = Array.isArray(data) ? data : [];
+      setPlanes(list);
+
+      const init = {};
+      for (const p of list) if (p?.id) init[p.id] = p.estado || "activo";
+      setEstadoDraft(init);
     } catch (err) {
       console.error("Error obteniendo planes:", err);
-      setError("Error al obtener los planes. Inténtalo de nuevo más tarde.");
+      setError(pickApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -42,208 +68,281 @@ const PlanesAdmin = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleCrearPlan = async (e) => {
-    e.preventDefault();
+  const parsed = useMemo(() => {
     const precioNum = Number(form.precio);
     const duracionNum = Number(form.duracionDias);
     const cantidadCursosNum = Number(form.cantidadCursos);
 
-    if (!form.nombre || !form.descripcion || Number.isNaN(precioNum) || Number.isNaN(duracionNum) || Number.isNaN(cantidadCursosNum)) {
-      window.alert("Completa todos los campos con valores válidos.");
+    return {
+      precioNum,
+      duracionNum,
+      cantidadCursosNum,
+      valid:
+        form.nombre.trim().length > 0 &&
+        form.descripcion.trim().length > 0 &&
+        Number.isFinite(precioNum) &&
+        precioNum > 0 &&
+        Number.isFinite(duracionNum) &&
+        duracionNum > 0 &&
+        Number.isFinite(cantidadCursosNum) &&
+        cantidadCursosNum > 0,
+    };
+  }, [form]);
+
+  const handleCrearPlan = async (e) => {
+    e.preventDefault();
+
+    if (!parsed.valid) {
+      window.alert("Completa todos los campos con valores válidos (mayores a 0).");
       return;
     }
 
     try {
       setSaving(true);
-      const { data } = await planesAPI.crearPlan({
+
+      const payload = {
         nombre: form.nombre.trim(),
         descripcion: form.descripcion.trim(),
-        precio: precioNum,
-        duracionDias: duracionNum,
-        cantidadCursos: cantidadCursosNum
-      });
+        precio: parsed.precioNum,
+        duracionDias: parsed.duracionNum,
+        cantidadCursos: parsed.cantidadCursosNum,
+        estado: form.estado || "activo",
+      };
 
-      if (data?.success && data.plan) {
-        setForm({ 
-          nombre: "", 
+      const resp = await planesAPI.crearPlan(payload);
+      const created = resp?.data;
+
+      if (created?.id) {
+        setForm({
+          nombre: "",
           descripcion: "",
-          precio: "", 
+          precio: "",
           duracionDias: "",
-          cantidadCursos: "1"
+          cantidadCursos: "1",
+          estado: "activo",
         });
         await fetchPlanes();
       } else {
-        window.alert("No se pudo crear el plan. Intenta nuevamente.");
+        window.alert("El plan se creó, pero la respuesta no incluyó un 'id'. Revisa el backend.");
+        await fetchPlanes();
       }
     } catch (err) {
       console.error("Error creando plan:", err);
-      const msg = err?.response?.data?.message || "Ocurrió un error al crear el plan.";
-      window.alert(msg);
+      window.alert(pickApiErrorMessage(err));
     } finally {
       setSaving(false);
     }
   };
 
+  const handleGuardarEstado = async (planId) => {
+    const nuevoEstado = estadoDraft[planId];
+    if (!nuevoEstado) return;
+
+    try {
+      setSavingRow((prev) => ({ ...prev, [planId]: true }));
+      await planesAPI.actualizarPlan(planId, { estado: nuevoEstado });
+
+      setPlanes((prev) => prev.map((p) => (p.id === planId ? { ...p, estado: nuevoEstado } : p)));
+    } catch (err) {
+      console.error("Error actualizando estado:", err);
+      window.alert(pickApiErrorMessage(err));
+      const original = planes.find((p) => p.id === planId)?.estado || "activo";
+      setEstadoDraft((prev) => ({ ...prev, [planId]: original }));
+    } finally {
+      setSavingRow((prev) => ({ ...prev, [planId]: false }));
+    }
+  };
+
   return (
-    <div className="explorar-main">
-      <h2 className="explorar-title">Gestión de planes de suscripción</h2>
-      <p className="text-sm text-slate-600 mb-4">
-        Crea y administra los planes disponibles para los tutores. Solo los usuarios con rol administrador pueden acceder a esta sección.
+    <div className="plan-admin">
+      <h2 className="plan-admin-title">Gestión de planes de suscripción</h2>
+      <p className="plan-admin-subtitle">
+        Crea planes y habilita/deshabilita su visibilidad cambiando su estado. (Solo se edita el estado).
       </p>
 
-      <section className="mb-8">
-        <h3 className="text-base font-semibold text-slate-900 mb-3">Crear nuevo plan</h3>
-        <form
-          onSubmit={handleCrearPlan}
-          className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end bg-white border border-slate-200 rounded-lg p-4 shadow-sm"
-        >
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
-              Nombre del plan
-            </label>
-            <input
-              type="text"
-              name="nombre"
-              value={form.nombre}
-              onChange={handleChange}
-              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-              placeholder="Ej: Plan Pro"
-            />
-          </div>
+      <section className="mb-8 plan-admin-card">
+        <div className="p-4">
+          <h3 className="plan-admin-section-title">Crear nuevo plan</h3>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
-              Descripción
-            </label>
-            <input
-              type="text"
-              name="descripcion"
-              value={form.descripcion}
-              onChange={handleChange}
-              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-              placeholder="Ej: Plan para tutores profesionales"
-            />
-          </div>
+          <form onSubmit={handleCrearPlan} className="plan-admin-form">
+            <div className="md:col-span-1">
+              <label className="plan-admin-label">Nombre</label>
+              <input
+                type="text"
+                name="nombre"
+                value={form.nombre}
+                onChange={handleChange}
+                className="plan-admin-input"
+                placeholder="Ej: Plan Pro"
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
-              Precio
-            </label>
-            <input
-              type="number"
-              name="precio"
-              value={form.precio}
-              onChange={handleChange}
-              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-              placeholder="Ej: 29.99"
-              step="0.01"
-              min="0"
-            />
-          </div>
+            <div className="md:col-span-2">
+              <label className="plan-admin-label">Descripción</label>
+              <input
+                type="text"
+                name="descripcion"
+                value={form.descripcion}
+                onChange={handleChange}
+                className="plan-admin-input"
+                placeholder="Ej: Para tutores profesionales"
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
-              Duración (días)
-            </label>
-            <input
-              type="number"
-              name="duracionDias"
-              value={form.duracionDias}
-              onChange={handleChange}
-              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-              placeholder="Ej: 30"
-            />
-          </div>
+            <div className="md:col-span-1">
+              <label className="plan-admin-label">Precio (USD)</label>
+              <input
+                type="number"
+                name="precio"
+                value={form.precio}
+                onChange={handleChange}
+                className="plan-admin-input"
+                placeholder="Ej: 29.99"
+                step="0.01"
+                min="0"
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
-              Cantidad de cursos permitidos
-            </label>
-            <input
-              type="number"
-              name="cantidadCursos"
-              min="1"
-              value={form.cantidadCursos}
-              onChange={handleChange}
-              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-              placeholder="Ej: 3"
-            />
-          </div>
+            <div className="md:col-span-1">
+              <label className="plan-admin-label">Duración (días)</label>
+              <input
+                type="number"
+                name="duracionDias"
+                value={form.duracionDias}
+                onChange={handleChange}
+                className="plan-admin-input"
+                placeholder="Ej: 30"
+                min="1"
+              />
+            </div>
 
-          <div className="flex md:justify-end">
-            <button
-              type="submit"
-              disabled={saving}
-              className="infocurso-reserve-btn w-full md:w-auto px-4 py-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {saving ? "Guardando..." : "Crear plan"}
-            </button>
-          </div>
-        </form>
+            <div className="md:col-span-1">
+              <label className="plan-admin-label">Cursos</label>
+              <input
+                type="number"
+                name="cantidadCursos"
+                min="1"
+                value={form.cantidadCursos}
+                onChange={handleChange}
+                className="plan-admin-input"
+                placeholder="Ej: 3"
+              />
+            </div>
+
+            <div className="md:col-span-1">
+              <label className="plan-admin-label">Estado</label>
+              <select
+                name="estado"
+                value={form.estado}
+                onChange={handleChange}
+                className="plan-admin-select w-full"
+              >
+                <option value="activo">activo</option>
+                <option value="inactivo">inactivo</option>
+              </select>
+            </div>
+
+            <div className="md:col-span-6 flex md:justify-end">
+              <button type="submit" disabled={saving} className="plan-admin-btn w-full md:w-auto">
+                {saving ? "Guardando..." : "Crear plan"}
+              </button>
+            </div>
+          </form>
+        </div>
       </section>
 
-      <section>
-        <h3 className="text-base font-semibold text-slate-900 mb-3">Planes actuales</h3>
+      <section className="plan-admin-card">
+        <div className="p-4">
+          <h3 className="plan-admin-section-title">Planes actuales</h3>
 
-        {loading && <p className="explorar-empty">Cargando planes...</p>}
-        {!loading && error && (
-          <p className="explorar-empty text-red-500">{error}</p>
-        )}
+          {loading && <p className="text-sm text-slate-600">Cargando planes...</p>}
+          {!loading && error && <p className="text-sm text-red-500">{error}</p>}
 
-        {!loading && !error && (
-          <div className="overflow-x-auto bg-white border border-slate-200 rounded-lg shadow-sm">
-            {planes.length > 0 ? (
-              <table className="min-w-full text-sm">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                      Nombre
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                      Descripción
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                      Precio (USD)
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                      Duración (días)
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                      Cursos permitidos
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                      Estado
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {planes.map((plan) => (
-                    <tr key={plan._id} className="border-t border-slate-100">
-                      <td className="px-4 py-2 text-slate-900">{plan.nombre}</td>
-                      <td className="px-4 py-2 text-slate-600 text-xs">{plan.descripcion}</td>
-                      <td className="px-4 py-2 text-slate-700">
-                        {typeof plan.precio === "number"
-                          ? plan.precio.toFixed(2)
-                          : plan.precio}
-                      </td>
-                      <td className="px-4 py-2 text-slate-700">{plan.duracionDias}</td>
-                      <td className="px-4 py-2 text-slate-700">{plan.cantidadCursos}</td>
-                      <td className="px-4 py-2">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
-                          {plan.estado || "activo"}
-                        </span>
-                      </td>
+          {!loading && !error && (
+            <div className="plan-admin-table-wrap">
+              {planes.length > 0 ? (
+                <table className="plan-admin-table">
+                  <thead className="plan-admin-thead">
+                    <tr>
+                      <th className="plan-admin-th">Nombre</th>
+                      <th className="plan-admin-th">Descripción</th>
+                      <th className="plan-admin-th">Precio</th>
+                      <th className="plan-admin-th">Duración</th>
+                      <th className="plan-admin-th">Cursos</th>
+                      <th className="plan-admin-th">Estado</th>
+                      <th className="plan-admin-th">Acción</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p className="explorar-empty">
-                No hay planes configurados todavía. Crea uno usando el formulario de arriba.
-              </p>
-            )}
-          </div>
-        )}
+                  </thead>
+
+                  <tbody>
+                    {planes.map((plan) => {
+                      const precio =
+                        typeof plan?.precio === "number"
+                          ? plan.precio.toFixed(2)
+                          : String(plan?.precio ?? "");
+
+                      const currentDraft = estadoDraft[plan.id] ?? plan.estado ?? "activo";
+                      const changed = String(currentDraft) !== String(plan.estado);
+
+                      return (
+                        <tr key={plan.id} className="plan-admin-row">
+                          <td className="plan-admin-td text-slate-900">{plan.nombre}</td>
+                          <td className="plan-admin-td text-slate-600 text-xs">{plan.descripcion}</td>
+                          <td className="plan-admin-td text-slate-700">{precio}</td>
+                          <td className="plan-admin-td text-slate-700">{plan.duracionDias}</td>
+                          <td className="plan-admin-td text-slate-700">{plan.cantidadCursos}</td>
+
+                          <td className="plan-admin-td">
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={currentDraft}
+                                onChange={(e) =>
+                                  setEstadoDraft((prev) => ({ ...prev, [plan.id]: e.target.value }))
+                                }
+                                className="plan-admin-select"
+                              >
+                                <option value="activo">activo</option>
+                                <option value="inactivo">inactivo</option>
+                              </select>
+
+                              <span
+                                className={
+                                  "plan-admin-pill " +
+                                  (plan.estado === "activo"
+                                    ? "plan-admin-pill-activo"
+                                    : "plan-admin-pill-inactivo")
+                                }
+                                title="Estado actual"
+                              >
+                                {plan.estado}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="plan-admin-td">
+                            <button
+                              type="button"
+                              className="plan-admin-btn px-3 py-2 text-sm"
+                              disabled={!changed || !!savingRow[plan.id]}
+                              onClick={() => handleGuardarEstado(plan.id)}
+                              title={!changed ? "No hay cambios" : "Guardar estado"}
+                            >
+                              {savingRow[plan.id] ? "Guardando..." : "Guardar"}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-sm text-slate-600">
+                  No hay planes configurados todavía. Crea uno usando el formulario de arriba.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );

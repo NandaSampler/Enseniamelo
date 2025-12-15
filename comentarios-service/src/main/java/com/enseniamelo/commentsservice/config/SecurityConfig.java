@@ -31,6 +31,7 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeExchange(auth -> auth
+                // Endpoints públicos (sin autenticación)
                 .pathMatchers("/actuator/**").permitAll()
                 .pathMatchers("/openapi/**").permitAll()
                 .pathMatchers("/swagger-ui/**").permitAll()
@@ -38,6 +39,10 @@ public class SecurityConfig {
                 .pathMatchers("/v3/api-docs/**").permitAll()
                 .pathMatchers("/webjars/**").permitAll()
                 
+                // ✅ GET comentarios es PÚBLICO (cualquiera puede ver)
+                .pathMatchers(HttpMethod.GET, "/api/comentario-curso/**").permitAll()
+                
+                // ✅ POST/PUT/DELETE comentarios requiere autenticación
                 .pathMatchers("/api/comentario-curso/**").authenticated()
                 
                 .anyExchange().authenticated()

@@ -50,7 +50,7 @@ public class SecurityConfig {
         }) // habilita CORS (se apoya en CorsWebFilter)
         .csrf(csrf -> csrf.disable())
         .authorizeExchange(auth -> auth
-            //Stripe
+            // Stripe
             .pathMatchers(HttpMethod.POST, "/ms-payments/v1/stripe/webhook").permitAll()
             // Públicos generales
             .pathMatchers("/*/swagger-ui/**", "/*/swagger-ui.html").permitAll()
@@ -81,13 +81,13 @@ public class SecurityConfig {
             .pathMatchers("/ms-payments/health").permitAll()
             .pathMatchers("/curso/health").permitAll()
 
-            //Autorizacion chats
+            // Autorizacion chats
             .pathMatchers(HttpMethod.GET, "/v1/chat/**").hasAnyRole("USER", "TUTOR", "ADMIN")
             .pathMatchers(HttpMethod.POST, "/v1/chat/**").hasAnyRole("USER", "TUTOR", "ADMIN")
             .pathMatchers(HttpMethod.PUT, "/v1/chat/**").hasAnyRole("USER", "TUTOR", "ADMIN")
             .pathMatchers(HttpMethod.DELETE, "/v1/chat/**").hasAnyRole("USER", "TUTOR", "ADMIN")
 
-            //Autorizacion mensajes
+            // Autorizacion mensajes
             .pathMatchers(HttpMethod.GET, "/v1/mensaje/**").hasAnyRole("USER", "TUTOR", "ADMIN")
             .pathMatchers(HttpMethod.POST, "/v1/mensaje/**").hasAnyRole("USER", "TUTOR", "ADMIN")
             .pathMatchers(HttpMethod.PUT, "/v1/mensaje/**").hasAnyRole("USER", "TUTOR", "ADMIN")
@@ -98,10 +98,11 @@ public class SecurityConfig {
 
             // Autorización Payments
             .pathMatchers("/ms-payments/v1/pagos/**").hasRole("ADMIN")
-            .pathMatchers("/ms-payments/v1/planes/**").hasAnyRole("USER", "TUTOR", "ADMIN")
+            .pathMatchers(HttpMethod.GET, "/ms-payments/v1/planes/**").hasAnyRole("USER", "TUTOR", "ADMIN")
+            .pathMatchers(HttpMethod.POST, "/ms-payments/v1/planes/**").hasRole("ADMIN")
+            .pathMatchers(HttpMethod.PUT, "/ms-payments/v1/planes/**").hasRole("ADMIN")
+            .pathMatchers(HttpMethod.DELETE, "/ms-payments/v1/planes/**").hasRole("ADMIN")
             .pathMatchers("/ms-payments/v1/suscripciones/**").hasAnyRole("USER", "TUTOR", "ADMIN")
-
-            
 
             // Documentación de cursos pública
             .pathMatchers("/curso/docs", "/curso/redoc", "/curso/openapi.json").permitAll()

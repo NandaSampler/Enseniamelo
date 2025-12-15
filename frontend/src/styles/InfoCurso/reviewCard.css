@@ -39,3 +39,72 @@
 .review-date {
   @apply text-[11px] text-slate-600;
 }
+/* Container para el mensaje de restricción */
+.infocurso-review-hint-container {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-left: 4px solid #0ea5e9;
+  border-radius: 0.5rem;
+}
+
+.infocurso-review-hint {
+  margin: 0;
+  color: #0f172a;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* Estados específicos del mensaje */
+.infocurso-review-hint-container.warning {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-left-color: #f59e0b;
+}
+
+.infocurso-review-hint-container.error {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  border-left-color: #ef4444;
+}
+
+.infocurso-review-hint-container.success {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  border-left-color: #10b981;
+}
+
+/* Mejorar el estilo del formulario de reseña cuando está deshabilitado */
+.infocurso-review-form:disabled,
+.infocurso-review-form[aria-disabled="true"] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Mejoras para el mensaje de restricción con iconos */
+.infocurso-review-hint::before {
+  content: "ℹ️ ";
+  margin-right: 0.5rem;
+}
+
+.infocurso-review-hint-container.warning .infocurso-review-hint::before {
+  content: "⚠️ ";
+}
+
+.infocurso-review-hint-container.error .infocurso-review-hint::before {
+  content: "❌ ";
+}
+
+.infocurso-review-hint-container.success .infocurso-review-hint::before {
+  content: "✅ ";
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .infocurso-review-hint-container {
+    padding: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .infocurso-review-hint {
+    font-size: 0.875rem;
+  }
+}

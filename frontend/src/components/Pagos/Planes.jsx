@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../../api/config";
 import { useNotification } from "../NotificationProvider";
-import "../../styles/Explorar/explorar.css";
+import "../../styles/Pagos/planes.css";
 
 const PAYMENTS_PREFIX = "/ms-payments/v1";
 
@@ -24,18 +24,30 @@ const Planes = () => {
   const esSuccess = useMemo(() => location.pathname.endsWith("/success"), [location.pathname]);
   const esCancel = useMemo(() => location.pathname.endsWith("/cancel"), [location.pathname]);
 
-  // Mensajes post-checkout
-  useEffect(() => {
-    if (esSuccess) {
-      setMensaje("Pago realizado con éxito. Tu suscripción será activada en segundos.");
-    } else if (esCancel) {
-      setMensaje("El pago fue cancelado. Puedes intentar nuevamente cuando desees.");
-    } else {
-      setMensaje("");
+  const isBloqueante = (sub) => {
+    if (!sub) return false;
+
+    const ahora = new Date();
+
+    if (sub.estado === "activa" || sub.estado === "pendiente") {
+      return true;
     }
+
+    if (sub.estado === "cancelada") {
+      if (!sub.fin) return true;
+      return new Date(sub.fin) > ahora;
+    }
+
+    return false;
+  };
+
+
+  useEffect(() => {
+    if (esSuccess) setMensaje("Pago realizado con éxito. Tu suscripción será activada en segundos.");
+    else if (esCancel) setMensaje("El pago fue cancelado. Puedes intentar nuevamente cuando desees.");
+    else setMensaje("");
   }, [esSuccess, esCancel]);
 
-  // Helper: trae /me
   const fetchMe = async () => {
     const meRes = await api.get("/v1/auth/me");
     const me = meRes?.data;
@@ -44,32 +56,26 @@ const Planes = () => {
     return me.id;
   };
 
-  // Helper: trae planes
   const fetchPlanes = async () => {
     const res = await api.get(`${PAYMENTS_PREFIX}/planes/`);
-    return Array.isArray(res.data) ? res.data : [];
+    const list = Array.isArray(res.data) ? res.data : [];
+    return list.filter((p) => (p?.estado || "activo") === "activo");
   };
 
-  // Helper: trae suscripciones con fallback (filtrado backend -> si no, todas y filtrar front)
   const fetchSubsForUser = async (userId) => {
-    // 1) Intento filtrado en backend
     try {
       const r1 = await api.get(`${PAYMENTS_PREFIX}/suscripciones/`, {
         params: { id_usuario: userId },
       });
       const list1 = Array.isArray(r1.data) ? r1.data : [];
       if (list1.length > 0) return list1;
-    } catch (e) {
-      // Ignoramos y hacemos fallback
-    }
+    } catch { }
 
-    // 2) Fallback: traer todas y filtrar en frontend
     const r2 = await api.get(`${PAYMENTS_PREFIX}/suscripciones/`);
     const list2 = Array.isArray(r2.data) ? r2.data : [];
     return list2.filter((s) => String(s?.id_usuario) === String(userId));
   };
 
-  // Boot inicial (me + planes + suscripción)
   useEffect(() => {
     let mounted = true;
 
@@ -87,12 +93,16 @@ const Planes = () => {
         const subs = await fetchSubsForUser(userId);
         if (!mounted) return;
 
-        const found =
-          subs.find((s) => s.estado === "activa") ||
-          subs.find((s) => s.estado === "pendiente") ||
-          null;
+        const prioridad = ["activa", "pendiente", "cancelada", "expirada"];
 
-        setSuscripcionActiva(found);
+        const ordered = prioridad
+          .map((estado) => subs.find((s) => s.estado === estado))
+          .filter(Boolean);
+
+        const selected = ordered[0] || null;
+
+        setSuscripcionActiva(selected);
+
       } catch (err) {
         console.error(err);
         if (!mounted) return;
@@ -114,13 +124,12 @@ const Planes = () => {
     };
   }, []);
 
-  // Polling luego de /success (por webhook: pendiente -> activa)
   useEffect(() => {
     if (!esSuccess) return;
     if (!mongoId) return;
 
     let tries = 0;
-    const maxTries = 10; // ~20s si intervalo 2s
+    const maxTries = 10;
 
     const tick = async () => {
       tries += 1;
@@ -132,14 +141,8 @@ const Planes = () => {
           null;
 
         setSuscripcionActiva(found);
-
-        // si ya está activa, paramos
-        if (found?.estado === "activa") {
-          clearInterval(timer);
-        }
-      } catch (e) {
-        // si falla, seguimos intentando
-      }
+        if (found?.estado === "activa") clearInterval(timer);
+      } catch { }
 
       if (tries >= maxTries) clearInterval(timer);
     };
@@ -161,18 +164,20 @@ const Planes = () => {
         return;
       }
 
-      if (suscripcionActiva) {
+      if (isBloqueante(suscripcionActiva)) {
         showNotification({
           type: "warning",
-          title: "Ya tienes una suscripción",
-          message: `Ya tienes una suscripción en estado "${suscripcionActiva.estado}".`,
+          title: "Suscripción activa",
+          message:
+            suscripcionActiva.estado === "cancelada"
+              ? "Tu suscripción fue cancelada, pero aún no finaliza su período."
+              : `Ya tienes una suscripción en estado "${suscripcionActiva.estado}".`,
         });
         return;
       }
 
       const inicio = new Date().toISOString().slice(0, 19);
 
-      // Stripe checkout (tu backend toma el usuario desde Bearer token)
       const { data } = await api.post(`${PAYMENTS_PREFIX}/stripe/checkout-session`, {
         id_plan: planId,
         inicio,
@@ -201,72 +206,74 @@ const Planes = () => {
   const volverAPlanes = () => navigate("/planes", { replace: true });
 
   return (
-    <div className="explorar-page">
-      <main className="explorar-main">
-        <h2 className="explorar-title">Planes para tutores</h2>
+    <div className="planes-page">
+      <main className="planes-main">
+        <h2 className="planes-title">Planes para tutores</h2>
+        <p className="planes-subtitle">
+          Elige el plan que mejor se adapte a tu actividad. El pago se realiza con Stripe y se activa en segundos.
+        </p>
 
         {mensaje && (
-          <div className="mb-4 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2 flex items-center justify-between">
+          <div className={"planes-alert " + (esSuccess ? "planes-alert-success" : "planes-alert-warning")}>
             <span>{mensaje}</span>
+
             {location.pathname !== "/planes" && (
-              <button
-                type="button"
-                className="text-xs font-medium text-emerald-800 hover:underline ml-4"
-                onClick={volverAPlanes}
-              >
+              <button type="button" className="planes-alert-action" onClick={volverAPlanes}>
                 Ver planes
               </button>
             )}
           </div>
         )}
 
-        {!loading && suscripcionActiva && (
-          <div className="mb-4 text-sm bg-slate-50 border border-slate-200 rounded-lg px-4 py-2">
-            Ya tienes una suscripción <strong>{suscripcionActiva.estado}</strong>. No puedes suscribirte a otro plan.
+        {!loading && isBloqueante(suscripcionActiva) && (
+          <div className="planes-alert planes-alert-warning">
+            {suscripcionActiva.estado === "cancelada"
+              ? `Tu suscripción fue cancelada, pero sigue activa hasta el ${new Date(
+                suscripcionActiva.fin
+              ).toLocaleDateString()}.`
+              : `Ya tienes una suscripción ${suscripcionActiva.estado}.`}
           </div>
+
         )}
 
-        {loading && <p className="explorar-empty">Cargando planes...</p>}
-        {!loading && error && <p className="explorar-empty text-red-500">{error}</p>}
+        {loading && <p className="planes-empty">Cargando planes...</p>}
+        {!loading && error && <p className="planes-empty text-red-500">{error}</p>}
 
         {!loading && !error && (
-          <section className="explorar-grid">
+          <section className="planes-grid">
             {planes.length > 0 ? (
               planes.map((plan) => (
-                <article key={plan.id} className="curso-card hover:shadow-md transition-shadow">
-                  <div className="curso-content">
-                    <div>
-                      <div className="curso-title-row">
-                        <h3 className="curso-title">{plan.nombre}</h3>
-                      </div>
-                      <p className="curso-description mt-2">{plan.descripcion}</p>
+                <article key={plan.id} className="planes-card">
+                  <div className="planes-card-inner">
+                    <div className="planes-card-header">
+                      <h3 className="planes-card-title">{plan.nombre}</h3>
+                      <span className="planes-badge planes-badge-pro">Tutor</span>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between">
-                      <div className="text-sm text-slate-700">
-                        <div className="text-lg font-semibold text-slate-900">
-                          {Number(plan.precio).toFixed(2)} USD
-                        </div>
-                        <div className="text-[11px] text-slate-500">Duración: {plan.duracionDias} días</div>
-                        <div className="text-[11px] text-slate-500">Cursos permitidos: {plan.cantidadCursos}</div>
+                    <p className="planes-desc">{plan.descripcion}</p>
+
+                    <div className="planes-footer">
+                      <div>
+                        <div className="planes-price">{Number(plan.precio).toFixed(2)} USD</div>
+                        <div className="planes-meta">Duración: {plan.duracionDias} días</div>
+                        <div className="planes-meta">Cursos permitidos: {plan.cantidadCursos}</div>
                       </div>
 
                       <button
                         type="button"
-                        className={`infocurso-reserve-btn w-auto px-4 py-2 text-sm ${
-                          suscripcionActiva ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
+                        className="planes-btn"
                         onClick={() => handleElegirPlan(plan.id)}
-                        disabled={!!suscripcionActiva}
+                        disabled={isBloqueante(suscripcionActiva)}
                       >
-                        {suscripcionActiva ? "Ya suscrito" : "Suscribirse"}
+                        {isBloqueante(suscripcionActiva) ? "No disponible" : "Suscribirse"}
+
                       </button>
                     </div>
                   </div>
                 </article>
               ))
             ) : (
-              <p className="explorar-empty">No hay planes disponibles por el momento.</p>
+              <p className="planes-empty">No hay planes disponibles por el momento.</p>
             )}
           </section>
         )}

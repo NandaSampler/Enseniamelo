@@ -38,34 +38,38 @@ public class ComentarioCursoController {
         this.usuariosIntegration = usuariosIntegration;
     }
 
-    // === GET: Listar todos los comentarios ===
+    // ✅ GET PÚBLICOS (sin @PreAuthorize - cualquiera puede ver comentarios)
+    
     @GetMapping
     @Operation(summary = "Listar todos los comentarios de cursos")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'TUTOR')")
     public Flux<ComentarioCurso> getAll() {
         LOGGER.info("GET /api/comentario-curso - Obteniendo todos los comentarios");
         return service.getAllComentarios();
     }
 
-    // === GET: Obtener comentario por ID ===
     @GetMapping("/{id}")
     @Operation(summary = "Obtener un comentario por su ID")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'TUTOR')")
     public Mono<ComentarioCurso> getById(@PathVariable String id) {
         LOGGER.info("GET /api/comentario-curso/{} - Obteniendo comentario", id);
         return service.getComentarioById(id);
     }
 
-    // === GET: Listar comentarios por curso ===
     @GetMapping("/curso/{idCurso}")
     @Operation(summary = "Listar comentarios de un curso específico")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'TUTOR')")
     public Flux<ComentarioCurso> getByCurso(@PathVariable String idCurso) {
         LOGGER.info("GET /api/comentario-curso/curso/{} - Obteniendo comentarios del curso", idCurso);
         return service.getComentariosByCurso(idCurso);
     }
     
-    // === GET: Listar comentarios de un usuario ===
+    @GetMapping("/curso/{idCurso}/promedio")
+    @Operation(summary = "Obtener promedio de clasificación de un curso")
+    public Mono<Double> getPromedioClasificacion(@PathVariable String idCurso) {
+        LOGGER.info("GET /api/comentario-curso/curso/{}/promedio", idCurso);
+        return service.getPromedioClasificacionCurso(idCurso);
+    }
+
+    // ✅ ENDPOINTS PROTEGIDOS (requieren autenticación)
+    
     @GetMapping("/usuario/{idUsuario}")
     @Operation(summary = "Listar comentarios de un usuario específico")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'TUTOR')")
@@ -74,7 +78,6 @@ public class ComentarioCursoController {
         return service.getComentariosByUsuario(idUsuario);
     }
     
-    // === GET: Obtener mis comentarios (usuario actual) ===
     @GetMapping("/mis-comentarios")
     @Operation(summary = "Listar mis comentarios (usuario autenticado)")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'TUTOR')")
@@ -88,17 +91,7 @@ public class ComentarioCursoController {
                             return service.getComentariosByUsuario(usuario.getId());
                         }));
     }
-    
-    // === GET: Promedio de clasificación de un curso ===
-    @GetMapping("/curso/{idCurso}/promedio")
-    @Operation(summary = "Obtener promedio de clasificación de un curso")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'TUTOR')")
-    public Mono<Double> getPromedioClasificacion(@PathVariable String idCurso) {
-        LOGGER.info("GET /api/comentario-curso/curso/{}/promedio", idCurso);
-        return service.getPromedioClasificacionCurso(idCurso);
-    }
 
-    // === POST: Crear un nuevo comentario ===
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Crear un nuevo comentario de curso")
@@ -125,6 +118,7 @@ public class ComentarioCursoController {
                             });
                 });
     }
+    
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar un comentario de curso existente")
     @PreAuthorize("hasRole('ADMIN') or @comentarioSecurityService.esComentarioDelUsuario(#id)")
@@ -136,6 +130,7 @@ public class ComentarioCursoController {
         ComentarioCurso comentario = ComentarioCursoMapper.toEntity(dto);
         return service.updateComentario(id, comentario);
     }
+    
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Eliminar un comentario de curso")

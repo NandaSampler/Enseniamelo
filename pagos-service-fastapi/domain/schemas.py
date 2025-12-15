@@ -26,7 +26,7 @@ class PlanCreate(BaseModel):
     precio: float = Field(..., gt=0, description="Precio del plan")
     duracionDias: int = Field(..., gt=0, description="Duración en días")
     cantidadCursos: int = Field(..., gt=0, description="Cantidad de cursos que incluye")
-    estado: PlanEstado = Field(..., description="Estado del plan")
+    estado: PlanEstado = Field("activo", description="Estado del plan")
 
     model_config = ConfigDict(json_schema_extra={
         "example": {
