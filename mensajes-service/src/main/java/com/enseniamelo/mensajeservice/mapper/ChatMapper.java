@@ -3,7 +3,6 @@ package com.enseniamelo.mensajeservice.mapper;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import org.bson.types.ObjectId;
 import org.mapstruct.Mapper;
@@ -16,36 +15,36 @@ import com.enseniamelo.mensajeservice.models.Chat;
 @Mapper(componentModel = "spring")
 public interface ChatMapper {
 
-    // ========== ENTITY → DTO ==========
+    // ========= ENTITY → DTO =========
     @Mapping(target = "participantes",
-             expression = "java(objectIdListToStringList(chat.getParticipantes()))")
+            expression = "java(objectIdListToStringList(chat.getParticipantes()))")
     @Mapping(target = "id_curso",
-             expression = "java(objectIdToString(chat.getId_curso()))")
-    // creado y actualizado se mapean solos (LocalDateTime → LocalDateTime)
+            expression = "java(objectIdToString(chat.getId_curso()))")
     ChatDTO toDto(Chat chat);
 
-    // ========== DTO → ENTITY ==========
+    // ========= DTO → ENTITY =========
     @Mapping(target = "participantes",
-             expression = "java(stringListToObjectIdList(chatDTO.getParticipantes()))")
+            expression = "java(stringListToObjectIdList(chatDTO.getParticipantes()))")
     @Mapping(target = "id_curso",
-             expression = "java(stringToObjectId(chatDTO.getId_curso()))")
+            expression = "java(stringToObjectId(chatDTO.getId_curso()))")
     @Mapping(target = "creado", ignore = true)
     @Mapping(target = "actualizado", ignore = true)
     Chat toEntity(ChatDTO chatDTO);
 
+    // ========= LISTS =========
     List<ChatDTO> entitiesToDtos(List<Chat> chats);
     List<Chat> dtosToEntities(List<ChatDTO> chats);
 
-    // ========== UPDATE ==========
+    // ========= UPDATE =========
     @Mapping(target = "participantes",
-             expression = "java(stringListToObjectIdList(chatDTO.getParticipantes()))")
+            expression = "java(stringListToObjectIdList(chatDTO.getParticipantes()))")
     @Mapping(target = "id_curso",
-             expression = "java(stringToObjectId(chatDTO.getId_curso()))")
+            expression = "java(stringToObjectId(chatDTO.getId_curso()))")
     @Mapping(target = "creado", ignore = true)
     @Mapping(target = "actualizado", ignore = true)
     void updateEntityFromDto(ChatDTO chatDTO, @MappingTarget Chat chat);
 
-    // ===== Helpers ====
+    // ========= HELPERS =========
     default String objectIdToString(ObjectId id) {
         return id != null ? id.toHexString() : null;
     }
@@ -59,7 +58,7 @@ public interface ChatMapper {
         return list.stream()
                 .filter(Objects::nonNull)
                 .map(ObjectId::toHexString)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     default List<ObjectId> stringListToObjectIdList(Collection<String> list) {
@@ -68,6 +67,6 @@ public interface ChatMapper {
                 .filter(Objects::nonNull)
                 .filter(str -> !str.isBlank())
                 .map(ObjectId::new)
-                .collect(Collectors.toList());
+                .toList();
     }
 }
