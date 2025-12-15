@@ -97,25 +97,6 @@ const AdminDetalle = ({
           <p className="admin-detail-summary">{curso.descripcion}</p>
         </div>
 
-        {Array.isArray(curso.categoriasNombres) &&
-          curso.categoriasNombres.length > 0 && (
-            <div className="admin-detail-description-block">
-              <h3 className="admin-detail-description-title">
-                Categorías del curso
-              </h3>
-              <div className="admin-detail-categories">
-                {curso.categoriasNombres.map((cat) => (
-                  <span
-                    key={cat}
-                    className="admin-detail-category-chip"
-                  >
-                    {cat}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
         <div className="admin-detail-meta-grid">
           <div>
             <p className="admin-detail-meta-label">CI tutor</p>
@@ -123,7 +104,7 @@ const AdminDetalle = ({
           </div>
           <div>
             <p className="admin-detail-meta-label">Estado verificación</p>
-            <p className="admin-detail-meta-value">{perfil_tutor.verificado}</p>
+            <p className="admin-detail-meta-value">{"VERIFICADO"}</p>
           </div>
           <div>
             <p className="admin-detail-meta-label">Clasificación</p>

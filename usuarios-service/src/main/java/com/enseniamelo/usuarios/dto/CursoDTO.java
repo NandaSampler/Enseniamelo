@@ -37,10 +37,10 @@ public class CursoDTO {
     private String modalidad;
 
     @Schema(description = "Precio por hora", example = "50.0")
-    private Float precioReserva;
+    private Float precio_reserva;
 
     @Schema(description = "URL de la portada del curso")
-    private String portadaUrl;
+    private String portada_url;
 
     @Schema(description = "Lista de URLs de fotos del curso")
     private List<String> fotos;
@@ -55,7 +55,7 @@ public class CursoDTO {
     private String idTutor;
 
     @Schema(description = "Estado de verificación del curso")
-    private String estadoVerificacion;
+    private String verificacion_estado;
     
     @Schema(description = "Estado del curso", example = "activo")
     private String estado;

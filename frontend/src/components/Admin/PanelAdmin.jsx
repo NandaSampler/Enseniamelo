@@ -5,17 +5,12 @@ import AdminDetalle from "./AdminDetalle";
 import { verificarAPI } from "../../api/verificar";
 import PlanesAdmin from "../Pagos/PlanesAdmin";
 
-/**
- * Mapea la respuesta del endpoint /completas al formato esperado por el frontend
- */
+
 const mapSolicitudCompletaFromApi = (raw) => {
-  // Extraer los objetos anidados
   const solicitud = raw.solicitud || {};
   const usuario = raw.usuario || {};
   const tutor = raw.tutor || {};
   const curso = raw.curso || {};
-
-  console.log("🔍 Datos raw recibidos:", { solicitud, usuario, tutor, curso });
 
   const nombreCompleto = [usuario.nombre, usuario.apellido]
     .filter(Boolean)
@@ -32,17 +27,22 @@ const mapSolicitudCompletaFromApi = (raw) => {
       })
     : "";
 
-  // ✅ Verificar ambos formatos: camelCase y el valor del curso
-  const precioReserva = curso.precioReserva || curso.precio_reserva || 0;
+  const precioReserva = curso.precio_reserva || 0;
+  const verificacion_estado = curso.verificacion_estado || "pendiente";
   const precioFormateado = precioReserva > 0
     ? `${precioReserva} Bs/hora`
     : "Sin precio definido";
+  const portadaUrl = curso.portada_url ;
+  const fotos = Array.isArray(curso.fotos) 
+    ? curso.fotos 
+    : [];
+
 
   return {
     id_verificar: solicitud.id,
     estado: solicitud.estado,
     comentario: solicitud.comentario || "",
-    foto_ci: solicitud.fotoCi ? solicitud.fotoCi : "",
+    foto_ci: solicitud.fotoCi || solicitud.foto_ci || "",
     archivos_verificacion: Array.isArray(solicitud.archivos)
       ? solicitud.archivos
       : [],
@@ -53,16 +53,14 @@ const mapSolicitudCompletaFromApi = (raw) => {
     // Información del curso completa
     curso: {
       id_curso: curso.id || solicitud.idCurso || "Sin ID",
-      // ✅ Priorizar el nombre del curso sobre el del usuario
       nombre: curso.nombre || curso.titulo || `Curso - ID: ${curso.id || solicitud.idCurso}`,
       titulo: curso.titulo || curso.nombre || "Sin título",
-      // ✅ Descripción del curso, no del comentario de solicitud
       descripcion: curso.descripcion || "Sin descripción disponible",
       modalidad: curso.modalidad || "Virtual",
       precio: precioFormateado,
       precio_reserva: precioReserva,
-      portada_url: curso.portadaUrl || curso.portada_url || "",
-      fotos: Array.isArray(curso.fotos) ? curso.fotos : [],
+      portada_url: portadaUrl,
+      fotos: fotos,
       creado: curso.creado || solicitud.creado,
       actualizado: curso.actualizado || solicitud.actualizado,
       necesita_reserva:
@@ -72,8 +70,9 @@ const mapSolicitudCompletaFromApi = (raw) => {
       categoriasNombres: Array.isArray(curso.categorias)
         ? curso.categorias.map((c) => (typeof c === "string" ? c : c.nombre || c))
         : [],
-      // ✅ Estado de verificación del curso
-      estadoVerificacion: curso.estadoVerificacion || curso.verificacion_estado || solicitud.estado,
+      verificacion_estado: verificacion_estado,
+      estado: curso.estado || "activo",
+      activo: typeof curso.activo === "boolean" ? curso.activo : true,
     },
     
     // Información del tutor completa
@@ -122,7 +121,6 @@ const PanelAdmin = () => {
     setLoading(true);
     setError("");
     try {
-      // Intentar usar el nuevo endpoint con información completa
       const { data } = await verificarAPI.getSolicitudesCompletas();
       
       if (data?.success && Array.isArray(data.solicitudes)) {
@@ -134,14 +132,11 @@ const PanelAdmin = () => {
       }
     } catch (err) {
       console.error("Error cargando solicitudes de verificación:", err);
-      
-      // Si el endpoint nuevo falla, intentar con el antiguo como fallback
       if (err?.response?.status === 404) {
         console.warn("Endpoint /completas no disponible, usando endpoint básico como fallback");
         try {
           const { data } = await verificarAPI.getSolicitudes();
           if (data?.success && Array.isArray(data.solicitudes)) {
-            // Aquí usarías tu mapeo antiguo si lo tuvieras
             setSolicitudes(data.solicitudes);
           }
         } catch (fallbackErr) {
@@ -161,10 +156,7 @@ const PanelAdmin = () => {
   const handleChangeEstado = async (id_verificar, nuevoEstado, nuevoComentario) => {
     try {
       let response;
-      
-      // Normalizar el estado
       const estadoNormalizado = nuevoEstado.toLowerCase();
-      
       if (estadoNormalizado === "aceptado" || estadoNormalizado === "aprobado") {
         response = await verificarAPI.aprobarSolicitud(id_verificar, nuevoComentario || "");
       } else if (estadoNormalizado === "rechazado") {
@@ -177,20 +169,14 @@ const PanelAdmin = () => {
       }
 
       if (response?.data?.success) {
-        // Recargar solicitudes para obtener datos actualizados
         await fetchSolicitudes();
-        
-        // Si hay una solicitud seleccionada, cerrar el detalle
         if (selectedSolicitud?.id_verificar === id_verificar) {
           setSelectedSolicitud(null);
         }
-        
-        // Mostrar mensaje de éxito
         const mensaje = estadoNormalizado === "aceptado" || estadoNormalizado === "aprobado"
           ? "Solicitud aprobada exitosamente"
           : "Solicitud rechazada exitosamente";
         
-        // Puedes reemplazar alert con un toast notification si lo prefieres
         alert(mensaje);
       }
     } catch (err) {
@@ -338,7 +324,6 @@ const PanelAdmin = () => {
                 "Ver documentos de solicitud",
                 selectedSolicitud.id_verificar
               );
-              // Aquí puedes implementar un modal para ver documentos
             }}
             onAddComment={() => {
               const nuevoComentario = window.prompt(

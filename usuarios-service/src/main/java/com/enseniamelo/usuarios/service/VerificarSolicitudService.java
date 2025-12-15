@@ -126,14 +126,13 @@ public class VerificarSolicitudService {
                         "Esto es normal si el servicio de cursos no tiene el endpoint implementado.", 
                         solicitud.getIdCurso(), error.getMessage()))
                 .onErrorResume(error -> {
-                    // Crear un DTO básico con la información que tenemos de la solicitud
                     CursoDTO cursoBasico = CursoDTO.builder()
                             .id(solicitud.getIdCurso())
                             .nombre("Curso (información no disponible)")
                             .descripcion("No se pudo obtener la descripción del curso")
                             .modalidad("Virtual")
-                            .precioReserva(0.0f)
-                            .estadoVerificacion(solicitud.getEstado())
+                            .precio_reserva(0.0f)
+                            .verificacion_estado(solicitud.getEstado())
                             .activo(true)
                             .build();
                     
