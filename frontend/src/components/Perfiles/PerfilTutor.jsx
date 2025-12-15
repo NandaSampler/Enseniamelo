@@ -46,7 +46,7 @@ const PerfilTutor = () => {
           });
           return;
         }
-      } catch {}
+      } catch { }
 
       const userData = JSON.parse(localStorage.getItem("user") || "{}");
       setPerfil({
@@ -82,7 +82,7 @@ const PerfilTutor = () => {
       try {
         const res = await api.get(`${PAYMENTS_PREFIX}/planes/`);
         setPlanes(Array.isArray(res.data) ? res.data : []);
-      } catch {}
+      } catch { }
     };
     fetchPlanes();
   }, []);
@@ -99,7 +99,7 @@ const PerfilTutor = () => {
         });
         const list1 = Array.isArray(r1.data) ? r1.data : [];
         if (list1.length > 0) return list1;
-      } catch {}
+      } catch { }
 
       // 2) fallback: todas y filtrar front
       const r2 = await api.get(`${PAYMENTS_PREFIX}/suscripciones/`);
@@ -111,10 +111,23 @@ const PerfilTutor = () => {
       try {
         const subs = await fetchSubsForUser(mongoId);
 
-        const found =
-          subs.find((s) => s.estado === "activa") ||
-          subs.find((s) => s.estado === "pendiente") ||
-          null;
+        const pickBestSub = (subs) => {
+          const prioridad = ["activa", "pendiente", "cancelada", "expirada"];
+          for (const st of prioridad) {
+            const hit = subs.find((s) => s.estado === st);
+            if (hit) return hit;
+          }
+
+          // fallback: última por updatedAt/createdAt/inicio
+          const sorted = [...subs].sort((a, b) => {
+            const da = new Date(a.updatedAt || a.createdAt || a.inicio || 0).getTime();
+            const db = new Date(b.updatedAt || b.createdAt || b.inicio || 0).getTime();
+            return db - da;
+          });
+          return sorted[0] || null;
+        };
+
+        const found = pickBestSub(subs);
 
         setSuscripcionRaw(found);
       } catch (error) {
@@ -145,15 +158,47 @@ const PerfilTutor = () => {
   const handleCancelarSuscripcion = async () => {
     if (!suscripcion || cancelando) return;
 
-    showNotification({
-      type: "warning",
-      title: "Cancelación",
-      message: "Aún no hay endpoint de cancelación conectado en el frontend.",
-      duration: 5000,
-    });
+    const ok = window.confirm(
+      "¿Estás seguro de cancelar tu suscripción?\n\n" +
+      "Seguirás teniendo acceso hasta que termine el período actual."
+    );
 
-    setCancelando(false);
+    if (!ok) return;
+
+    try {
+      setCancelando(true);
+
+      await api.put(
+        `${PAYMENTS_PREFIX}/suscripciones/${suscripcion.id}`,
+        { estado: "cancelada" }
+      );
+
+      showNotification({
+        type: "success",
+        title: "Suscripción cancelada",
+        message: "Tu suscripción fue cancelada correctamente.",
+      });
+
+      // Actualizar estado local
+      setSuscripcionRaw((prev) =>
+        prev ? { ...prev, estado: "cancelada" } : prev
+      );
+    } catch (err) {
+      console.error("Error cancelando suscripción:", err);
+
+      showNotification({
+        type: "error",
+        title: "No se pudo cancelar",
+        message:
+          err?.response?.data?.detail ||
+          err?.response?.data?.error?.message ||
+          "Ocurrió un error al cancelar la suscripción.",
+      });
+    } finally {
+      setCancelando(false);
+    }
   };
+
 
   return (
     <>

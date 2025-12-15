@@ -1,0 +1,120 @@
+/* frontend/src/styles/Pagos/planes.css */
+
+.planes-page {
+  @apply min-h-screen bg-slate-100;
+}
+
+.planes-main {
+  @apply max-w-6xl mx-auto px-4 pb-10;
+}
+
+.planes-title {
+  @apply mt-8 text-2xl md:text-3xl font-semibold text-slate-900;
+}
+
+.planes-subtitle {
+  @apply mt-2 text-sm text-slate-600 max-w-2xl;
+}
+
+/* Alertas / banners */
+.planes-alert {
+  @apply mb-4 rounded-2xl px-4 py-3 border flex items-start justify-between gap-3;
+}
+
+.planes-alert-success {
+  @apply bg-emerald-50 border-emerald-200 text-emerald-800;
+}
+
+.planes-alert-warning {
+  @apply bg-slate-50 border-slate-200 text-slate-700;
+}
+
+.planes-alert-error {
+  @apply bg-red-50 border-red-200 text-red-700;
+}
+
+.planes-alert-action {
+  @apply text-xs font-semibold rounded-xl px-3 py-2 border transition;
+  border-color: rgba(16, 185, 129, 0.25);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.planes-alert-action:hover {
+  @apply underline;
+}
+
+/* Grid */
+.planes-grid {
+  @apply mt-6 grid gap-4 md:grid-cols-2;
+}
+
+/* Card */
+.planes-card {
+  @apply bg-white border border-slate-200 rounded-2xl shadow-sm transition-all duration-200 overflow-hidden;
+}
+
+.planes-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 30px rgba(15, 23, 42, 0.08);
+}
+
+.planes-card-inner {
+  @apply p-5 flex flex-col h-full;
+}
+
+.planes-card-header {
+  @apply flex items-start justify-between gap-3;
+}
+
+.planes-card-title {
+  @apply text-lg font-semibold text-slate-900 leading-tight;
+}
+
+.planes-badge {
+  @apply inline-flex items-center px-2 py-1 rounded-full text-[11px] font-semibold border;
+}
+
+.planes-badge-pro {
+  @apply bg-sky-50 text-sky-700 border-sky-100;
+}
+
+/* Texto */
+.planes-desc {
+  @apply mt-2 text-sm text-slate-600 leading-relaxed;
+}
+
+/* Footer */
+.planes-footer {
+  @apply mt-5 flex items-center justify-between gap-4;
+}
+
+.planes-price {
+  @apply text-xl font-bold text-slate-900;
+}
+
+.planes-meta {
+  @apply text-[11px] text-slate-500 mt-1;
+}
+
+/* Botón */
+.planes-btn {
+  @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200;
+  background: #0ea5e9; /* sky-500 */
+  color: white;
+  box-shadow: 0 10px 18px rgba(14, 165, 233, 0.22);
+}
+
+.planes-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 26px rgba(14, 165, 233, 0.3);
+}
+
+.planes-btn:disabled {
+  @apply opacity-60 cursor-not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.planes-empty {
+  @apply mt-8 text-center text-slate-600;
+}
