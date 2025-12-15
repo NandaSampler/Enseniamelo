@@ -5,6 +5,7 @@ import "../../styles/Perfiles/perfilEstudiante.css";
 import { authAPI } from "../../api/auth";
 import ConfirmModal from "../ConfirmModal";
 import { useNotification } from "../NotificationProvider";
+import Navbar from "../Navbar";
 
 const EditarPerfilTutor = () => {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ const EditarPerfilTutor = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [userId, setUserId] = useState(null);
-  const [userRole, setUserRole] = useState("TUTOR");
+  const [userRole, setUserRole] = useState("DOCENTE"); 
   const [form, setForm] = useState({
     nombre: "",
     apellido: "",
@@ -31,7 +32,6 @@ const EditarPerfilTutor = () => {
     const fetchUserProfile = async () => {
       setLoadingData(true);
       
-      // 🔍 DEBUG: Verificar token y roles
       const token = localStorage.getItem("access_token") || localStorage.getItem("token");
       if (token) {
         try {
@@ -50,7 +50,9 @@ const EditarPerfilTutor = () => {
           const user = response.data.user;
           
           setUserId(user.id || user._id);
-          setUserRole(user.rol || "TUTOR");
+          // ✅ Backend solo acepta: ADMIN | DOCENTE | ESTUDIANTE
+          // TUTOR se mapea a DOCENTE en el backend
+          setUserRole("DOCENTE");
           
           setForm((prev) => ({
             ...prev,
@@ -77,7 +79,8 @@ const EditarPerfilTutor = () => {
           const userData = JSON.parse(storedUser);
           
           setUserId(userData.id || userData._id);
-          setUserRole(userData.rol || "TUTOR");
+          // ✅ Backend solo acepta: ADMIN | DOCENTE | ESTUDIANTE
+          setUserRole("DOCENTE");
           
           setForm((prev) => ({
             ...prev,
@@ -188,24 +191,46 @@ const EditarPerfilTutor = () => {
       const isChangingPassword =
         form.currentPassword || form.newPassword || form.confirmPassword;
 
+      // ✅ CORRECCIÓN: Construir payload correcto con validaciones del backend
+      const telefonoLimpio = form.telefono.replace(/[^0-9+]/g, '');
+      
+      // Validar que el teléfono tenga el formato correcto (8-15 dígitos)
+      if (!telefonoLimpio.match(/^[+]?[0-9]{8,15}$/)) {
+        showNotification({
+          type: "error",
+          title: "Error en teléfono",
+          message: "El teléfono debe tener entre 8 y 15 dígitos (puede incluir +)"
+        });
+        setLoading(false);
+        return;
+      }
+
       const payload = {
-        nombre: form.nombre,
-        apellido: form.apellido,
-        email: form.email,
-        telefono: form.telefono.replace(/[^0-9+]/g, '').substring(0, 16),
+        nombre: form.nombre.trim(),
+        apellido: form.apellido.trim(),
+        email: form.email.trim(),
+        telefono: telefonoLimpio,
         foto: form.foto || "",
-        rol: userRole,
+        rol: "DOCENTE", // ✅ SIEMPRE enviar "DOCENTE" para tutores (backend solo acepta ADMIN|DOCENTE|ESTUDIANTE)
       };
 
+      // ✅ Agregar contraseñas solo si está cambiando
       if (isChangingPassword) {
         payload.currentPassword = form.currentPassword;
         payload.newPassword = form.newPassword;
       }
 
+      console.log('📤 Enviando payload:', payload);
+
       const { data } = await authAPI.updateProfile(userId, payload);
 
       if (data) {
-        localStorage.setItem("user", JSON.stringify(data));
+        // ✅ Actualizar localStorage con datos correctos
+        const updatedUser = {
+          ...data,
+          rol: userRole // Mantener el rol normalizado
+        };
+        localStorage.setItem("user", JSON.stringify(updatedUser));
         
         showNotification({
           type: "success",
@@ -213,6 +238,7 @@ const EditarPerfilTutor = () => {
           message: "Tu información se ha guardado correctamente"
         });
 
+        // Limpiar campos de contraseña
         setForm((prev) => ({
           ...prev,
           currentPassword: "",
@@ -230,10 +256,22 @@ const EditarPerfilTutor = () => {
       }
     } catch (error) {
       console.error('❌ Error actualizando:', error);
+      
+      // ✅ Mostrar mensaje de error más específico
+      let errorMessage = "Error al actualizar el perfil";
+      
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.response?.status === 400) {
+        errorMessage = "Datos inválidos. Verifica que todos los campos estén correctos.";
+      } else if (error?.response?.status === 401) {
+        errorMessage = "Contraseña actual incorrecta";
+      }
+      
       showNotification({
         type: "error",
         title: "Error",
-        message: error?.response?.data?.message || "Error al actualizar el perfil"
+        message: errorMessage
       });
     } finally {
       setLoading(false);
@@ -246,210 +284,222 @@ const EditarPerfilTutor = () => {
 
   if (loadingData) {
     return (
+      <>
+        <Navbar currentSection="perfil" />
+        <div className="edit-perfil-page">
+          <div className="header">
+            <div className="container">
+              <div className="header-content">
+                <div className="header-left">
+                  <h1>Editar Perfil Tutor</h1>
+                  <p className="header-subtitle">Cargando datos...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {/* ✅ AGREGADO: Navbar */}
+      <Navbar currentSection="perfil" />
+      
       <div className="edit-perfil-page">
+        <ConfirmModal
+          isOpen={showConfirmModal}
+          onClose={() => setShowConfirmModal(false)}
+          onConfirm={handleSave}
+          title="¿Guardar cambios?"
+          message="Se actualizará tu información de perfil. Esta acción no se puede deshacer."
+          type="info"
+          confirmText="Guardar"
+          cancelText="Cancelar"
+        />
+
         <div className="header">
           <div className="container">
             <div className="header-content">
               <div className="header-left">
                 <h1>Editar Perfil Tutor</h1>
-                <p className="header-subtitle">Cargando datos...</p>
+                <p className="header-subtitle">Actualiza tu información</p>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    );
-  }
 
-  return (
-    <div className="edit-perfil-page">
-      <ConfirmModal
-        isOpen={showConfirmModal}
-        onClose={() => setShowConfirmModal(false)}
-        onConfirm={handleSave}
-        title="¿Guardar cambios?"
-        message="Se actualizará tu información de perfil. Esta acción no se puede deshacer."
-        type="info"
-        confirmText="Guardar"
-        cancelText="Cancelar"
-      />
+        <div className="main-content">
+          <div className="container">
+            <div className="edit-form">
+              <form onSubmit={handleSubmit}>
+                <div className="form-section">
+                  <h3 className="section-title">Información Personal</h3>
 
-      <div className="header">
-        <div className="container">
-          <div className="header-content">
-            <div className="header-left">
-              <h1>Editar Perfil Tutor</h1>
-              <p className="header-subtitle">Actualiza tu información</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="main-content">
-        <div className="container">
-          <div className="edit-form">
-            <form onSubmit={handleSubmit}>
-              <div className="form-section">
-                <h3 className="section-title">Información Personal</h3>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Nombre</label>
-                    <input
-                      type="text"
-                      name="nombre"
-                      className="form-input"
-                      value={form.nombre}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Apellido</label>
-                    <input
-                      type="text"
-                      name="apellido"
-                      className="form-input"
-                      value={form.apellido}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      className="form-input"
-                      value={form.email}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Teléfono</label>
-                    <input
-                      type="tel"
-                      name="telefono"
-                      className="form-input"
-                      value={form.telefono}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Foto de Perfil</label>
-                  <div className="photo-upload">
-                    <div className="photo-preview">
-                      {form.foto ? (
-                        <img src={form.foto} alt="Foto de perfil" />
-                      ) : (
-                        <div className="photo-placeholder">
-                          <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" />
-                          </svg>
-                        </div>
-                      )}
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Nombre</label>
+                      <input
+                        type="text"
+                        name="nombre"
+                        className="form-input"
+                        value={form.nombre}
+                        onChange={handleChange}
+                        required
+                      />
                     </div>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      onChange={handlePhotoChange}
-                      accept="image/*"
-                      className="file-input"
-                    />
-                    <button
-                      type="button"
-                      onClick={triggerFileInput}
-                      className="upload-btn"
-                    >
-                      Cambiar Foto
-                    </button>
+
+                    <div className="form-group">
+                      <label className="form-label">Apellido</label>
+                      <input
+                        type="text"
+                        name="apellido"
+                        className="form-input"
+                        value={form.apellido}
+                        onChange={handleChange}
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              <div className="form-section">
-                <h3 className="section-title">Descripción</h3>
-                <div className="form-group">
-                  <label className="form-label">Biografía</label>
-                  <textarea
-                    name="descripcion"
-                    className="form-textarea"
-                    value={form.descripcion}
-                    onChange={handleChange}
-                    placeholder="Cuéntanos sobre tu experiencia como tutor..."
-                    rows={4}
-                  ></textarea>
-                  <small style={{ color: '#666', fontSize: '0.85rem', marginTop: '4px', display: 'block' }}>
-                    ⚠️ Nota: La biografía aún no se guarda en el backend. Solo se guardan: nombre, apellido, email, teléfono y foto.
-                  </small>
-                </div>
-              </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Email</label>
+                      <input
+                        type="email"
+                        name="email"
+                        className="form-input"
+                        value={form.email}
+                        onChange={handleChange}
+                        required
+                      />
+                    </div>
 
-              <div className="form-section">
-                <h3 className="section-title">Cambiar Contraseña</h3>
-
-                <div className="form-group">
-                  <label className="form-label">Contraseña Actual</label>
-                  <input
-                    type="password"
-                    name="currentPassword"
-                    className="form-input"
-                    value={form.currentPassword}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Nueva Contraseña</label>
-                    <input
-                      type="password"
-                      name="newPassword"
-                      className="form-input"
-                      value={form.newPassword}
-                      onChange={handleChange}
-                    />
+                    <div className="form-group">
+                      <label className="form-label">Teléfono</label>
+                      <input
+                        type="tel"
+                        name="telefono"
+                        className="form-input"
+                        value={form.telefono}
+                        onChange={handleChange}
+                        required
+                        placeholder="+59170000000"
+                      />
+                    </div>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Confirmar Nueva Contraseña</label>
-                    <input
-                      type="password"
-                      name="confirmPassword"
-                      className="form-input"
-                      value={form.confirmPassword}
-                      onChange={handleChange}
-                    />
+                    <label className="form-label">Foto de Perfil</label>
+                    <div className="photo-upload">
+                      <div className="photo-preview">
+                        {form.foto ? (
+                          <img src={form.foto} alt="Foto de perfil" />
+                        ) : (
+                          <div className="photo-placeholder">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        onChange={handlePhotoChange}
+                        accept="image/*"
+                        className="file-input"
+                      />
+                      <button
+                        type="button"
+                        onClick={triggerFileInput}
+                        className="upload-btn"
+                      >
+                        Cambiar Foto
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="form-actions">
-                <button
-                  type="button"
-                  onClick={goBack}
-                  className="cancel-btn"
-                >
-                  Cancelar
-                </button>
-                <button type="submit" className="save-btn" disabled={loading}>
-                  {loading ? "Guardando..." : "Guardar Cambios"}
-                </button>
-              </div>
-            </form>
+                <div className="form-section">
+                  <h3 className="section-title">Descripción</h3>
+                  <div className="form-group">
+                    <label className="form-label">Biografía</label>
+                    <textarea
+                      name="descripcion"
+                      className="form-textarea"
+                      value={form.descripcion}
+                      onChange={handleChange}
+                      placeholder="Cuéntanos sobre tu experiencia como tutor..."
+                      rows={4}
+                    ></textarea>
+                    <small style={{ color: '#666', fontSize: '0.85rem', marginTop: '4px', display: 'block' }}>
+                      ⚠️ Nota: La biografía aún no se guarda en el backend. Solo se guardan: nombre, apellido, email, teléfono y foto.
+                    </small>
+                  </div>
+                </div>
+
+                <div className="form-section">
+                  <h3 className="section-title">Cambiar Contraseña</h3>
+
+                  <div className="form-group">
+                    <label className="form-label">Contraseña Actual</label>
+                    <input
+                      type="password"
+                      name="currentPassword"
+                      className="form-input"
+                      value={form.currentPassword}
+                      onChange={handleChange}
+                      autoComplete="current-password"
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Nueva Contraseña</label>
+                      <input
+                        type="password"
+                        name="newPassword"
+                        className="form-input"
+                        value={form.newPassword}
+                        onChange={handleChange}
+                        autoComplete="new-password"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Confirmar Nueva Contraseña</label>
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        className="form-input"
+                        value={form.confirmPassword}
+                        onChange={handleChange}
+                        autoComplete="new-password"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    onClick={goBack}
+                    className="cancel-btn"
+                  >
+                    Cancelar
+                  </button>
+                  <button type="submit" className="save-btn" disabled={loading}>
+                    {loading ? "Guardando..." : "Guardar Cambios"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
