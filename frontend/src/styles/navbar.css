@@ -23,8 +23,7 @@
 }
 
 .navbar-link {
-  @apply px-3 py-1 rounded-full cursor-pointer transition-colors duration-150
-         text-sm hover:bg-sky-900/70;
+  @apply px-3 py-1 rounded-full cursor-pointer text-sm transition-all duration-300 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-sky-500;
 }
 
 .navbar-link-active {
@@ -58,7 +57,20 @@
 }
 
 .navbar-logout-btn {
-  @apply px-4 py-2 rounded-full bg-sky-700 text-white text-sm font-medium
-         border border-white/50 hover:bg-sky-900 transition;
+  @apply px-4 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-sky-600 text-white font-medium hover:from-sky-700 hover:to-indigo-700 transition-transform transform hover:scale-105;
 }
 
+@keyframes slide-down {
+  0% {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-down {
+  animation: slide-down 0.25s ease-out forwards;
+}
