@@ -3,15 +3,37 @@ import "../../styles/Admin/cardAdmin.css";
 const CardAdmin = ({ solicitud, onDetail, onReject, onAccept }) => {
   const { curso, perfil_tutor, estado, comentario, creado } = solicitud;
 
-  // Normalizar el estado a minúsculas
-  const estadoNormalizado = String(estado || "").toLowerCase();
+  const estadoNormalizado = String(estado || "pendiente").toLowerCase();
 
-  const estadoLabel =
-    estadoNormalizado === "PENDIENTE"
-      ? "Pendiente"
-      : estadoNormalizado === "ACEPTADO"
-      ? "Aceptado"
-      : "Rechazado";
+  const getEstadoLabel = (estado) => {
+    switch (estado) {
+      case "pendiente":
+        return "Pendiente";
+      case "aceptado":
+      case "aprobado":
+        return "Aceptado";
+      case "rechazado":
+        return "Rechazado";
+      default:
+        return "Pendiente";
+    }
+  };
+
+  const getEstadoClass = (estado) => {
+    switch (estado) {
+      case "aceptado":
+      case "aprobado":
+        return "aceptado";
+      case "rechazado":
+        return "rechazado";
+      case "pendiente":
+      default:
+        return "pendiente";
+    }
+  };
+
+  const estadoLabel = getEstadoLabel(estadoNormalizado);
+  const estadoClass = getEstadoClass(estadoNormalizado);
 
   return (
     <article className="admin-card">
@@ -22,20 +44,22 @@ const CardAdmin = ({ solicitud, onDetail, onReject, onAccept }) => {
 
         <div className="admin-card-info">
           <div className="admin-card-header">
-            <h3 className="admin-card-title">{curso.titulo}</h3>
-            <span className={`admin-card-status admin-card-status-${estadoNormalizado}`}>
+            <h3 className="admin-card-title">
+              {curso?.titulo || curso?.nombre || "Sin título"}
+            </h3>
+            <span className={`admin-card-status admin-card-status-${estadoClass}`}>
               {estadoLabel}
             </span>
           </div>
 
           <p className="admin-card-meta">
-            {perfil_tutor.nombre_tutor}
-            {curso.modalidad && <span> • {curso.modalidad}</span>}
-            {curso.precio && <span> • {curso.precio}</span>}
+            {perfil_tutor?.nombre_tutor || "Tutor"}
+            {curso?.modalidad && <span> • {curso.modalidad}</span>}
+            {curso?.precio && <span> • {curso.precio}</span>}
           </p>
 
           <p className="admin-card-description">
-            {comentario || curso.descripcion}
+            {comentario || curso?.descripcion || "Sin descripción"}
           </p>
 
           {creado && (
@@ -51,6 +75,7 @@ const CardAdmin = ({ solicitud, onDetail, onReject, onAccept }) => {
           type="button"
           className="admin-card-btn admin-card-btn-secondary"
           onClick={onDetail}
+          aria-label="Ver detalles de la solicitud"
         >
           Detalles
         </button>
@@ -61,6 +86,7 @@ const CardAdmin = ({ solicitud, onDetail, onReject, onAccept }) => {
               type="button"
               className="admin-card-btn admin-card-btn-outline"
               onClick={onReject}
+              aria-label="Rechazar solicitud"
             >
               Rechazar
             </button>
@@ -69,6 +95,7 @@ const CardAdmin = ({ solicitud, onDetail, onReject, onAccept }) => {
               type="button"
               className="admin-card-btn admin-card-btn-primary"
               onClick={onAccept}
+              aria-label="Aceptar solicitud"
             >
               Aceptar
             </button>
