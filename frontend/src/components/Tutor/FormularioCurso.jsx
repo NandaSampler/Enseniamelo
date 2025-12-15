@@ -3,6 +3,7 @@ import { verificarAPI } from "../../api/verificar";
 import { uploadsAPI } from "../../api/uploads";
 import { usuariosAPI } from "../../api/usuarios";
 import "../../styles/Tutor/formularioCurso.css";
+import "../../styles/Tutor/successPopup.css";
 
 const FormularioCurso = ({ open, onClose, onSuccess, cursoId }) => {
   const [comentario, setComentario] = useState("");
@@ -10,6 +11,7 @@ const FormularioCurso = ({ open, onClose, onSuccess, cursoId }) => {
   const [archivos, setArchivos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
 
   if (!open) return null;
 
@@ -107,11 +109,16 @@ const FormularioCurso = ({ open, onClose, onSuccess, cursoId }) => {
       const { data } = await verificarAPI.crearSolicitudCurso(payload);
 
       if (data) {
-        if (onSuccess) {
-          onSuccess(data);
-        } else if (onClose) {
-          onClose();
-        }
+        setShowSuccess(true);
+        // Cerrar el formulario después de 2 segundos
+        setTimeout(() => {
+          setShowSuccess(false);
+          if (onSuccess) {
+            onSuccess(data);
+          } else if (onClose) {
+            onClose();
+          }
+        }, 2000);
       } else {
         setError("No se pudo enviar la solicitud. Intenta nuevamente.");
       }
@@ -223,8 +230,18 @@ const FormularioCurso = ({ open, onClose, onSuccess, cursoId }) => {
             </button>
           </div>
         </form>
-      </div>
+
+      {showSuccess && (
+        <div className="success-popup-overlay">
+          <div className="success-popup">
+            <div className="success-popup-icon">✓</div>
+            <h3>¡Solicitud enviada con éxito!</h3>
+            <p>Tu solicitud de verificación ha sido enviada correctamente.</p>
+          </div>
+        </div>
+      )}
     </div>
+  </div>
   );
 };
 

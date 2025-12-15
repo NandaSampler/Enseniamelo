@@ -4,7 +4,7 @@ import CardAdmin from "./CardAdmin";
 import AdminDetalle from "./AdminDetalle";
 import { verificarAPI } from "../../api/verificar";
 import PlanesAdmin from "../Pagos/PlanesAdmin";
-
+import { useNotification } from '../NotificationProvider';
 
 const mapSolicitudCompletaFromApi = (raw) => {
   const solicitud = raw.solicitud || {};
@@ -110,6 +110,7 @@ const PanelAdmin = () => {
   const [selectedSolicitud, setSelectedSolicitud] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     if (activeTab === "solicitudes") {
@@ -177,14 +178,23 @@ const PanelAdmin = () => {
           ? "Solicitud aprobada exitosamente"
           : "Solicitud rechazada exitosamente";
         
-        alert(mensaje);
+        showNotification({
+          type: estadoNormalizado === "aceptado" || estadoNormalizado === "aprobado" ? 'success' : 'error',
+          title: estadoNormalizado === "aceptado" || estadoNormalizado === "aprobado" 
+            ? "¡Solicitud Aprobada!" 
+            : "Solicitud Rechazada",
+          message: mensaje,
+          duration: 5000
+        });
       }
     } catch (err) {
       console.error("Error actualizando estado de solicitud:", err);
-      alert(
-        err?.response?.data?.message ||
-          "No se pudo actualizar el estado de la solicitud."
-      );
+      showNotification({
+        type: 'error',
+        title: 'Error',
+        message: err?.response?.data?.message || "No se pudo actualizar el estado de la solicitud.",
+        duration: 5000
+      });
     }
   };
 
