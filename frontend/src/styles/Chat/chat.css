@@ -1,13 +1,26 @@
 .chat-page {
-  @apply h-screen w-full bg-slate-100 flex justify-center items-stretch;
+  /* Ajusta esto al alto real de tu navbar */
+  --app-header-height: 64px;
+
+  height: calc(100dvh - var(--app-header-height));
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  background: rgb(241 245 249);
+  overflow: hidden;
 }
 
+/* contenedor principal */
 .chat-container {
   @apply flex-1 grid grid-cols-1 md:grid-cols-[280px_minmax(0,1fr)] h-full shadow-lg bg-white overflow-hidden rounded-xl;
 }
 
+/* =========================
+   LISTA IZQUIERDA
+========================= */
 .chat-list {
-  @apply flex flex-col border-r border-slate-200 bg-slate-50;
+  @apply flex flex-col border-r border-slate-200 bg-slate-50 min-h-0;
 }
 
 .search-bar {
@@ -15,19 +28,15 @@
 }
 
 .search-bar input {
-  @apply flex-1 rounded-full border border-slate-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition shadow-sm;
-}
-
-.clear-btn {
-  @apply text-lg leading-none text-slate-500 hover:text-slate-700 transition;
+  @apply w-full rounded-full border border-slate-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition shadow-sm;
 }
 
 .chat-items {
-  @apply flex-1 overflow-y-auto p-2;
+  @apply flex-1 overflow-y-auto p-2 min-h-0;
 }
 
 .chat-item {
-  @apply flex items-center gap-3 px-4 py-3 cursor-pointer transition rounded-2xl hover:bg-sky-50 shadow-sm;
+  @apply w-full flex items-center gap-3 px-4 py-3 cursor-pointer transition rounded-2xl hover:bg-sky-50 shadow-sm text-left;
 }
 
 .chat-item-active {
@@ -35,7 +44,7 @@
 }
 
 .chat-avatar {
-  @apply w-12 h-12 rounded-full flex items-center justify-center text-white font-bold shadow-lg;
+  @apply w-12 h-12 rounded-full flex items-center justify-center text-white font-bold shadow-lg flex-shrink-0;
   background: linear-gradient(135deg, #3b82f6, #06b6d4);
 }
 
@@ -52,26 +61,71 @@
 }
 
 .chat-course {
-  @apply mt-1 inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-[11px] text-slate-600 border border-slate-200;
+  @apply mt-1 inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-[11px] text-slate-600 border border-slate-200 truncate;
+}
+
+.chat-empty {
+  @apply p-3 text-slate-500 text-sm;
+}
+
+/* =========================
+   PANEL DERECHO (CHAT)
+========================= */
+.chat-messages {
+  @apply flex flex-col h-full min-h-0 overflow-hidden bg-slate-100;
+}
+
+/* Header sticky (siempre visible) */
+.chat-messages-header {
+  @apply flex-none px-6 py-4 border-b border-slate-200 bg-white shadow-sm sticky top-0 z-30;
+}
+
+.chat-messages-header-main {
+  @apply flex items-center justify-between gap-3;
+}
+
+.chat-header-left {
+  @apply min-w-0;
+}
+
+.chat-messages-title {
+  @apply text-lg font-semibold text-slate-900 truncate;
+}
+
+.chat-messages-subtitle {
+  @apply text-xs text-slate-500 mt-0.5 truncate;
+}
+
+/* Botones */
+.chat-reserva-actions {
+  @apply flex items-center gap-2 flex-shrink-0;
+}
+
+.chat-accept-btn {
+  @apply text-xs md:text-sm px-3.5 py-1.5 rounded-full bg-emerald-500 text-white font-medium
+         hover:bg-emerald-600 whitespace-nowrap shadow-sm;
 }
 
 .chat-accept-btn:disabled {
   @apply bg-slate-300 text-slate-500 cursor-not-allowed hover:bg-slate-300;
 }
 
-.chat-messages {
-  @apply flex flex-col h-full overflow-hidden bg-slate-100;
+.chat-reject-btn {
+  @apply text-xs md:text-sm px-3.5 py-1.5 rounded-full bg-slate-800 text-slate-50 font-medium
+         hover:bg-slate-900 whitespace-nowrap shadow-sm border border-slate-900;
 }
 
+/* =========================
+   MENSAJES: scroll SOLO aquí
+========================= */
 .messages-container {
-  @apply flex-1 overflow-y-auto p-4;
+  @apply flex-1 overflow-y-auto p-4 min-h-0;
   scroll-behavior: smooth;
 }
 
 .messages-container::-webkit-scrollbar {
   width: 8px;
 }
-
 .messages-container::-webkit-scrollbar-thumb {
   background-color: #cbd5e1;
   border-radius: 999px;
@@ -83,7 +137,6 @@
   justify-content: center;
   margin: 16px 0;
 }
-
 .date-separator span {
   @apply bg-slate-200 text-slate-600 px-3 py-1 rounded-full text-xs font-medium;
 }
@@ -91,9 +144,8 @@
 .message {
   display: flex;
   margin-bottom: 6px;
-  transition: all 0.2s;
+  width: 100%;
 }
-
 .message.own-message {
   justify-content: flex-end;
 }
@@ -102,17 +154,16 @@
   max-width: 75%;
   padding: 10px 16px;
   border-radius: 20px;
-  position: relative;
   word-wrap: break-word;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
-/* Mensajes de otros (izquierda) - gris */
+/* otros */
 .message:not(.own-message) .message-bubble {
   @apply bg-white text-slate-900;
 }
 
-/* Mensajes propios (derecha) - azul */
+/* propios */
 .message.own-message .message-bubble {
   background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: white;
@@ -127,82 +178,32 @@
 .message-time {
   @apply text-[10px] opacity-70 mt-1 text-right;
 }
-
 .own-message .message-time {
   @apply text-white/70;
 }
 
+/* =========================
+   INPUT: fijo abajo
+========================= */
 .message-input {
-  @apply flex-none px-4 py-3 bg-white border-t border-slate-200 flex items-center gap-3 shadow-inner rounded-t-xl;
+  @apply flex-none border-t border-slate-200 px-4 py-3 bg-white flex items-center gap-3;
 }
 
 .message-input input {
   @apply flex-1 rounded-full border border-slate-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-sm;
 }
 
-.message-input input:focus {
-  border-color: #3b82f6;
-}
-
-.message-input input:disabled {
-  background-color: #f3f4f6;
-  cursor: not-allowed;
-}
-
 .send-btn {
   @apply w-10 h-10 rounded-full bg-sky-600 text-white flex items-center justify-center text-lg hover:bg-sky-700 shadow-md;
-}
-
-.send-btn:hover:not(:disabled) {
-  background: #2563eb;
 }
 
 .send-btn:disabled {
   @apply bg-slate-300 cursor-not-allowed;
 }
 
-.own-message .message-time {
-  @apply text-slate-200;
-}
-
-.chat-messages-header {
-  @apply flex-none px-6 py-4 border-b border-slate-200 bg-white shadow-sm sticky top-0 z-10;
-}
-
-.chat-messages-header-main {
-  @apply flex items-center justify-between gap-3;
-}
-
-.chat-messages-title {
-  @apply text-lg font-semibold text-slate-900 truncate;
-}
-
-.chat-messages-subtitle {
-  @apply text-xs text-slate-500 mt-0.5 truncate;
-}
-
-.chat-reserva-actions {
-  @apply flex items-center gap-2;
-}
-
-.chat-reserva-actions button {
-  @apply text-sm px-3 py-1.5 rounded-full font-medium shadow-sm;
-}
-
-.chat-accept-btn {
-  @apply text-xs md:text-sm px-3.5 py-1.5 rounded-full bg-emerald-500 text-white font-medium
-         hover:bg-emerald-600 whitespace-nowrap shadow-sm;
-}
-
-.chat-reject-btn {
-  @apply text-xs md:text-sm px-3.5 py-1.5 rounded-full bg-slate-800 text-slate-50 font-medium
-         hover:bg-slate-900 whitespace-nowrap shadow-sm border border-slate-900;
-}
-
-.chat-reject-btn:disabled {
-  @apply bg-slate-200 text-slate-400 border-slate-200 cursor-not-allowed hover:bg-slate-200;
-}
-
+/* =========================
+   MODAL
+========================= */
 .chat-modal-backdrop {
   @apply fixed inset-0 bg-black/40 flex items-center justify-center z-40;
 }
@@ -233,16 +234,4 @@
 
 .chat-modal-btn-primary {
   @apply px-3 py-1.5 rounded-lg text-sm bg-sky-600 text-white font-medium hover:bg-sky-700;
-}
-
-.message-input {
-  @apply border-t border-slate-200 px-3 py-2 flex items-center gap-2 bg-white;
-}
-
-.message-input input {
-  @apply flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500;
-}
-
-.send-btn {
-  @apply w-9 h-9 rounded-full bg-sky-600 text-white flex items-center justify-center text-sm hover:bg-sky-700;
 }
