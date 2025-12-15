@@ -41,4 +41,22 @@ export const authAPI = {
   }
 };
 
+export function hasRole(role) {
+  try {
+    const token =
+      localStorage.getItem("access_token") ||
+      localStorage.getItem("token");
+
+    if (!token) return false;
+
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    const roles = payload?.realm_access?.roles || [];
+
+    return roles.includes(role);
+  } catch {
+    return false;
+  }
+}
+
+
 export default authAPI;

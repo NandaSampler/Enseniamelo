@@ -19,12 +19,12 @@ const mapSolicitudCompletaFromApi = (raw) => {
 
   const fechaCreacion = solicitud.creado
     ? new Date(solicitud.creado).toLocaleDateString("es-BO", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
     : "";
 
   const precioReserva = curso.precio_reserva || 0;
@@ -32,9 +32,9 @@ const mapSolicitudCompletaFromApi = (raw) => {
   const precioFormateado = precioReserva > 0
     ? `${precioReserva} Bs/hora`
     : "Sin precio definido";
-  const portadaUrl = curso.portada_url ;
-  const fotos = Array.isArray(curso.fotos) 
-    ? curso.fotos 
+  const portadaUrl = curso.portada_url;
+  const fotos = Array.isArray(curso.fotos)
+    ? curso.fotos
     : [];
 
 
@@ -49,7 +49,7 @@ const mapSolicitudCompletaFromApi = (raw) => {
     creado: fechaCreacion,
     decidido: solicitud.decidido,
     actualizado: solicitud.actualizado || solicitud.creado,
-    
+
     // Información del curso completa
     curso: {
       id_curso: curso.id || solicitud.idCurso || "Sin ID",
@@ -74,7 +74,7 @@ const mapSolicitudCompletaFromApi = (raw) => {
       estado: curso.estado || "activo",
       activo: typeof curso.activo === "boolean" ? curso.activo : true,
     },
-    
+
     // Información del tutor completa
     perfil_tutor: {
       id_tutor: tutor.id || solicitud.idPerfilTutor,
@@ -89,7 +89,7 @@ const mapSolicitudCompletaFromApi = (raw) => {
       telefono: tutor.telefono || usuario.telefono || "",
       foto: tutor.foto || usuario.foto || "",
     },
-    
+
     // Información del usuario
     usuario: {
       id: usuario.id || solicitud.idUsuario,
@@ -122,7 +122,7 @@ const PanelAdmin = () => {
     setError("");
     try {
       const { data } = await verificarAPI.getSolicitudesCompletas();
-      
+
       if (data?.success && Array.isArray(data.solicitudes)) {
         const solicitudesMapeadas = data.solicitudes.map(mapSolicitudCompletaFromApi);
         setSolicitudes(solicitudesMapeadas);
@@ -145,7 +145,7 @@ const PanelAdmin = () => {
       } else {
         setError(
           err?.response?.data?.message ||
-            "Error al obtener las solicitudes de verificación."
+          "Error al obtener las solicitudes de verificación."
         );
       }
     } finally {
@@ -176,25 +176,25 @@ const PanelAdmin = () => {
         const mensaje = estadoNormalizado === "aceptado" || estadoNormalizado === "aprobado"
           ? "Solicitud aprobada exitosamente"
           : "Solicitud rechazada exitosamente";
-        
+
         alert(mensaje);
       }
     } catch (err) {
       console.error("Error actualizando estado de solicitud:", err);
       alert(
         err?.response?.data?.message ||
-          "No se pudo actualizar el estado de la solicitud."
+        "No se pudo actualizar el estado de la solicitud."
       );
     }
   };
 
   const filteredSolicitudes = solicitudes.filter((sol) => {
     if (filter === "todos") return true;
-    
+
     // Normalizar estados para la comparación
     const estadoNormalizado = sol.estado?.toLowerCase();
     const filterNormalizado = filter.toLowerCase();
-    
+
     // Manejar variaciones de estados
     if (filterNormalizado === "aceptado" || filterNormalizado === "aprobado") {
       return estadoNormalizado === "aceptado" || estadoNormalizado === "aprobado";
@@ -205,7 +205,7 @@ const PanelAdmin = () => {
     if (filterNormalizado === "rechazado") {
       return estadoNormalizado === "rechazado";
     }
-    
+
     return estadoNormalizado === filterNormalizado;
   });
 
@@ -225,25 +225,28 @@ const PanelAdmin = () => {
               <button
                 type="button"
                 className={
-                  "admin-panel-chip " +
+                  "admin-panel-tabbtn " +
                   (activeTab === "solicitudes"
-                    ? "admin-panel-chip-primary"
-                    : "admin-panel-chip-light")
+                    ? "admin-panel-tabbtn-active"
+                    : "admin-panel-tabbtn-inactive")
                 }
                 onClick={() => setActiveTab("solicitudes")}
               >
+                <span className="admin-panel-tabbtn-dot" />
                 Solicitudes de tutores
               </button>
+
               <button
                 type="button"
                 className={
-                  "admin-panel-chip " +
+                  "admin-panel-tabbtn " +
                   (activeTab === "planes"
-                    ? "admin-panel-chip-primary"
-                    : "admin-panel-chip-light")
+                    ? "admin-panel-tabbtn-active"
+                    : "admin-panel-tabbtn-inactive")
                 }
                 onClick={() => setActiveTab("planes")}
               >
+                <span className="admin-panel-tabbtn-dot" />
                 Planes de suscripción
               </button>
             </div>
@@ -271,9 +274,8 @@ const PanelAdmin = () => {
               onClick={() => setFilter("pendiente")}
             >
               Pendientes
-              {solicitudes.length > 0 && ` (${
-                solicitudes.filter((s) => s.estado?.toLowerCase() === "pendiente").length
-              })`}
+              {solicitudes.length > 0 && ` (${solicitudes.filter((s) => s.estado?.toLowerCase() === "pendiente").length
+                })`}
             </button>
             <button
               className={
@@ -283,13 +285,12 @@ const PanelAdmin = () => {
               onClick={() => setFilter("aceptado")}
             >
               Aceptados
-              {solicitudes.length > 0 && ` (${
-                solicitudes.filter(
-                  (s) =>
-                    s.estado?.toLowerCase() === "aceptado" ||
-                    s.estado?.toLowerCase() === "aprobado"
-                ).length
-              })`}
+              {solicitudes.length > 0 && ` (${solicitudes.filter(
+                (s) =>
+                  s.estado?.toLowerCase() === "aceptado" ||
+                  s.estado?.toLowerCase() === "aprobado"
+              ).length
+                })`}
             </button>
             <button
               className={
@@ -299,9 +300,8 @@ const PanelAdmin = () => {
               onClick={() => setFilter("rechazado")}
             >
               Rechazados
-              {solicitudes.length > 0 && ` (${
-                solicitudes.filter((s) => s.estado?.toLowerCase() === "rechazado").length
-              })`}
+              {solicitudes.length > 0 && ` (${solicitudes.filter((s) => s.estado?.toLowerCase() === "rechazado").length
+                })`}
             </button>
           </div>
         )}
