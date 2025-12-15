@@ -5,7 +5,7 @@ import "../../styles/Perfiles/perfilEstudiante.css";
 import { authAPI } from "../../api/auth";
 import ConfirmModal from "../ConfirmModal";
 import { useNotification } from "../NotificationProvider";
-import Navbar from "../Navbar"; // ✅ AGREGADO
+import Navbar from "../Navbar";
 
 const EditarPerfilTutor = () => {
   const navigate = useNavigate();
@@ -15,7 +15,7 @@ const EditarPerfilTutor = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [userId, setUserId] = useState(null);
-  const [userRole, setUserRole] = useState("DOCENTE"); // ✅ Backend solo acepta DOCENTE para tutores
+  const [userRole, setUserRole] = useState("DOCENTE"); 
   const [form, setForm] = useState({
     nombre: "",
     apellido: "",
