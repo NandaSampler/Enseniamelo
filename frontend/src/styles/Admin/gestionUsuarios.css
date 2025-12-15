@@ -1,0 +1,211 @@
+/* frontend/src/styles/Admin/gestionUsuarios.css */
+
+.gestion-usuarios {
+  @apply max-w-7xl mx-auto px-4 py-6;
+}
+
+.usuarios-header {
+  @apply mb-6;
+}
+
+.usuarios-title {
+  @apply text-2xl md:text-3xl font-bold text-slate-900 mb-2;
+}
+
+.usuarios-subtitle {
+  @apply text-sm text-slate-600;
+}
+
+.usuarios-controles {
+  @apply mb-6 space-y-4;
+}
+
+.search-bar-usuarios {
+  @apply w-full;
+}
+
+.search-input-usuarios {
+  @apply w-full max-w-md px-4 py-2 border border-slate-300 rounded-lg
+         focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500
+         text-sm;
+}
+
+.filtros-usuarios {
+  @apply flex flex-wrap gap-2;
+}
+
+.filtro-btn {
+  @apply px-4 py-2 rounded-lg text-xs md:text-sm font-medium
+         border border-slate-200 bg-white text-slate-600
+         hover:bg-slate-50 transition-colors cursor-pointer;
+}
+
+.filtro-activo {
+  @apply bg-sky-600 text-white border-sky-600 hover:bg-sky-700;
+}
+
+.usuarios-table-container {
+  @apply bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200;
+}
+
+.usuarios-table {
+  @apply w-full;
+}
+
+.usuarios-table thead {
+  @apply bg-slate-50 border-b border-slate-200;
+}
+
+.usuarios-table th {
+  @apply px-4 py-3 text-left text-xs font-semibold text-slate-600
+         uppercase tracking-wider;
+}
+
+.usuarios-table td {
+  @apply px-4 py-4 border-b border-slate-100;
+}
+
+.usuarios-table tbody tr:hover {
+  @apply bg-slate-50;
+}
+
+.usuario-info {
+  @apply flex items-center gap-3;
+}
+
+.usuario-avatar {
+  @apply w-10 h-10 rounded-full bg-gradient-to-br from-sky-400 to-sky-600
+         flex items-center justify-center text-white font-semibold
+         text-sm flex-shrink-0;
+}
+
+.usuario-avatar img {
+  @apply w-full h-full rounded-full object-cover;
+}
+
+.usuario-nombre {
+  @apply font-semibold text-slate-900 text-sm;
+}
+
+.usuario-id {
+  @apply text-xs text-slate-500;
+}
+
+.rol-badge {
+  @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium;
+}
+
+.rol-estudiante {
+  @apply bg-blue-100 text-blue-700 border border-blue-200;
+}
+
+.rol-tutor {
+  @apply bg-purple-100 text-purple-700 border border-purple-200;
+}
+
+.rol-admin {
+  @apply bg-red-100 text-red-700 border border-red-200;
+}
+
+.estado-toggle {
+  @apply px-3 py-1 rounded-full text-xs font-medium
+         transition-colors cursor-pointer border;
+}
+
+.estado-toggle.activo {
+  @apply bg-emerald-100 text-emerald-700 border-emerald-300
+         hover:bg-emerald-200;
+}
+
+.estado-toggle.inactivo {
+  @apply bg-slate-100 text-slate-600 border-slate-300
+         hover:bg-slate-200;
+}
+
+.acciones-cell {
+  @apply flex items-center gap-2;
+}
+
+.btn-accion {
+  @apply w-8 h-8 rounded-lg flex items-center justify-center
+         transition-colors cursor-pointer;
+}
+
+.btn-accion svg {
+  @apply w-4 h-4;
+}
+
+.btn-editar {
+  @apply bg-blue-50 text-blue-600 hover:bg-blue-100;
+}
+
+.btn-eliminar {
+  @apply bg-red-50 text-red-600 hover:bg-red-100;
+}
+
+/* Modal */
+.modal-overlay {
+  @apply fixed inset-0 bg-black/50 flex items-center justify-center z-50;
+}
+
+.modal-content {
+  @apply bg-white rounded-2xl shadow-xl p-6 w-full max-w-md;
+}
+
+.modal-title {
+  @apply text-xl font-bold text-slate-900 mb-2;
+}
+
+.modal-text {
+  @apply text-sm text-slate-600 mb-4;
+}
+
+.modal-roles {
+  @apply grid grid-cols-3 gap-3 my-6;
+}
+
+.rol-option {
+  @apply px-4 py-3 rounded-lg border-2 border-slate-200
+         text-sm font-medium text-slate-700
+         hover:border-sky-500 hover:bg-sky-50 hover:text-sky-700
+         transition-all cursor-pointer;
+}
+
+.modal-actions {
+  @apply flex justify-end gap-3;
+}
+
+.btn-cancelar {
+  @apply px-4 py-2 rounded-lg bg-slate-100 text-slate-700
+         hover:bg-slate-200 transition-colors font-medium text-sm;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .usuarios-table {
+    @apply text-sm;
+  }
+
+  .usuarios-table th,
+  .usuarios-table td {
+    @apply px-2 py-2;
+  }
+}
+
+@media (max-width: 768px) {
+  .usuarios-table-container {
+    @apply overflow-x-auto;
+  }
+
+  .usuarios-table {
+    @apply min-w-[800px];
+  }
+
+  .filtros-usuarios {
+    @apply grid grid-cols-2 gap-2;
+  }
+
+  .filtro-btn {
+    @apply w-full justify-center;
+  }
+}

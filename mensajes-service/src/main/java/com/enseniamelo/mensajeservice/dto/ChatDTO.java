@@ -40,7 +40,8 @@ public class ChatDTO {
         description = "ID del curso asociado (ObjectId como string)",
         example = "69285221a9c1a01030b75018"
     )
-    private String id_curso;
+    @JsonProperty("id_curso")
+    private String idCurso;
 
     @Schema(
         description = "Último mensaje del chat",
@@ -64,8 +65,8 @@ public class ChatDTO {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private LocalDateTime actualizado;
 
-    public String getId_curso() {
-        return id_curso;
+    public String getIdCurso() {
+        return idCurso;
     }
 
     public List<String> getParticipantes() {

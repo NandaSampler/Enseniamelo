@@ -21,8 +21,16 @@ export const chatsAPI = {
 
     // compatibilidad
     const id_curso = body.id_curso || body.idCurso || body.cursoId || null;
-    const participantes = Array.isArray(body.participantes) ? body.participantes : undefined;
+    const participantes = Array.isArray(body.participantes)
+      ? body.participantes
+      : undefined;
     const ultimoMensaje = body.ultimoMensaje ?? undefined;
+
+    console.log("Creating chat with:", {
+      id_curso,
+      participantes,
+      ultimoMensaje,
+    });
 
     const req = {};
     if (id_curso) req.id_curso = id_curso;
