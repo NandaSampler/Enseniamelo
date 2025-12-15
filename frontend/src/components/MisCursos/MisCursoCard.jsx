@@ -1,7 +1,7 @@
-import "../../styles/Explorar/cursoCard.css";
-import "../../styles/MisCursos/misCursoCard.css";
 import { Link } from "react-router-dom";
 import api from "../../api/config";
+import "../../styles/Explorar/cursoCard.css";
+import "../../styles/MisCursos/misCursoCard.css";
 
 // Mismo mapa de colores que en CursoCard.jsx
 const tagColors = {
@@ -10,20 +10,31 @@ const tagColors = {
   Marketing: "tag-pink",
 };
 
+const joinUrl = (base, path) => {
+  const b = (base || "").replace(/\/+$/, "");
+  const p = (path || "").replace(/^\/+/, "");
+  if (!b) return `/${p}`;
+  if (!p) return b;
+  return `${b}/${p}`;
+};
+
 const resolvePortadaUrl = (portada) => {
   if (!portada) return "";
   if (portada.startsWith("data:")) return portada;
   if (portada.startsWith("http://") || portada.startsWith("https://")) return portada;
+
+  // ✅ En dev: baseURL="/api" y portada="/curso/uploads/..." => "/api/curso/uploads/..."
   if (portada.startsWith("/")) {
-    const baseApi = api.defaults.baseURL || "";
-    const root = baseApi.replace(/\/+api\/?$/, "");
-    return root + portada;
+    const base = api.defaults.baseURL || ""; // "/api"
+    return joinUrl(base, portada);
   }
+
   return portada;
 };
 
 const MisCursoCard = ({
-  id,
+  // ✅ ahora el ID correcto para navegar es idCurso
+  idCurso,
   titulo,
   tag,
   categoriasNombres = [],
@@ -45,17 +56,14 @@ const MisCursoCard = ({
     !!fechaClase && fechaClase <= ahora && estadoReserva !== "cancelada" && estadoReserva !== "completada";
   const showCalificadoChip = estadoReserva === "completada";
 
+  // ✅ por si llega vacío
+  const safeCursoId = idCurso || "";
+
   return (
-    <Link to={`/curso/${id}`} className="block">
+    <Link to={`/curso/${safeCursoId}`} className="block">
       <article className="curso-card miscurso-card hover:shadow-md transition-shadow">
         <div className="curso-thumb">
-          {portadaSrc && (
-            <img
-              src={portadaSrc}
-              alt={titulo}
-              className="curso-thumb-img"
-            />
-          )}
+          {portadaSrc && <img src={portadaSrc} alt={titulo} className="curso-thumb-img" />}
         </div>
 
         <div className="curso-content">
@@ -66,40 +74,25 @@ const MisCursoCard = ({
               </div>
 
               <div className="curso-tags-row">
-                {Array.isArray(categoriasNombres) && categoriasNombres.length > 0
-                  ? categoriasNombres.map((nombre) => {
-                      if (!nombre) return null;
-                      const categoriaClass = tagColors[nombre] || "tag-default";
-                      return (
-                        <span
-                          key={nombre}
-                          className={`curso-tag ${categoriaClass}`}
-                        >
-                          {nombre}
-                        </span>
-                      );
-                    })
-                  : tag && (
-                      <span
-                        className={`curso-tag ${
-                          tagColors[tag] || "tag-default"
-                        }`}
-                      >
-                        {tag}
+                {Array.isArray(categoriasNombres) && categoriasNombres.length > 0 ? (
+                  categoriasNombres.map((nombre) => {
+                    if (!nombre) return null;
+                    const categoriaClass = tagColors[nombre] || "tag-default";
+                    return (
+                      <span key={nombre} className={`curso-tag ${categoriaClass}`}>
+                        {nombre}
                       </span>
-                    )}
+                    );
+                  })
+                ) : tag ? (
+                  <span className={`curso-tag ${tagColors[tag] || "tag-default"}`}>{tag}</span>
+                ) : null}
               </div>
             </div>
 
-            {showCalificar && (
-              <button type="button" className="miscurso-calificar">
-                Calificar
-              </button>
-            )}
+            {showCalificar && <button type="button" className="miscurso-calificar">Calificar</button>}
 
-            {showCalificadoChip && (
-              <span className="miscurso-calificado-chip">Calificado</span>
-            )}
+            {showCalificadoChip && <span className="miscurso-calificado-chip">Calificado</span>}
 
             {showFecha && (
               <div className="miscurso-fecha-wrapper">
