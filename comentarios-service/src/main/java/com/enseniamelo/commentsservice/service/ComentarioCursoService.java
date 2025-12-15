@@ -21,17 +21,18 @@ public class ComentarioCursoService {
     private final ComentarioCursoRepository repository;
     private final MsUsuariosIntegration usuariosIntegration;
     private final MsCursosIntegration cursosIntegration;
-    private final ReservaValidationService reservaValidationService;
+    // ✅ COMENTAMOS la validación de reservas temporalmente
+    // private final ReservaValidationService reservaValidationService;
 
     public ComentarioCursoService(
             ComentarioCursoRepository repository,
             MsUsuariosIntegration usuariosIntegration,
-            MsCursosIntegration cursosIntegration,
-            ReservaValidationService reservaValidationService) {
+            MsCursosIntegration cursosIntegration) {
+            // ReservaValidationService reservaValidationService) {
         this.repository = repository;
         this.usuariosIntegration = usuariosIntegration;
         this.cursosIntegration = cursosIntegration;
-        this.reservaValidationService = reservaValidationService;
+        // this.reservaValidationService = reservaValidationService;
     }
 
     // === OBTENER TODOS LOS COMENTARIOS ===
@@ -77,39 +78,44 @@ public class ComentarioCursoService {
                                             "Curso no encontrado con id: " + comentario.getId_curso()));
                                 }
                                 
-                                // 3. NUEVA VALIDACIÓN: Verificar que el usuario tiene una reserva confirmada
-                                return reservaValidationService.tieneReservaConfirmada(
+                                // ✅ VALIDACIÓN DE RESERVA DESHABILITADA TEMPORALMENTE
+                                // La validación se hace en el frontend (solo permite comentar si estado=completada)
+                                // Si quieres rehabilitarla, descomenta el siguiente bloque:
+                                
+                                /*
+                                return reservaValidationService.tieneReservaCompletada(
                                         comentario.getId_usuario(), 
                                         comentario.getId_curso(), 
                                         token)
                                         .flatMap(tieneReserva -> {
                                             if (!tieneReserva) {
-                                                LOGGER.warn("Usuario {} intentó comentar curso {} sin reserva confirmada", 
+                                                LOGGER.warn("Usuario {} intentó comentar curso {} sin reserva completada", 
                                                         comentario.getId_usuario(), comentario.getId_curso());
                                                 return Mono.error(new IllegalStateException(
-                                                        "Solo puedes comentar y calificar cursos con reserva confirmada"));
+                                                        "Solo puedes comentar y calificar cursos que hayas completado"));
+                                            }
+                                */
+                                
+                                // 3. Verificar que el usuario no haya comentado ya este curso
+                                return repository.findAll()
+                                        .filter(c -> c.getId_usuario().equals(comentario.getId_usuario()) 
+                                                && c.getId_curso().equals(comentario.getId_curso()))
+                                        .hasElements()
+                                        .flatMap(yaComento -> {
+                                            if (yaComento) {
+                                                LOGGER.warn("Usuario {} ya comentó el curso {}", 
+                                                        comentario.getId_usuario(), comentario.getId_curso());
+                                                return Mono.error(new IllegalStateException(
+                                                        "Ya has comentado este curso anteriormente"));
                                             }
                                             
-                                            // 4. Verificar que el usuario no haya comentado ya este curso
-                                            return repository.findAll()
-                                                    .filter(c -> c.getId_usuario().equals(comentario.getId_usuario()) 
-                                                            && c.getId_curso().equals(comentario.getId_curso()))
-                                                    .hasElements()
-                                                    .flatMap(yaComento -> {
-                                                        if (yaComento) {
-                                                            LOGGER.warn("Usuario {} ya comentó el curso {}", 
-                                                                    comentario.getId_usuario(), comentario.getId_curso());
-                                                            return Mono.error(new IllegalStateException(
-                                                                    "Ya has comentado este curso anteriormente"));
-                                                        }
-                                                        
-                                                        // Todo OK, guardar comentario
-                                                        LOGGER.info("Todas las validaciones exitosas, guardando comentario");
-                                                        return repository.save(comentario)
-                                                                .doOnSuccess(saved -> LOGGER.info("Comentario creado con id: {}", 
-                                                                        saved.getIdComentario()));
-                                                    });
+                                            // Todo OK, guardar comentario
+                                            LOGGER.info("Todas las validaciones exitosas, guardando comentario");
+                                            return repository.save(comentario)
+                                                    .doOnSuccess(saved -> LOGGER.info("Comentario creado con id: {}", 
+                                                            saved.getIdComentario()));
                                         });
+                                // }); // Cierra el bloque de reservaValidationService si lo rehabilitas
                             });
                 });
     }
