@@ -3,10 +3,13 @@ import "../../styles/Admin/cardAdmin.css";
 const CardAdmin = ({ solicitud, onDetail, onReject, onAccept }) => {
   const { curso, perfil_tutor, estado, comentario, creado } = solicitud;
 
+  // Normalizar el estado a minúsculas
+  const estadoNormalizado = String(estado || "").toLowerCase();
+
   const estadoLabel =
-    estado === "pendiente"
+    estadoNormalizado === "PENDIENTE"
       ? "Pendiente"
-      : estado === "aceptado"
+      : estadoNormalizado === "ACEPTADO"
       ? "Aceptado"
       : "Rechazado";
 
@@ -18,21 +21,17 @@ const CardAdmin = ({ solicitud, onDetail, onReject, onAccept }) => {
         </div>
 
         <div className="admin-card-info">
-          <div className="admin-card-title-row">
-            <h3 className="admin-card-title">{curso.nombre}</h3>
-            <span className={`admin-card-status admin-card-status-${estado}`}>
+          <div className="admin-card-header">
+            <h3 className="admin-card-title">{curso.titulo}</h3>
+            <span className={`admin-card-status admin-card-status-${estadoNormalizado}`}>
               {estadoLabel}
             </span>
           </div>
 
           <p className="admin-card-meta">
-            {perfil_tutor.nombre_tutor && (
-              <span>{perfil_tutor.nombre_tutor}</span>
-            )}
+            {perfil_tutor.nombre_tutor}
             {curso.modalidad && <span> • {curso.modalidad}</span>}
-            {curso.necesita_reserva && curso.precio_reserva > 0 && (
-              <span> • {curso.precio_reserva} Bs/hora</span>
-            )}
+            {curso.precio && <span> • {curso.precio}</span>}
           </p>
 
           <p className="admin-card-description">
@@ -40,7 +39,7 @@ const CardAdmin = ({ solicitud, onDetail, onReject, onAccept }) => {
           </p>
 
           {creado && (
-            <p className="admin-card-meta admin-card-meta-small">
+            <p className="admin-card-date">
               Creado: {creado}
             </p>
           )}
@@ -56,7 +55,7 @@ const CardAdmin = ({ solicitud, onDetail, onReject, onAccept }) => {
           Detalles
         </button>
 
-        {estado === "pendiente" && (
+        {estadoNormalizado === "pendiente" && (
           <>
             <button
               type="button"
