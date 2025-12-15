@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query, status, Header, HTTPException
 from pydantic import BaseModel
+from app.core.course_quota_guard import enforce_course_quota  
 
 from app.schemas.curso import CursoCreate, CursoCreateIn, CursoUpdate, CursoOut
 from app.schemas.categoria import CategoriaOut
@@ -51,6 +52,7 @@ def get_curso(curso_id: str, service: CursoService = Depends(get_curso_service))
 @router.post("/", response_model=CursoOut, status_code=status.HTTP_201_CREATED)
 async def create_curso(
     payload: CursoCreateIn,
+    _quota: None = Depends(enforce_course_quota),
     service: CursoService = Depends(get_curso_service),
     authorization: Optional[str] = Header(None),
 ):

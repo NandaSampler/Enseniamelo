@@ -346,6 +346,17 @@ const ConfigurarCurso = () => {
         data?.message ||
         "Ocurrió un error. Por favor intenta de nuevo.";
 
+      if (status === 403) {
+        showNotification({
+          type: "warning",
+          title: "Límite de cursos alcanzado",
+          message: msg,
+          duration: 7000,
+        });
+        navigate("/planes");
+        return;
+      }
+      
       showNotification({
         type: "error",
         title: `Error al crear curso${status ? ` (${status})` : ""}`,
