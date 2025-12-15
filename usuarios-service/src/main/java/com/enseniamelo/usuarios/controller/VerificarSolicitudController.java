@@ -25,7 +25,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -43,7 +42,7 @@ public class VerificarSolicitudController {
                         @ApiResponse(responseCode = "400", description = "Datos inválidos o curso ya tiene solicitud")
         })
         @PostMapping("/curso")
-        public Mono<ResponseEntity<VerificarSolicitudDTO>> crearSolicitudParaCurso(
+        public Mono<ResponseEntity<Map<String, Object>>> crearSolicitudParaCurso(
                         @Valid @RequestBody VerificarSolicitudDTO solicitudDTO) {
 
                 log.info("POST /v1/verificacion/curso - Creando solicitud para curso: {}", solicitudDTO.getIdCurso());
@@ -53,7 +52,11 @@ public class VerificarSolicitudController {
                                 solicitudDTO.getIdPerfilTutor(),
                                 solicitudDTO.getIdCurso(),
                                 solicitudDTO)
-                                .map(creada -> ResponseEntity.status(HttpStatus.CREATED).body(creada));
+                                .map(creada -> ResponseEntity.status(HttpStatus.CREATED)
+                                        .body(Map.of(
+                                                "success", true,
+                                                "solicitud", creada
+                                        )));
         }
 
         @Operation(summary = "Obtener solicitud de un curso")
@@ -63,12 +66,15 @@ public class VerificarSolicitudController {
         })
         @PreAuthorize("hasRole('ADMIN') or hasRole('TUTOR')")
         @GetMapping("/curso/{idCurso}")
-        public Mono<ResponseEntity<VerificarSolicitudDTO>> buscarPorCurso(
+        public Mono<ResponseEntity<Map<String, Object>>> buscarPorCurso(
                         @Parameter(description = "ID del curso", required = true) @PathVariable String idCurso) {
 
                 log.info("GET /v1/verificacion/curso/{} - Buscando solicitud del curso", idCurso);
                 return solicitudService.buscarPorCurso(idCurso)
-                                .map(ResponseEntity::ok)
+                                .map(solicitud -> ResponseEntity.ok(Map.of(
+                                        "success", true,
+                                        "solicitud", solicitud
+                                )))
                                 .defaultIfEmpty(ResponseEntity.notFound().build());
         }
 
@@ -78,11 +84,16 @@ public class VerificarSolicitudController {
         })
         @PreAuthorize("hasRole('ADMIN') or #idUsuario == authentication.principal.claims['sub']")
         @GetMapping("/usuario/{idUsuario}")
-        public Flux<VerificarSolicitudDTO> buscarPorUsuario(
+        public Mono<ResponseEntity<Map<String, Object>>> buscarPorUsuario(
                         @Parameter(description = "ID de MongoDB del usuario", required = true) @PathVariable String idUsuario) {
 
                 log.info("GET /v1/verificacion/usuario/{} - Buscando solicitudes del usuario", idUsuario);
-                return solicitudService.buscarPorUsuario(idUsuario);
+                return solicitudService.buscarPorUsuario(idUsuario)
+                                .collectList()
+                                .map(solicitudes -> ResponseEntity.ok(Map.of(
+                                        "success", true,
+                                        "solicitudes", solicitudes
+                                )));
         }
 
         @Operation(summary = "Obtener todas las solicitudes de un tutor")
@@ -91,11 +102,16 @@ public class VerificarSolicitudController {
         })
         @PreAuthorize("hasRole('ADMIN') or hasRole('TUTOR')")
         @GetMapping("/tutor/{idPerfilTutor}")
-        public Flux<VerificarSolicitudDTO> buscarPorTutor(
+        public Mono<ResponseEntity<Map<String, Object>>> buscarPorTutor(
                         @Parameter(description = "ID del perfil de tutor", required = true) @PathVariable String idPerfilTutor) {
 
                 log.info("GET /v1/verificacion/tutor/{} - Buscando solicitudes del tutor", idPerfilTutor);
-                return solicitudService.buscarPorTutor(idPerfilTutor);
+                return solicitudService.buscarPorTutor(idPerfilTutor)
+                                .collectList()
+                                .map(solicitudes -> ResponseEntity.ok(Map.of(
+                                        "success", true,
+                                        "solicitudes", solicitudes
+                                )));
         }
 
         @Operation(summary = "Obtener todas las solicitudes")
@@ -104,9 +120,17 @@ public class VerificarSolicitudController {
         })
         @PreAuthorize("hasRole('ADMIN')")
         @GetMapping
-        public Flux<VerificarSolicitudDTO> obtenerTodas() {
+        public Mono<ResponseEntity<Map<String, Object>>> obtenerTodas() {
                 log.info("GET /v1/verificacion - Obteniendo todas las solicitudes");
-                return solicitudService.obtenerTodas();
+                return solicitudService.obtenerTodas()
+                                .collectList()
+                                .map(solicitudes -> {
+                                        log.info("Solicitudes encontradas: {}", solicitudes.size());
+                                        return ResponseEntity.ok(Map.of(
+                                                "success", true,
+                                                "solicitudes", solicitudes
+                                        ));
+                                });
         }
 
         @Operation(summary = "Buscar solicitud por ID")
@@ -116,12 +140,15 @@ public class VerificarSolicitudController {
         })
         @PreAuthorize("hasRole('ADMIN')")
         @GetMapping("/{id}")
-        public Mono<ResponseEntity<VerificarSolicitudDTO>> buscarPorId(
+        public Mono<ResponseEntity<Map<String, Object>>> buscarPorId(
                         @Parameter(description = "ID de MongoDB de la solicitud", required = true) @PathVariable String id) {
 
                 log.info("GET /v1/verificacion/{} - Buscando solicitud", id);
                 return solicitudService.buscarPorId(id)
-                                .map(ResponseEntity::ok)
+                                .map(solicitud -> ResponseEntity.ok(Map.of(
+                                        "success", true,
+                                        "solicitud", solicitud
+                                )))
                                 .defaultIfEmpty(ResponseEntity.notFound().build());
         }
 
@@ -131,11 +158,16 @@ public class VerificarSolicitudController {
         })
         @PreAuthorize("hasRole('ADMIN')")
         @GetMapping("/estado/{estado}")
-        public Flux<VerificarSolicitudDTO> obtenerPorEstado(
+        public Mono<ResponseEntity<Map<String, Object>>> obtenerPorEstado(
                         @Parameter(description = "Estado: PENDIENTE, APROBADO, RECHAZADO", required = true) @PathVariable String estado) {
 
                 log.info("GET /v1/verificacion/estado/{} - Obteniendo solicitudes por estado", estado);
-                return solicitudService.obtenerPorEstado(estado);
+                return solicitudService.obtenerPorEstado(estado)
+                                .collectList()
+                                .map(solicitudes -> ResponseEntity.ok(Map.of(
+                                        "success", true,
+                                        "solicitudes", solicitudes
+                                )));
         }
 
         @Operation(summary = "Aprobar solicitud", description = "Aprueba la verificación del curso")
@@ -146,14 +178,17 @@ public class VerificarSolicitudController {
         })
         @PreAuthorize("hasRole('ADMIN')")
         @PutMapping("/{id}/aprobar")
-        public Mono<ResponseEntity<VerificarSolicitudDTO>> aprobarSolicitud(
+        public Mono<ResponseEntity<Map<String, Object>>> aprobarSolicitud(
                         @Parameter(description = "ID de MongoDB de la solicitud", required = true) @PathVariable String id,
                         @RequestBody(required = false) Map<String, String> body) {
 
                 String comentario = body != null ? body.get("comentario") : null;
                 log.info("PUT /v1/verificacion/{}/aprobar - Aprobando solicitud", id);
                 return solicitudService.aprobarSolicitud(id, comentario)
-                                .map(ResponseEntity::ok);
+                                .map(solicitud -> ResponseEntity.ok(Map.of(
+                                        "success", true,
+                                        "solicitud", solicitud
+                                )));
         }
 
         @Operation(summary = "Rechazar solicitud")
@@ -164,14 +199,17 @@ public class VerificarSolicitudController {
         })
         @PreAuthorize("hasRole('ADMIN')")
         @PutMapping("/{id}/rechazar")
-        public Mono<ResponseEntity<VerificarSolicitudDTO>> rechazarSolicitud(
+        public Mono<ResponseEntity<Map<String, Object>>> rechazarSolicitud(
                         @Parameter(description = "ID de MongoDB de la solicitud", required = true) @PathVariable String id,
                         @RequestBody(required = false) Map<String, String> body) {
 
                 String comentario = body != null ? body.get("comentario") : "Solicitud rechazada";
                 log.info("PUT /v1/verificacion/{}/rechazar - Rechazando solicitud", id);
                 return solicitudService.rechazarSolicitud(id, comentario)
-                                .map(ResponseEntity::ok);
+                                .map(solicitud -> ResponseEntity.ok(Map.of(
+                                        "success", true,
+                                        "solicitud", solicitud
+                                )));
         }
 
         @Operation(summary = "Eliminar solicitud")
