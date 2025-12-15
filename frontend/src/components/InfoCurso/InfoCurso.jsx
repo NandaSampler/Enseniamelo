@@ -570,8 +570,6 @@ const InfoCurso = () => {
 
         fetchDisponibilidad();
     }, [id]);
-
-    // ✅ NUEVA LÓGICA: Verificar que la reserva esté COMPLETADA para poder reseñar
     useEffect(() => {
         const checkReservaParaResena = async () => {
             if (!id) return;
@@ -599,27 +597,72 @@ const InfoCurso = () => {
                 if (!reservaCurso) {
                     setPuedeResenar(false);
                     setTieneReserva(false);
-                    setMensajeRestriccion("Debes reservar este curso y esperar la confirmación del tutor antes de poder dejar una reseña");
+                    setMensajeRestriccion("Debes reservar y completar este curso antes de poder dejar una reseña");
                     return;
                 }
 
                 setTieneReserva(true);
 
-                // ✅ VALIDACIÓN CRÍTICA: Solo permite reseñar si estado === "confirmada" o "completada"
                 const estado = (reservaCurso.estado || "").toLowerCase();
                 
-                if (estado === "confirmada" || estado === "completada") {
-                    setPuedeResenar(true);
-                    setMensajeRestriccion("");
+                if (estado === "confirmada") {
+                    const fechaReserva = reservaCurso.fecha;
+                    
+                    if (!fechaReserva) {
+                        setPuedeResenar(false);
+                        setMensajeRestriccion("La reserva no tiene fecha asignada. Contacta al tutor.");
+                        return;
+                    }
+
+                    const fechaReservaDate = new Date(fechaReserva);
+                    const ahora = new Date();
+
+                    if (ahora < fechaReservaDate) {
+                        setPuedeResenar(false);
+                        const fechaFormateada = fechaReservaDate.toLocaleDateString('es-ES', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        setMensajeRestriccion(`Podrás dejar una reseña después de tu clase programada para el ${fechaFormateada}`);
+                    } else {
+                        setPuedeResenar(true);
+                        setMensajeRestriccion("");
+                    }
+                } else if (estado === "confirmada") {
+                    setPuedeResenar(false);
+                    
+                    const fechaReserva = reservaCurso.fecha;
+                    if (fechaReserva) {
+                        const fechaReservaDate = new Date(fechaReserva);
+                        const ahora = new Date();
+                        
+                        if (ahora < fechaReservaDate) {
+                            const fechaFormateada = fechaReservaDate.toLocaleDateString('es-ES', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                            setMensajeRestriccion(`Tu clase está programada para el ${fechaFormateada}. Podrás dejar una reseña después de completarla.`);
+                        } else {
+                            setMensajeRestriccion("Tu clase ya pasó. Espera a que el tutor la marque como completada para poder dejar tu reseña.");
+                        }
+                    } else {
+                        setMensajeRestriccion("Tu reserva está confirmada. Podrás dejar una reseña después de completar la clase.");
+                    }
                 } else if (estado === "pendiente") {
                     setPuedeResenar(false);
-                    setMensajeRestriccion("Tu reserva está pendiente de confirmación por el tutor. Una vez confirmada, podrás dejar tu reseña.");
+                    setMensajeRestriccion("Tu reserva está pendiente de confirmación por el tutor");
                 } else if (estado === "cancelada") {
                     setPuedeResenar(false);
                     setMensajeRestriccion("Tu reserva fue cancelada. No puedes dejar una reseña.");
                 } else {
                     setPuedeResenar(false);
-                    setMensajeRestriccion("Debes tener una reserva confirmada para poder dejar una reseña");
+                    setMensajeRestriccion("Debes completar el curso antes de poder dejar una reseña");
                 }
 
                 // ✅ Verificar si ya comentó
