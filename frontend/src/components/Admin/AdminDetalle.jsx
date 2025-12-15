@@ -1,13 +1,31 @@
 import "../../styles/Admin/adminDetalle.css";
 import api from "../../api/config";
 
+// Función auxiliar para unir URLs
+const joinUrl = (base = "", path = "") => {
+  const b = String(base || "").replace(/\/+$/, "");
+  const p = String(path || "").replace(/^\/+/, "/");
+  return b ? `${b}${p}` : p;
+};
+
+// Función mejorada basada en resolvePortadaUrl de CursoCard
 const resolveStaticUrl = (url) => {
   if (!url) return "";
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
 
-  const baseApi = api.defaults.baseURL || window.location.origin;
-  const root = baseApi.replace(/\/+api\/?$/, "");
-  return root + url;
+  // Si ya es una URL completa o un data URL, la devolvemos tal cual
+  if (url.startsWith("data:") || url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+
+  // Si la ruta ya está bien formada, la unimos con la base de la API
+  if (url.startsWith("/curso/") || url.startsWith("/uploads/")) {
+    const base = api.defaults.baseURL || ""; // "/api" en desarrollo
+    return joinUrl(base, url); // => "/api/curso/uploads/xxx.jpg"
+  }
+
+  // Para rutas relativas, asumimos que están en /uploads/curso/
+  const base = api.defaults.baseURL || "";
+  return joinUrl(base, `/uploads/curso/${url.replace(/^\/+/, "")}`);
 };
 
 const AdminDetalle = ({
