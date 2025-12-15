@@ -54,7 +54,7 @@ public class SecurityConfig {
                 .pathMatchers(HttpMethod.GET, "/api/v1/auth/me/**").authenticated()
                 
                 // Usuario endpoints 
-                .pathMatchers(HttpMethod.GET, "/v1/usuario/**").hasAnyRole("ADMIN", "USER")
+                .pathMatchers(HttpMethod.GET, "/v1/usuario/**").hasAnyRole("ADMIN", "USER", "TUTOR")
                 .pathMatchers(HttpMethod.POST, "/v1/usuario").hasRole("ADMIN")
                 .pathMatchers(HttpMethod.PUT, "/v1/usuario/**").hasAnyRole("ADMIN", "USER")
                 .pathMatchers(HttpMethod.DELETE, "/v1/usuario/**").hasRole("ADMIN")

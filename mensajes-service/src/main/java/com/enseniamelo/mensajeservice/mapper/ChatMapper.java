@@ -18,15 +18,15 @@ public interface ChatMapper {
     // ========= ENTITY → DTO =========
     @Mapping(target = "participantes",
             expression = "java(objectIdListToStringList(chat.getParticipantes()))")
-    @Mapping(target = "id_curso",
-            expression = "java(objectIdToString(chat.getId_curso()))")
+    @Mapping(target = "idCurso",
+            expression = "java(objectIdToString(chat.getIdCurso()))")
     ChatDTO toDto(Chat chat);
 
     // ========= DTO → ENTITY =========
     @Mapping(target = "participantes",
             expression = "java(stringListToObjectIdList(chatDTO.getParticipantes()))")
-    @Mapping(target = "id_curso",
-            expression = "java(stringToObjectId(chatDTO.getId_curso()))")
+    @Mapping(target = "idCurso",
+            expression = "java(stringToObjectId(chatDTO.getIdCurso()))")
     @Mapping(target = "creado", ignore = true)
     @Mapping(target = "actualizado", ignore = true)
     Chat toEntity(ChatDTO chatDTO);
@@ -38,8 +38,8 @@ public interface ChatMapper {
     // ========= UPDATE =========
     @Mapping(target = "participantes",
             expression = "java(stringListToObjectIdList(chatDTO.getParticipantes()))")
-    @Mapping(target = "id_curso",
-            expression = "java(stringToObjectId(chatDTO.getId_curso()))")
+    @Mapping(target = "idCurso",
+            expression = "java(stringToObjectId(chatDTO.getIdCurso()))")
     @Mapping(target = "creado", ignore = true)
     @Mapping(target = "actualizado", ignore = true)
     void updateEntityFromDto(ChatDTO chatDTO, @MappingTarget Chat chat);
