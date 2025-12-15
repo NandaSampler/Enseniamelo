@@ -7,6 +7,7 @@ const EditarPerfilEstudiante = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
   const [form, setForm] = useState({
     nombre: "",
     apellido: "",
@@ -21,31 +22,62 @@ const EditarPerfilEstudiante = () => {
 
   useEffect(() => {
     const fetchUserProfile = async () => {
+      setLoadingData(true);
+      
       try {
+        // ✅ Intentar desde el API
         const response = await authAPI.getProfile();
-        if (response.data.success) {
+        
+        console.log('✅ [EditarPerfil] Respuesta API:', response);
+        
+        if (response?.data?.success && response.data.user) {
           const user = response.data.user;
+          
           setForm((prev) => ({
             ...prev,
             nombre: user.nombre || "",
             apellido: user.apellido || "",
             email: user.email || "",
-            telefono: user.telefono || "",
-            foto: user.foto || "",
-            descripcion: user.descripcion || "",
+            telefono: user.telefono || user.phone || "",
+            foto: user.foto || user.photo || user.picture || "",
+            descripcion: user.descripcion || user.biografia || user.bio || "",
           }));
+          
+          console.log('✅ [EditarPerfil] Datos cargados desde API:', user);
+          setLoadingData(false);
+          return;
         }
+        
       } catch (error) {
-        const userData = JSON.parse(localStorage.getItem("user") || "{}");
-        setForm((prev) => ({
-          ...prev,
-          nombre: userData.nombre || "",
-          apellido: userData.apellido || "",
-          email: userData.email || "",
-          telefono: userData.telefono || "",
-          foto: userData.foto || "",
-          descripcion: userData.descripcion || "",
-        }));
+        console.warn('⚠️ [EditarPerfil] Error desde API:', error?.message);
+      }
+      
+      // ✅ FALLBACK: localStorage
+      try {
+        const storedUser = localStorage.getItem("user");
+        
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          console.log('📦 [EditarPerfil] Datos desde localStorage:', userData);
+          
+          setForm((prev) => ({
+            ...prev,
+            nombre: userData.nombre || "",
+            apellido: userData.apellido || "",
+            email: userData.email || "",
+            telefono: userData.telefono || userData.phone || "",
+            foto: userData.foto || userData.photo || userData.picture || "",
+            descripcion: userData.descripcion || userData.biografia || userData.bio || "",
+          }));
+          
+          console.log('✅ [EditarPerfil] Formulario actualizado desde localStorage');
+        } else {
+          console.error('❌ [EditarPerfil] No hay datos en localStorage');
+        }
+      } catch (parseError) {
+        console.error('❌ [EditarPerfil] Error parseando localStorage:', parseError);
+      } finally {
+        setLoadingData(false);
       }
     };
 
@@ -123,10 +155,17 @@ const EditarPerfilEstudiante = () => {
         payload.newPassword = form.newPassword;
       }
 
+      console.log('📤 [EditarPerfil] Enviando payload:', payload);
+
       const { data } = await authAPI.updateProfile(payload);
 
+      console.log('✅ [EditarPerfil] Respuesta del servidor:', data);
+
       if (data?.success && data.user) {
+        // ✅ Actualizar localStorage con los nuevos datos
         localStorage.setItem("user", JSON.stringify(data.user));
+        console.log('✅ [EditarPerfil] localStorage actualizado');
+        
         alert("Perfil actualizado exitosamente");
 
         // Limpiamos campos de contraseña después de guardar
@@ -142,17 +181,33 @@ const EditarPerfilEstudiante = () => {
         alert("No se pudo actualizar el perfil. Intenta nuevamente.");
       }
     } catch (error) {
-      console.error("Error actualizando perfil:", error);
+      console.error('❌ [EditarPerfil] Error actualizando:', error);
       alert("Error al actualizar el perfil");
     } finally {
       setLoading(false);
     }
   };
 
-
   const goBack = () => {
     navigate("/perfil");
   };
+
+  if (loadingData) {
+    return (
+      <div className="edit-perfil-page">
+        <div className="header">
+          <div className="container">
+            <div className="header-content">
+              <div className="header-left">
+                <h1>Editar Perfil Estudiante</h1>
+                <p className="header-subtitle">Cargando datos...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="edit-perfil-page">

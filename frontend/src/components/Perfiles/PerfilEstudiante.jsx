@@ -13,37 +13,92 @@ const PerfilEstudiante = () => {
     foto: "",
     descripcion: "",
   });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
+      setLoading(true);
+      
       try {
+        // ✅ Primero intentar desde el API
         const response = await authAPI.getProfile();
-        if (response.data.success) {
+        
+        console.log('✅ Respuesta de authAPI.getProfile():', response);
+        
+        if (response?.data?.success && response.data.user) {
           const user = response.data.user;
           setPerfil({
             nombre: user.nombre || "",
             apellido: user.apellido || "",
             email: user.email || "",
-            telefono: user.telefono || "",
-            foto: user.foto || "",
-            descripcion: user.descripcion || "",
+            telefono: user.telefono || user.phone || "",
+            foto: user.foto || user.photo || user.picture || "",
+            descripcion: user.descripcion || user.biografia || user.bio || "",
           });
+          console.log('✅ Perfil cargado desde API:', user);
+          return;
         }
+        
+        // Si la respuesta no tiene el formato esperado
+        if (response?.data && !response.data.success) {
+          console.warn('⚠️ API respondió pero sin success=true:', response.data);
+        }
+        
       } catch (error) {
-        const userData = JSON.parse(localStorage.getItem("user") || "{}");
+        console.warn('⚠️ Error llamando a authAPI.getProfile():', error?.response?.status, error?.message);
+      }
+      
+      // ✅ FALLBACK: Leer desde localStorage
+      try {
+        const storedUser = localStorage.getItem("user");
+        
+        if (!storedUser) {
+          console.error('❌ No hay datos en localStorage.user');
+          return;
+        }
+        
+        console.log('📦 localStorage.user (raw):', storedUser);
+        
+        const userData = JSON.parse(storedUser);
+        console.log('📦 localStorage.user (parsed):', userData);
+        
         setPerfil({
           nombre: userData.nombre || "",
           apellido: userData.apellido || "",
           email: userData.email || "",
-          telefono: userData.telefono || "",
-          foto: userData.foto || "",
-          descripcion: userData.descripcion || "",
+          telefono: userData.telefono || userData.phone || "",
+          foto: userData.foto || userData.photo || userData.picture || "",
+          descripcion: userData.descripcion || userData.biografia || userData.bio || "",
         });
+        
+        console.log('✅ Perfil cargado desde localStorage');
+        
+      } catch (parseError) {
+        console.error('❌ Error parseando localStorage.user:', parseError);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchUserProfile();
   }, []);
+
+  if (loading) {
+    return (
+      <div className="edit-perfil-page">
+        <div className="header">
+          <div className="container">
+            <div className="header-content">
+              <div className="header-left">
+                <h1>Perfil Estudiante</h1>
+                <p className="header-subtitle">Cargando...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="edit-perfil-page">
@@ -51,7 +106,7 @@ const PerfilEstudiante = () => {
         <div className="container">
           <div className="header-content">
             <div className="header-left">
-              <h1>Editar Perfil Estudiante</h1>
+              <h1>Perfil Estudiante</h1>
               <p className="header-subtitle">Container</p>
             </div>
           </div>
@@ -68,24 +123,32 @@ const PerfilEstudiante = () => {
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Nombre</label>
-                  <p className="form-input readonly-input">{perfil.nombre}</p>
+                  <p className="form-input readonly-input">
+                    {perfil.nombre || "Sin nombre"}
+                  </p>
                 </div>
 
                 <div className="form-group">
                   <label className="form-label">Apellido</label>
-                  <p className="form-input readonly-input">{perfil.apellido}</p>
+                  <p className="form-input readonly-input">
+                    {perfil.apellido || "Sin apellido"}
+                  </p>
                 </div>
               </div>
 
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Email</label>
-                  <p className="form-input readonly-input">{perfil.email}</p>
+                  <p className="form-input readonly-input">
+                    {perfil.email || "Sin email"}
+                  </p>
                 </div>
 
                 <div className="form-group">
                   <label className="form-label">Teléfono</label>
-                  <p className="form-input readonly-input">{perfil.telefono}</p>
+                  <p className="form-input readonly-input">
+                    {perfil.telefono || "Sin teléfono"}
+                  </p>
                 </div>
               </div>
 
