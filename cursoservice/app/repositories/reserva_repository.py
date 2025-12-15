@@ -1,18 +1,18 @@
 from __future__ import annotations
+
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from decimal import Decimal
+from typing import Any, Dict, List, Optional
 
 from bson import ObjectId
 from pymongo import ReturnDocument
 from pymongo.errors import PyMongoError
 
-from app.schemas.reserva import ReservaCreate, ReservaUpdate, ReservaOut
 from app.core.db import get_collection
-from decimal import Decimal
+from app.schemas.reserva import ReservaCreate, ReservaOut, ReservaUpdate
 
 
 class ReservaRepository:
-    """Repositorio Mongo para Reserva."""
     def __init__(self) -> None:
         self.col = get_collection("reservas")
 
@@ -29,22 +29,34 @@ class ReservaRepository:
             self.col.create_index("id_usuario")
         except PyMongoError:
             pass
+        try:
+            self.col.create_index([("id_usuario", 1), ("id_curso", 1)])
+        except PyMongoError:
+            pass
+        try:
+            self.col.create_index("estado")
+        except PyMongoError:
+            pass
 
     def list(
         self,
         id_usuario: Optional[str] = None,
         id_curso: Optional[str] = None,
         id_horario: Optional[str] = None,
+        estado: Optional[str] = None,
     ) -> List[ReservaOut]:
         filtro: Dict[str, Any] = {}
+
         if id_usuario is not None:
             filtro["id_usuario"] = ObjectId(id_usuario)
         if id_curso is not None:
             filtro["id_curso"] = ObjectId(id_curso)
         if id_horario is not None:
             filtro["id_horario"] = ObjectId(id_horario)
+        if estado is not None:
+            filtro["estado"] = estado
 
-        docs = list(self.col.find(filtro))
+        docs = list(self.col.find(filtro).sort("fechaCreacion", -1))
         return [ReservaOut(**self._normalize(d)) for d in docs]
 
     def get(self, reserva_id: str) -> ReservaOut:
@@ -52,6 +64,17 @@ class ReservaRepository:
         if not doc:
             raise KeyError("reserva no encontrada")
         return ReservaOut(**self._normalize(doc))
+
+    def find_active_by_user_course(self, id_usuario: str, id_curso: str) -> Optional[ReservaOut]:
+        doc = self.col.find_one(
+            {
+                "id_usuario": ObjectId(id_usuario),
+                "id_curso": ObjectId(id_curso),
+                "estado": {"$ne": "cancelada"},
+            },
+            sort=[("fechaCreacion", -1)],
+        )
+        return ReservaOut(**self._normalize(doc)) if doc else None
 
     def _clean_decimal_fields(self, data: Dict[str, Any]) -> Dict[str, Any]:
         out = dict(data)
@@ -62,14 +85,15 @@ class ReservaRepository:
     def create(self, payload: ReservaCreate) -> ReservaOut:
         now = datetime.utcnow()
         data = payload.model_dump()
-        data = self._clean_decimal_fields(data)  # 👈 limpiar Decimals
+        data = self._clean_decimal_fields(data)
 
-        if "id_curso" in data and data["id_curso"] is not None:
+        # ObjectId conversions
+        if data.get("id_curso"):
             data["id_curso"] = ObjectId(data["id_curso"])
-        if "id_horario" in data and data["id_horario"] is not None:
-            data["id_horario"] = ObjectId(data["id_horario"])
-        if "id_usuario" in data and data["id_usuario"] is not None:
+        if data.get("id_usuario"):
             data["id_usuario"] = ObjectId(data["id_usuario"])
+        if data.get("id_horario"):
+            data["id_horario"] = ObjectId(data["id_horario"])
 
         data.update({"fechaCreacion": now, "actualizado": now})
         res = self.col.insert_one(data)
@@ -78,9 +102,11 @@ class ReservaRepository:
 
     def update(self, reserva_id: str, payload: ReservaUpdate) -> ReservaOut:
         update_data = payload.model_dump(exclude_unset=True)
-        update_data = self._clean_decimal_fields(update_data)  # 👈 limpiar Decimals
+        update_data = self._clean_decimal_fields(update_data)
 
-        # si algún día permites actualizar FKs, convertir aquí a ObjectId
+        if "id_horario" in update_data and update_data["id_horario"]:
+            update_data["id_horario"] = ObjectId(update_data["id_horario"])
+
         update_data["actualizado"] = datetime.utcnow()
 
         doc = self.col.find_one_and_update(
@@ -97,10 +123,6 @@ class ReservaRepository:
         if res.deleted_count == 0:
             raise KeyError("reserva no encontrada")
 
-    def clear(self) -> None:
-        self.col.delete_many({})
-
-    # helpers
     def _normalize(self, doc: dict) -> dict:
         d = dict(doc)
         d["id"] = str(d["_id"])
@@ -113,8 +135,8 @@ class ReservaRepository:
         return d
 
 
-# --- Singleton perezoso ---
 _repo: Optional[ReservaRepository] = None
+
 
 def get_reserva_repo() -> ReservaRepository:
     global _repo

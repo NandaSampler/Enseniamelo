@@ -1,36 +1,99 @@
-import { useEffect, useState, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { chatsAPI } from "../../api/chats";
 import { reservasAPI } from "../../api/reservas";
 import { usuariosAPI } from "../../api/usuarios";
+import "../../styles/Chat/chat.css";
 import { useNotification } from "../NotificationProvider";
 import ReservarHorario from "./ReservarHorario";
-import "../../styles/Chat/chat.css";
+
+const normalizeId = (x) => {
+  if (!x) return null;
+  if (typeof x === "string") return x;
+  if (x?.$oid) return x.$oid;
+  if (x?._id) return x._id;
+  if (x?.id) return x.id;
+  return String(x);
+};
+
+const normalizeChat = (chat) => {
+  if (!chat) return null;
+
+  const _id = normalizeId(chat?._id || chat?.id);
+
+  const participantes = Array.isArray(chat?.participantes)
+    ? chat.participantes
+        .filter(Boolean)
+        .map((p) => normalizeId(p))
+        .filter(Boolean)
+    : [];
+
+  const rawCurso = chat?.id_curso;
+  const id_curso =
+    rawCurso && typeof rawCurso === "object"
+      ? {
+          ...rawCurso,
+          _id: normalizeId(rawCurso?._id || rawCurso?.id),
+          nombre: rawCurso?.nombre || "",
+        }
+      : rawCurso
+      ? normalizeId(rawCurso)
+      : null;
+
+  return {
+    ...chat,
+    _id,
+    participantes,
+    id_curso,
+  };
+};
+
+const normalizeMensaje = (m) => {
+  if (!m) return null;
+  const _id = normalizeId(m?._id || m?.id);
+  return _id ? { ...m, _id } : null;
+};
+
+const getStoredCursoId = (chatId) => {
+  if (!chatId) return null;
+  return localStorage.getItem(`chatCurso:${chatId}`) || null;
+};
 
 const ChatPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id: routeChatId } = useParams();
   const { showNotification } = useNotification();
+
   const [chats, setChats] = useState([]);
   const [selectedChatId, setSelectedChatId] = useState(null);
+
   const [mensajes, setMensajes] = useState([]);
   const [nuevoMensaje, setNuevoMensaje] = useState("");
   const [enviandoMensaje, setEnviandoMensaje] = useState(false);
+
   const [usuariosCache, setUsuariosCache] = useState({});
   const [busqueda, setBusqueda] = useState("");
+
   const [mostrarModalReserva, setMostrarModalReserva] = useState(false);
   const [reservasPorChat, setReservasPorChat] = useState({});
+
   const messagesEndRef = useRef(null);
 
   const usuarioActual = JSON.parse(localStorage.getItem("user") || "{}");
-  const usuarioActualId = usuarioActual._id || usuarioActual.id; // ✅ Corregido
-  const usuarioActualRol = usuarioActual.rol;
-  const usuarioActualRolCodigo = usuarioActual.rolCodigo;
+  const usuarioActualId = usuarioActual?._id || usuarioActual?.id || null;
+  const usuarioActualRol = usuarioActual?.rol;
+  const usuarioActualRolCodigo = usuarioActual?.rolCodigo;
+
+  // ✅ cursoId enviado desde InfoCurso por state
+  const cursoIdFromNav =
+    location?.state?.cursoId ? String(location.state.cursoId) : null;
 
   const cargarDatosUsuarios = async (idsUsuarios) => {
     try {
       for (const userId of idsUsuarios) {
-        if (!userId || usuariosCache[userId]) continue;
+        if (!userId) continue;
+        if (usuariosCache[userId]) continue;
 
         const { data } = await usuariosAPI.getUsuario(userId);
         const usuario = data?.usuario || data;
@@ -38,9 +101,9 @@ const ChatPage = () => {
         setUsuariosCache((prev) => ({
           ...prev,
           [userId]: {
-            _id: usuario._id || usuario.id,
-            nombre: usuario.nombre,
-            apellido: usuario.apellido,
+            _id: normalizeId(usuario?._id || usuario?.id) || userId,
+            nombre: usuario?.nombre || "Usuario",
+            apellido: usuario?.apellido || "",
           },
         }));
       }
@@ -49,20 +112,21 @@ const ChatPage = () => {
     }
   };
 
-  const agruparMensajesPorFecha = (mensajes) => {
+  const agruparMensajesPorFecha = (mensajesList) => {
     const grupos = {};
-    mensajes.forEach((mensaje) => {
-      const fecha = new Date(mensaje.creado);
+    (mensajesList || []).forEach((mensaje) => {
+      const fecha = new Date(mensaje?.creado || Date.now());
       const fechaKey = fecha.toDateString();
-      if (!grupos[fechaKey]) {
-        grupos[fechaKey] = [];
-      }
+      if (!grupos[fechaKey]) grupos[fechaKey] = [];
       grupos[fechaKey].push(mensaje);
     });
     return grupos;
   };
 
-  const mensajesAgrupados = agruparMensajesPorFecha(mensajes);
+  const mensajesAgrupados = useMemo(
+    () => agruparMensajesPorFecha(mensajes),
+    [mensajes]
+  );
 
   const formatearSeparadorFecha = (fechaString) => {
     const fecha = new Date(fechaString);
@@ -70,131 +134,132 @@ const ChatPage = () => {
     const ayer = new Date(ahora);
     ayer.setDate(ayer.getDate() - 1);
 
-    if (fecha.toDateString() === ahora.toDateString()) {
-      return "Hoy";
-    } else if (fecha.toDateString() === ayer.toDateString()) {
-      return "Ayer";
-    } else {
-      return fecha.toLocaleDateString("es-BO", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year:
-          fecha.getFullYear() !== ahora.getFullYear() ? "numeric" : undefined,
-      });
-    }
+    if (fecha.toDateString() === ahora.toDateString()) return "Hoy";
+    if (fecha.toDateString() === ayer.toDateString()) return "Ayer";
+
+    return fecha.toLocaleDateString("es-BO", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: fecha.getFullYear() !== ahora.getFullYear() ? "numeric" : undefined,
+    });
   };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [mensajes]);
 
+  // ✅ Mantener selectedChatId sincronizado con la ruta
+  useEffect(() => {
+    if (routeChatId && routeChatId !== "undefined") {
+      setSelectedChatId(routeChatId);
+
+      // ✅ Si vienes por URL y hay cursoId en state, guárdalo también
+      if (cursoIdFromNav) {
+        localStorage.setItem(`chatCurso:${routeChatId}`, String(cursoIdFromNav));
+      }
+    }
+  }, [routeChatId, cursoIdFromNav]);
+
+  // ✅ Cargar chats + fallback: si entras con /chats/:id y no está en la lista -> getChat(id)
   useEffect(() => {
     const fetchChats = async () => {
       try {
         const response = await chatsAPI.getChats();
-        const data = response.data;
-        const chatsObtenidos = Array.isArray(data) ? data : data.chats || [];
+        const data = response?.data;
+        const chatsObtenidos = Array.isArray(data) ? data : data?.chats || [];
 
-        // ✅ Normalizar chats: SIEMPRE usar _id internamente
-        const chatsNormalizados = chatsObtenidos.map((chat) => ({
-          ...chat,
-          _id: chat._id || chat.id,
-          participantes: (chat.participantes || []).map((p) => {
-            if (typeof p === "string") return p;
-            if (p?.$oid) return p.$oid;
-            if (p?._id) return p._id;
-            if (p?.id) return p.id;
-            return p;
-          }),
-          id_curso:
-            typeof chat.id_curso === "object"
-              ? {
-                  ...chat.id_curso,
-                  _id: chat.id_curso._id || chat.id_curso.id,
-                  nombre: chat.id_curso.nombre,
-                }
-              : chat.id_curso,
-        }));
+        const chatsNormalizados = (chatsObtenidos || [])
+          .filter(Boolean)
+          .map(normalizeChat)
+          .filter((c) => !!c?._id);
 
-        const chatsDelUsuario = chatsNormalizados.filter((chat) =>
-          (chat.participantes || []).some((p) => {
-            const participanteId = typeof p === "string" ? p : p._id || p.id;
-            return String(participanteId) === String(usuarioActualId);
-          })
-        );
-        setChats(chatsDelUsuario);
+        setChats(chatsNormalizados);
 
-        // Extraer IDs de participantes
+        // ✅ Si vienes por URL con chatId y no está en la lista -> traerlo por id y agregarlo
+        if (routeChatId && routeChatId !== "undefined") {
+          const existe = chatsNormalizados.some(
+            (c) => String(c._id) === String(routeChatId)
+          );
+
+          if (!existe) {
+            try {
+              const respChat = await chatsAPI.getChat(routeChatId);
+              const chatData = respChat?.data?.chat || respChat?.data;
+              const chatNorm = normalizeChat(chatData);
+
+              // ✅ Si el backend devuelve id_curso null, inyecta el cursoId guardado
+              const storedCurso = getStoredCursoId(routeChatId);
+              if (!chatNorm?.id_curso && storedCurso) {
+                chatNorm.id_curso = storedCurso;
+              }
+
+              if (chatNorm?._id) {
+                setChats((prev) => {
+                  const ya = prev.some((c) => String(c._id) === String(chatNorm._id));
+                  return ya ? prev : [chatNorm, ...prev];
+                });
+              }
+            } catch (e) {
+              console.error("❌ No se pudo cargar el chat por ID:", e);
+            }
+          }
+        } else {
+          // ✅ Si no hay chatId en ruta, navegar al primero
+          if (chatsNormalizados.length > 0 && chatsNormalizados[0]?._id) {
+            navigate(`/chats/${chatsNormalizados[0]._id}`, { replace: true });
+          }
+        }
+
+        // ✅ Precargar usuarios “otros” (si hay participantes)
         const todosLosParticipantes = new Set();
-        chatsDelUsuario.forEach((chat) => {
+        chatsNormalizados.forEach((chat) => {
           (chat.participantes || []).forEach((p) => {
-            const participanteId = typeof p === "string" ? p : p._id || p.id;
-            if (participanteId && participanteId !== usuarioActualId) {
-              todosLosParticipantes.add(participanteId);
+            if (p && usuarioActualId && String(p) !== String(usuarioActualId)) {
+              todosLosParticipantes.add(p);
             }
           });
         });
 
-        // Cargar datos de todos los participantes
         if (todosLosParticipantes.size > 0) {
           await cargarDatosUsuarios(Array.from(todosLosParticipantes));
         }
 
-        // ✅ Setear selectedChatId
-        if (routeChatId && routeChatId !== "undefined") {
-          setSelectedChatId(routeChatId);
-        } else if (chatsDelUsuario.length > 0 && chatsDelUsuario[0]._id) {
-          console.log("🎯 Navegando al primer chat:", chatsDelUsuario[0]._id);
-          navigate(`/chats/${chatsDelUsuario[0]._id}`, { replace: true });
-        }
-
-        // ✅ Cargar reservas - USAR _id
+        // ✅ Reservas por chat (usa cursoId guardado si id_curso está null)
         const reservasMap = {};
         await Promise.all(
-          chatsDelUsuario.map(async (chat) => {
+          chatsNormalizados.map(async (chat) => {
+            const chatId = chat?._id;
+            const storedCurso = getStoredCursoId(chatId);
+
             const cursoId =
-              typeof chat.id_curso === "object"
+              chat?.id_curso && typeof chat.id_curso === "object"
                 ? chat.id_curso._id || chat.id_curso.id
-                : chat.id_curso;
+                : chat?.id_curso || storedCurso;
 
             if (!cursoId) return;
 
             let estudianteId = null;
-            if (
-              usuarioActualRolCodigo === 1 ||
-              usuarioActualRol === "estudiante"
-            ) {
+            if (usuarioActualRolCodigo === 1 || usuarioActualRol === "estudiante") {
               estudianteId = usuarioActualId;
             } else {
-              const otros = (chat.participantes || []).filter((p) => {
-                const pId = typeof p === "string" ? p : p._id || p.id;
-                return String(pId) !== String(usuarioActualId);
-              });
-              if (otros[0]) {
-                estudianteId =
-                  typeof otros[0] === "string"
-                    ? otros[0]
-                    : otros[0]._id || otros[0].id;
-              }
+              const otros = (chat.participantes || []).filter(
+                (p) => String(p) !== String(usuarioActualId)
+              );
+              estudianteId = otros?.[0] || null;
             }
 
             if (!estudianteId) return;
 
             try {
               const { data: dataReserva } =
-                await reservasAPI.getEstadoReservaChat({
-                  cursoId,
-                  estudianteId,
-                });
-              if (dataReserva?.success && dataReserva.reserva) {
-                reservasMap[chat._id] = dataReserva.reserva; // ✅ Usar _id
+                await reservasAPI.getEstadoReservaChat({ cursoId, estudianteId });
+
+              if (dataReserva?.success && dataReserva?.reserva) {
+                reservasMap[chatId] = dataReserva.reserva;
               }
             } catch (error) {
-              console.error(
-                "Error obteniendo estado de reserva para chat:",
-                error
-              );
+              console.error("Error obteniendo estado de reserva para chat:", error);
             }
           })
         );
@@ -211,47 +276,10 @@ const ChatPage = () => {
     };
 
     fetchChats();
-  }, []); // ✅ Sin dependencias - solo cargar una vez
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const obtenerOtroUsuario = (chat) => {
-    if (!chat) return null;
-
-    const otros = (chat.participantes || []).filter((p) => {
-      const pId = typeof p === "string" ? p : p._id || p.id;
-      return String(pId) !== String(usuarioActualId);
-    });
-
-    if (otros.length === 0) return null;
-
-    const otroId =
-      typeof otros[0] === "string" ? otros[0] : otros[0]._id || otros[0].id;
-
-    return (
-      usuariosCache[otroId] || {
-        _id: otroId,
-        nombre: "Usuario",
-        apellido: "",
-      }
-    );
-  };
-
-  const obtenerNombreOtroUsuario = (chat) => {
-    const otroUsuario = obtenerOtroUsuario(chat);
-    if (!otroUsuario) return "Usuario";
-    return (
-      `${otroUsuario.nombre || ""} ${otroUsuario.apellido || ""}`.trim() ||
-      "Usuario"
-    );
-  };
-
-  // ✅ useEffect para actualizar selectedChatId cuando cambia routeChatId
-  useEffect(() => {
-    if (routeChatId && routeChatId !== "undefined") {
-      setSelectedChatId(routeChatId);
-    }
-  }, [routeChatId]);
-
-  // ✅ useEffect para cargar mensajes cuando cambia selectedChatId
+  // ✅ cargar mensajes cuando cambia selectedChatId
   useEffect(() => {
     if (!selectedChatId || selectedChatId === "undefined") {
       setMensajes([]);
@@ -261,15 +289,12 @@ const ChatPage = () => {
     const fetchMensajes = async () => {
       try {
         const { data } = await chatsAPI.getMensajes(selectedChatId);
+        const mensajesRecibidos = Array.isArray(data) ? data : data?.mensajes || [];
 
-        const mensajesRecibidos = Array.isArray(data)
-          ? data
-          : data?.mensajes || [];
-
-        const mensajesNormalizados = mensajesRecibidos.map((m) => ({
-          ...m,
-          _id: m._id || m.id,
-        }));
+        const mensajesNormalizados = (mensajesRecibidos || [])
+          .filter(Boolean)
+          .map(normalizeMensaje)
+          .filter(Boolean);
 
         setMensajes(mensajesNormalizados);
       } catch (error) {
@@ -284,14 +309,35 @@ const ChatPage = () => {
     };
 
     fetchMensajes();
-  }, [selectedChatId]);
+  }, [selectedChatId, showNotification]);
 
   const manejarSeleccionChat = (chatId) => {
-    if (!chatId || chatId === "undefined") {
-      console.error("❌ chatId inválido");
-      return;
-    }
+    if (!chatId || chatId === "undefined") return;
     navigate(`/chats/${chatId}`);
+  };
+
+  const obtenerOtroUsuario = (chat) => {
+    if (!chat) return null;
+
+    const otros = (chat.participantes || []).filter(
+      (p) => String(p) !== String(usuarioActualId)
+    );
+    const otroId = otros?.[0] || null;
+    if (!otroId) return null;
+
+    return (
+      usuariosCache[otroId] || {
+        _id: otroId,
+        nombre: "Usuario",
+        apellido: "",
+      }
+    );
+  };
+
+  const obtenerNombreOtroUsuario = (chat) => {
+    const otroUsuario = obtenerOtroUsuario(chat);
+    if (!otroUsuario) return "Usuario";
+    return `${otroUsuario.nombre || ""} ${otroUsuario.apellido || ""}`.trim() || "Usuario";
   };
 
   const manejarEnviarMensaje = async () => {
@@ -304,25 +350,22 @@ const ChatPage = () => {
       const mensajeDTO = {
         id_chat: selectedChatId,
         remitente: usuarioActualId,
-        contenido: contenido,
+        contenido,
       };
 
       const { data } = await chatsAPI.sendMensaje(mensajeDTO);
       const mensajeNuevo = Array.isArray(data) ? data[0] : data;
-      const mensajeNormalizado = {
-        ...mensajeNuevo,
-        _id: mensajeNuevo._id || mensajeNuevo.id,
-      };
 
-      setMensajes((prev) => [...prev, mensajeNormalizado]);
+      const mensajeNormalizado = normalizeMensaje(mensajeNuevo);
+      if (mensajeNormalizado?._id) setMensajes((prev) => [...prev, mensajeNormalizado]);
+
       setNuevoMensaje("");
     } catch (error) {
       console.error("❌ Error enviando mensaje:", error);
       showNotification({
         type: "error",
         title: "Error",
-        message:
-          error.response?.data?.message || "No se pudo enviar el mensaje",
+        message: error?.response?.data?.message || "No se pudo enviar el mensaje",
       });
     } finally {
       setEnviandoMensaje(false);
@@ -336,33 +379,38 @@ const ChatPage = () => {
     return nombreOtro.toLowerCase().includes(texto);
   });
 
-  const chatSeleccionado = chats.find((c) => c._id === selectedChatId) || null;
-  const tituloCurso = chatSeleccionado?.id_curso?.nombre || "";
+  const chatSeleccionado =
+    chats.find((c) => String(c._id) === String(selectedChatId)) || null;
+
+  // ✅ CURSO ID RESUELTO (aunque chat.id_curso sea null)
+  const cursoIdResuelto = useMemo(() => {
+    if (!selectedChatId) return null;
+
+    let cid = null;
+
+    if (chatSeleccionado?.id_curso) {
+      cid =
+        typeof chatSeleccionado.id_curso === "object"
+          ? normalizeId(chatSeleccionado.id_curso._id || chatSeleccionado.id_curso.id)
+          : normalizeId(chatSeleccionado.id_curso);
+    }
+
+    cid = cid || cursoIdFromNav || getStoredCursoId(selectedChatId) || null;
+    return cid ? String(cid) : null;
+  }, [chatSeleccionado, cursoIdFromNav, selectedChatId]);
+
+  const tituloCurso =
+    chatSeleccionado?.id_curso && typeof chatSeleccionado.id_curso === "object"
+      ? chatSeleccionado.id_curso.nombre || ""
+      : "";
+
   const reservaSeleccionada = chatSeleccionado
     ? reservasPorChat[chatSeleccionado._id] || null
     : null;
+
   const nombreOtroUsuarioHeader = chatSeleccionado
     ? obtenerNombreOtroUsuario(chatSeleccionado)
     : "";
-
-  const obtenerLabelsTutorEstudiante = () => {
-    if (!chatSeleccionado) return { tutorLabel: "", estudianteLabel: "" };
-    const nombreOtro = obtenerNombreOtroUsuario(chatSeleccionado);
-
-    if (usuarioActualRolCodigo === 2 || usuarioActualRol === "docente") {
-      return {
-        tutorLabel: "Tú (tutor)",
-        estudianteLabel: nombreOtro,
-      };
-    }
-
-    return {
-      tutorLabel: nombreOtro,
-      estudianteLabel: "Tú (estudiante)",
-    };
-  };
-
-  const { tutorLabel, estudianteLabel } = obtenerLabelsTutorEstudiante();
 
   const esTutorEnChatSeleccionado = !!(
     chatSeleccionado &&
@@ -372,34 +420,41 @@ const ChatPage = () => {
 
   const obtenerEstudianteIdDeChat = () => {
     if (!chatSeleccionado) return null;
-    const otros = (chatSeleccionado.participantes || []).filter((p) => {
-      const pId = typeof p === "string" ? p : p._id || p.id;
-      return String(pId) !== String(usuarioActualId);
-    });
-    if (otros.length === 0) return null;
-    return typeof otros[0] === "string"
-      ? otros[0]
-      : otros[0]._id || otros[0].id;
+    const otros = (chatSeleccionado.participantes || []).filter(
+      (p) => String(p) !== String(usuarioActualId)
+    );
+    return otros?.[0] || null;
   };
 
-  const manejarAbrirModalReserva = () => {
-    setMostrarModalReserva(true);
-  };
+  const manejarAbrirModalReserva = () => setMostrarModalReserva(true);
+  const manejarCerrarModalReserva = () => setMostrarModalReserva(false);
 
-  const manejarCerrarModalReserva = () => {
-    setMostrarModalReserva(false);
-  };
-
+  // ✅ ACEPTAR usando cursoIdResuelto
   const manejarAceptarReserva = async (fechaHoraReserva) => {
     if (!chatSeleccionado) return;
 
-    const cursoId =
-      typeof chatSeleccionado.id_curso === "object"
-        ? chatSeleccionado.id_curso._id || chatSeleccionado.id_curso.id
-        : chatSeleccionado.id_curso;
+    const cursoId = cursoIdResuelto;
     const estudianteId = obtenerEstudianteIdDeChat();
 
-    if (!cursoId || !estudianteId || !fechaHoraReserva) {
+    if (!cursoId) {
+      showNotification({
+        type: "error",
+        title: "Error",
+        message: "No se pudo identificar el curso para esta reserva.",
+      });
+      return;
+    }
+
+    if (!estudianteId) {
+      showNotification({
+        type: "error",
+        title: "Error",
+        message: "No se pudo identificar al estudiante para esta reserva.",
+      });
+      return;
+    }
+
+    if (!fechaHoraReserva) {
       showNotification({
         type: "warning",
         title: "Campos incompletos",
@@ -422,8 +477,10 @@ const ChatPage = () => {
           title: "¡Reserva aceptada!",
           message: "La reserva fue aceptada y el horario creado correctamente",
         });
+
         setMostrarModalReserva(false);
-        if (data.reserva && chatSeleccionado) {
+
+        if (data?.reserva && chatSeleccionado) {
           setReservasPorChat((prev) => ({
             ...prev,
             [chatSeleccionado._id]: data.reserva,
@@ -433,7 +490,7 @@ const ChatPage = () => {
         showNotification({
           type: "error",
           title: "Error",
-          message: "No se pudo aceptar la reserva. Intenta nuevamente.",
+          message: data?.message || "No se pudo aceptar la reserva. Intenta nuevamente.",
         });
       }
     } catch (error) {
@@ -441,21 +498,35 @@ const ChatPage = () => {
       showNotification({
         type: "error",
         title: "Error",
-        message: "Ocurrió un error al aceptar la reserva",
+        message: error?.response?.data?.message || "Ocurrió un error al aceptar la reserva",
       });
     }
   };
 
+  // ✅ RECHAZAR usando cursoIdResuelto
   const manejarRechazarReserva = async () => {
     if (!chatSeleccionado) return;
 
-    const cursoId =
-      typeof chatSeleccionado.id_curso === "object"
-        ? chatSeleccionado.id_curso._id || chatSeleccionado.id_curso.id
-        : chatSeleccionado.id_curso;
+    const cursoId = cursoIdResuelto;
     const estudianteId = obtenerEstudianteIdDeChat();
 
-    if (!cursoId || !estudianteId) return;
+    if (!cursoId) {
+      showNotification({
+        type: "error",
+        title: "Error",
+        message: "No se pudo identificar el curso para esta reserva.",
+      });
+      return;
+    }
+
+    if (!estudianteId) {
+      showNotification({
+        type: "error",
+        title: "Error",
+        message: "No se pudo identificar al estudiante para esta reserva.",
+      });
+      return;
+    }
 
     try {
       const { data } = await reservasAPI.rechazarReserva({
@@ -463,12 +534,13 @@ const ChatPage = () => {
         estudianteId,
       });
 
-      if (data?.success && data.reserva) {
+      if (data?.success && data?.reserva) {
         showNotification({
           type: "info",
           title: "Reserva rechazada",
           message: "La reserva ha sido rechazada correctamente",
         });
+
         setReservasPorChat((prev) => ({
           ...prev,
           [chatSeleccionado._id]: data.reserva,
@@ -477,7 +549,7 @@ const ChatPage = () => {
         showNotification({
           type: "error",
           title: "Error",
-          message: "No se pudo rechazar la reserva. Intenta nuevamente.",
+          message: data?.message || "No se pudo rechazar la reserva. Intenta nuevamente.",
         });
       }
     } catch (error) {
@@ -485,7 +557,7 @@ const ChatPage = () => {
       showNotification({
         type: "error",
         title: "Error",
-        message: "Ocurrió un error al rechazar la reserva",
+        message: error?.response?.data?.message || "Ocurrió un error al rechazar la reserva",
       });
     }
   };
@@ -513,57 +585,62 @@ const ChatPage = () => {
           </div>
 
           <div className="chat-items">
-            {chatsFiltrados.map((chat) => {
-              const nombreOtro = obtenerNombreOtroUsuario(chat);
-              const iniciales = nombreOtro
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .substring(0, 2)
-                .toUpperCase();
+            {chatsFiltrados.length === 0 ? (
+              <div style={{ padding: 12, color: "#64748b", fontSize: 14 }}>
+                No tienes conversaciones aún.
+              </div>
+            ) : (
+              chatsFiltrados.map((chat) => {
+                const nombreOtro = obtenerNombreOtroUsuario(chat);
+                const iniciales = nombreOtro
+                  .split(" ")
+                  .map((n) => n?.[0] || "")
+                  .join("")
+                  .substring(0, 2)
+                  .toUpperCase();
 
-              return (
-                <div
-                  key={chat._id}
-                  className={
-                    "chat-item" +
-                    (selectedChatId === chat._id ? " chat-item-active" : "")
-                  }
-                  onClick={() => manejarSeleccionChat(chat._id)}
-                >
-                  <div className="chat-avatar">
-                    <span>{iniciales}</span>
-                  </div>
-                  <div className="chat-info">
-                    <div className="chat-name">{nombreOtro}</div>
-                    <div className="chat-course">
-                      {chat.id_curso?.nombre || "Curso"}
+                const nombreCurso =
+                  chat?.id_curso && typeof chat.id_curso === "object"
+                    ? chat.id_curso.nombre || "Curso"
+                    : "Curso";
+
+                return (
+                  <div
+                    key={chat._id}
+                    className={
+                      "chat-item" +
+                      (String(selectedChatId) === String(chat._id)
+                        ? " chat-item-active"
+                        : "")
+                    }
+                    onClick={() => manejarSeleccionChat(chat._id)}
+                  >
+                    <div className="chat-avatar">
+                      <span>{iniciales || "U"}</span>
                     </div>
-                    <div className="chat-last-message">
-                      {chat.ultimoMensaje || "Sin mensajes"}
+                    <div className="chat-info">
+                      <div className="chat-name">{nombreOtro}</div>
+                      <div className="chat-course">{nombreCurso}</div>
+                      <div className="chat-last-message">
+                        {chat.ultimoMensaje || "Sin mensajes"}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
 
         <div className="chat-messages">
-          {chatSeleccionado && (
+          {chatSeleccionado ? (
             <div className="chat-messages-header">
               <div className="chat-messages-header-main">
-                <h2 className="chat-messages-title">
-                  {nombreOtroUsuarioHeader}
-                </h2>
+                <h2 className="chat-messages-title">{nombreOtroUsuarioHeader}</h2>
                 <p className="chat-messages-subtitle">
                   {tituloCurso || "Chat del curso"}
                 </p>
-                {(tutorLabel || estudianteLabel) && (
-                  <p className="chat-messages-roles">
-                    Tutor: {tutorLabel} · Estudiante: {estudianteLabel}
-                  </p>
-                )}
+
                 {esTutorEnChatSeleccionado && (
                   <div className="chat-reserva-actions">
                     <button
@@ -579,54 +656,63 @@ const ChatPage = () => {
                     >
                       Aceptar reserva
                     </button>
+
+                    <button
+                      type="button"
+                      className="chat-reject-btn"
+                      onClick={manejarRechazarReserva}
+                    >
+                      Rechazar
+                    </button>
                   </div>
                 )}
               </div>
             </div>
+          ) : (
+            <div style={{ padding: 16, color: "#64748b" }}>
+              {selectedChatId
+                ? "Cargando conversación..."
+                : "Selecciona una conversación para comenzar."}
+            </div>
           )}
 
           <div className="messages-container">
-            {Object.entries(mensajesAgrupados).map(
-              ([fechaKey, mensajesDelDia]) => (
-                <div key={fechaKey}>
-                  <div className="date-separator">
-                    <span>{formatearSeparadorFecha(fechaKey)}</span>
-                  </div>
-
-                  {mensajesDelDia.map((m) => {
-                    const mensajeId = m._id || m.id;
-                    const remitenteId =
-                      typeof m.remitente === "string"
-                        ? m.remitente
-                        : m.remitente?._id || m.remitente?.id;
-                    const esPropio =
-                      String(remitenteId) === String(usuarioActualId);
-                    const horaTexto = m.creado
-                      ? new Date(m.creado).toLocaleTimeString("es-BO", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })
-                      : "";
-
-                    return (
-                      <div
-                        key={mensajeId}
-                        className={`message ${esPropio ? "own-message" : ""}`}
-                      >
-                        <div className="message-bubble">
-                          <div className="message-content">{m.contenido}</div>
-                          {horaTexto && (
-                            <div className="message-time">{horaTexto}</div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <div ref={messagesEndRef} />
+            {Object.entries(mensajesAgrupados).map(([fechaKey, mensajesDelDia]) => (
+              <div key={fechaKey}>
+                <div className="date-separator">
+                  <span>{formatearSeparadorFecha(fechaKey)}</span>
                 </div>
-              )
-            )}
+
+                {(mensajesDelDia || []).map((m) => {
+                  const mensajeId = m._id || m.id;
+                  const remitenteId =
+                    typeof m.remitente === "string"
+                      ? m.remitente
+                      : m.remitente?._id || m.remitente?.id;
+
+                  const esPropio = String(remitenteId) === String(usuarioActualId);
+
+                  const horaTexto = m.creado
+                    ? new Date(m.creado).toLocaleTimeString("es-BO", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                      })
+                    : "";
+
+                  return (
+                    <div key={mensajeId} className={`message ${esPropio ? "own-message" : ""}`}>
+                      <div className="message-bubble">
+                        <div className="message-content">{m.contenido}</div>
+                        {horaTexto && <div className="message-time">{horaTexto}</div>}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div ref={messagesEndRef} />
+              </div>
+            ))}
           </div>
 
           {selectedChatId && (
@@ -637,9 +723,7 @@ const ChatPage = () => {
                 value={nuevoMensaje}
                 onChange={(e) => setNuevoMensaje(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !enviandoMensaje) {
-                    manejarEnviarMensaje();
-                  }
+                  if (e.key === "Enter" && !enviandoMensaje) manejarEnviarMensaje();
                 }}
                 disabled={enviandoMensaje}
               />

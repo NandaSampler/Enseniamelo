@@ -1,90 +1,82 @@
 // frontend/src/api/reservas.js
-import api from './config';
+import api from "./config";
 
-const RESERVAS_BASE = '/curso/api/v1/reservas';
+const RESERVAS_BASE = "/curso/api/v1/reservas/";
+
+const getUsuarioActualId = () => {
+  const u = JSON.parse(localStorage.getItem("user") || "{}");
+  return u._id || u.id || null;
+};
 
 export const reservasAPI = {
-  // Obtener todas las reservas con filtros opcionales
   getReservas: async (params = {}) => {
     return await api.get(RESERVAS_BASE, { params });
   },
 
-  // Obtener una reserva por ID
   getReserva: async (id) => {
     return await api.get(`${RESERVAS_BASE}/${id}`);
   },
 
-  // Crear una nueva reserva
-  createReserva: async (reservaData) => {
-    return await api.post(RESERVAS_BASE, reservaData);
+  // ✅ Crea reserva SIN horario (se asigna después)
+  // body: { id_usuario, id_curso }
+  createReserva: async (data = {}) => {
+    const id_usuario = data.id_usuario || getUsuarioActualId();
+    const id_curso = data.id_curso || data.cursoId;
+
+    if (!id_usuario) throw new Error("No se pudo determinar id_usuario (localStorage.user)");
+    if (!id_curso) throw new Error("No se pudo determinar id_curso");
+
+    return await api.post(RESERVAS_BASE, { id_usuario, id_curso });
   },
 
-  // Actualizar una reserva
   updateReserva: async (id, reservaData) => {
     return await api.put(`${RESERVAS_BASE}/${id}`, reservaData);
   },
 
-  // Eliminar una reserva
   deleteReserva: async (id) => {
     return await api.delete(`${RESERVAS_BASE}/${id}`);
   },
 
-  // Obtener reservas del estudiante autenticado
+  // ✅ Tu backend filtra por query param id_usuario
   getMisReservasEstudiante: async () => {
-    return await api.get(RESERVAS_BASE, {
-      params: {
-        // El backend filtrará por el usuario autenticado
-      }
-    });
+    const id_usuario = getUsuarioActualId();
+    if (!id_usuario) throw new Error("No se pudo determinar id_usuario (localStorage.user)");
+
+    return await api.get(RESERVAS_BASE, { params: { id_usuario } });
   },
 
-  // Obtener reservas confirmadas del tutor
+  // (si luego implementas endpoint real)
   getReservasConfirmadasTutor: async () => {
-    return await api.get(RESERVAS_BASE, {
-      params: {
-        estado: 'confirmada'
-        // El backend filtrará por los cursos del tutor autenticado
-      }
-    });
+    return await api.get(RESERVAS_BASE, { params: { estado: "confirmada" } });
   },
 
-  // Aceptar una reserva (crear horario)
-  aceptarReserva: async ({ cursoId, estudianteId, inicio }) => {
+  // ✅ Estos endpoints existen en tu frontend actual. Si tu backend aún no los tiene, no los uses.
+  aceptarReserva: async ({ cursoId, estudianteId, inicio, duracion_min = 60 }) => {
     return await api.post(`${RESERVAS_BASE}/aceptar`, {
       cursoId,
       estudianteId,
-      inicio
+      inicio,
+      duracion_min,
     });
   },
 
-  // Rechazar una reserva
   rechazarReserva: async ({ cursoId, estudianteId }) => {
-    return await api.post(`${RESERVAS_BASE}/rechazar`, {
-      cursoId,
-      estudianteId
-    });
+    return await api.post(`${RESERVAS_BASE}/rechazar`, { cursoId, estudianteId });
   },
 
-  // Marcar reserva como completada
-  marcarReservaCompletada: async ({ cursoId }) => {
-    return await api.post(`${RESERVAS_BASE}/completar`, {
-      cursoId
-    });
+  marcarReservaCompletada: async ({ cursoId, estudianteId }) => {
+    return await api.post(`${RESERVAS_BASE}/completar`, { cursoId, estudianteId });
   },
 
-  // Obtener estado de reserva para un chat
   getEstadoReservaChat: async ({ cursoId, estudianteId }) => {
-    return await api.get(`${RESERVAS_BASE}/estado`, {
-      params: { cursoId, estudianteId }
-    });
+    return await api.get(`${RESERVAS_BASE}/estado`, { params: { cursoId, estudianteId } });
   },
 
-  // Verificar disponibilidad de cupos para un curso
   verificarDisponibilidad: async (cursoId, usuarioId) => {
     return await api.get(`${RESERVAS_BASE}/disponibilidad/${cursoId}`, {
-      params: { id_usuario: usuarioId }
+      params: { id_usuario: usuarioId },
     });
-  }
+  },
 };
 
 export default reservasAPI;

@@ -1,9 +1,10 @@
 // frontend/src/api/config.js
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.DEV
-  ? "/api"
-  : (import.meta.env.VITE_API_BASE_URL || "/api");
+// ✅ SIEMPRE usar /api (en dev con proxy, y en prod detrás de gateway/nginx)
+const API_BASE_URL =
+  (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim()) ||
+  "/api";
 
 const KEYCLOAK_TOKEN_URL =
   import.meta.env.VITE_KEYCLOAK_TOKEN_URL ||
@@ -56,37 +57,25 @@ api.interceptors.request.use(
     const token = getAccessToken();
     config.headers = config.headers || {};
 
-    // ✅ NO setear Content-Type en GET/HEAD (a veces el gateway devuelve 400)
+    // ✅ NO setear Content-Type en GET/HEAD
     const method = (config.method || "get").toLowerCase();
     const isBodyMethod = ["post", "put", "patch", "delete"].includes(method);
 
-    // Si es FormData, axios pone el boundary solo
-    const isFormData =
-      typeof FormData !== "undefined" && config.data instanceof FormData;
+    const isFormData = typeof FormData !== "undefined" && config.data instanceof FormData;
 
     if (isBodyMethod && !isFormData && !config.headers["Content-Type"]) {
       config.headers["Content-Type"] = "application/json";
     }
 
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    } else {
-      delete config.headers.Authorization;
-    }
-
-    // Debug útil (solo DEV)
-    if (import.meta.env.DEV && config.url?.includes("/tutor/mis-cursos")) {
-      console.log("➡️ GET mis-cursos URL:", `${config.baseURL}${config.url}`);
-      console.log("➡️ Authorization header:", config.headers.Authorization);
-      console.log("➡️ Content-Type:", config.headers["Content-Type"]);
-    }
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    else delete config.headers.Authorization;
 
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// ✅ Response interceptor (igual que antes, pero guardando token normalizado)
+// ✅ Response interceptor
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
