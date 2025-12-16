@@ -7,11 +7,46 @@ import { usuariosAPI } from "../../api/usuarios";
 import "../../styles/Tutor/panelTutor.css";
 import { useNotification } from "../NotificationProvider";
 import CardTutor from "./CardTutor";
+import api from "../../api/config";
+
 
 // =====================================================
 // Helpers (robustos para ids + nombres)
 // =====================================================
 const calendarDays = Array.from({ length: 31 }, (_, i) => i + 1);
+
+
+const PAYMENTS_PREFIX = "/ms-payments/v1";
+
+const fetchMe = async () => {
+  const meRes = await api.get("/v1/auth/me");
+  const me = meRes?.data;
+  if (!me?.id) throw new Error("No se pudo obtener el id del usuario (/v1/auth/me).");
+  return me.id;
+};
+
+const fetchSubsForUser = async (userId) => {
+  try {
+    const r1 = await api.get(`${PAYMENTS_PREFIX}/suscripciones/`, { params: { id_usuario: userId } });
+    const list1 = Array.isArray(r1.data) ? r1.data : [];
+    if (list1.length > 0) return list1;
+  } catch { }
+
+  const r2 = await api.get(`${PAYMENTS_PREFIX}/suscripciones/`);
+  const list2 = Array.isArray(r2.data) ? r2.data : [];
+  return list2.filter((s) => String(s?.id_usuario) === String(userId));
+};
+
+const fetchPlanById = async (planId) => {
+  try {
+    const r = await api.get(`${PAYMENTS_PREFIX}/planes/${planId}`);
+    return r?.data;
+  } catch {
+    const r = await api.get(`${PAYMENTS_PREFIX}/planes/${planId}/`);
+    return r?.data;
+  }
+};
+
 
 const normalizeId = (x) => {
   if (!x) return null;
@@ -88,6 +123,8 @@ const SolicitudesReservasModal = ({
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
   const [nombresUsuarios, setNombresUsuarios] = useState({}); // { userId: "Nombre Apellido" }
   const [saving, setSaving] = useState(false);
+
+
 
   // Reset cuando se abre
   useEffect(() => {
@@ -421,6 +458,7 @@ const SolicitudesReservasModal = ({
 const PanelTutor = () => {
   const navigate = useNavigate();
   const { showNotification } = useNotification();
+  const [loadingSuscripcion, setLoadingSuscripcion] = useState(false);
 
   const [cursos, setCursos] = useState([]);
   const [loadingCursos, setLoadingCursos] = useState(false);
@@ -457,64 +495,115 @@ const PanelTutor = () => {
 
   // --------- Fetch cursos + reservas ----------
   useEffect(() => {
-    const fetchCursos = async () => {
-      setLoadingCursos(true);
-      setErrorCursos("");
+  const fetchCursos = async () => {
+    setLoadingCursos(true);
+    setErrorCursos("");
 
-      try {
-        const { data } = await cursosAPI.getMisCursos();
+    try {
+      const { data } = await cursosAPI.getMisCursos();
 
-        const cursosRaw = Array.isArray(data)
-          ? data
-          : data?.success && Array.isArray(data.cursos)
-          ? data.cursos
-          : [];
+      const cursosRaw = Array.isArray(data)
+        ? data
+        : data?.success && Array.isArray(data.cursos)
+        ? data.cursos
+        : [];
 
-        setCursos(
-          cursosRaw.map((c) => ({
-            id: c.id || c._id,
-            titulo: c.nombre,
-            descripcion: c.descripcion,
-            categorias: c.categorias || [],
-            precio: c.precio_reserva,
-            modalidad: c.modalidad,
-            verificacion_estado: c.verificacion_estado,
-          }))
-        );
-      } catch (err) {
-        console.error("Error obteniendo cursos del tutor:", err);
+      setCursos(
+        cursosRaw.map((c) => ({
+          id: c.id || c._id,
+          titulo: c.nombre,
+          descripcion: c.descripcion,
+          categorias: c.categorias || [],
+          precio: c.precio_reserva,
+          modalidad: c.modalidad,
+          verificacion_estado: c.verificacion_estado,
+        }))
+      );
+    } catch (err) {
+      console.error("Error obteniendo cursos del tutor:", err);
 
-        const msg =
-          err?.response?.data?.detail ||
-          err?.response?.data?.message ||
-          `Error al obtener tus cursos (status ${err?.response?.status || "?"}).`;
+      const msg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        `Error al obtener tus cursos (status ${err?.response?.status || "?"}).`;
 
-        setErrorCursos(msg);
-      } finally {
-        setLoadingCursos(false);
+      setErrorCursos(msg);
+    } finally {
+      setLoadingCursos(false);
+    }
+  };
+
+  const fetchReservas = async () => {
+    try {
+      const { data: conf } = await reservasAPI.getReservasConfirmadasTutor();
+      if (conf?.success && Array.isArray(conf.reservas)) setReservasConfirmadas(conf.reservas);
+      else setReservasConfirmadas([]);
+
+      const { data: pend } = await reservasAPI.getReservas({ estado: "pendiente" });
+      const list = pend?.success ? pend?.reservas || [] : Array.isArray(pend) ? pend : [];
+      setReservasPendientes(list);
+    } catch (err) {
+      console.error("Error obteniendo reservas:", err);
+      setReservasConfirmadas([]);
+      setReservasPendientes([]);
+    }
+  };
+
+  const fetchSuscripcion = async () => {
+    setLoadingSuscripcion(true);
+    try {
+      const userId = await fetchMe();
+      const subs = await fetchSubsForUser(userId);
+
+      const found =
+        subs.find((s) => s.estado === "activa") ||
+        subs.find((s) => s.estado === "pendiente") ||
+        null;
+
+      setSuscripcionActiva(found);
+
+      if (!found) {
+        setLimiteCursos(3);
+        setPlanNombre(null);
+        return;
       }
-    };
 
-    const fetchReservas = async () => {
-      try {
-        // Ideal: backend devuelve SOLO del tutor.
-        const { data: conf } = await reservasAPI.getReservasConfirmadasTutor();
-        if (conf?.success && Array.isArray(conf.reservas)) setReservasConfirmadas(conf.reservas);
-        else setReservasConfirmadas([]);
+      const idPlanRaw = found?.id_plan;
+      const planId =
+        typeof idPlanRaw === "object" ? (idPlanRaw?.id || idPlanRaw?._id) : idPlanRaw;
 
-        // Pendientes: si tu endpoint aún devuelve global, filtramos luego por cursos del tutor
-        const { data: pend } = await reservasAPI.getReservas({ estado: "pendiente" });
-        const list = pend?.success ? pend?.reservas || [] : Array.isArray(pend) ? pend : [];
-        setReservasPendientes(list);
-      } catch (err) {
-        console.error("Error obteniendo reservas:", err);
-        setReservasConfirmadas([]);
-        setReservasPendientes([]);
+      const embeddedLimit = typeof idPlanRaw === "object" ? idPlanRaw?.cantidadCursos : null;
+
+      if (Number.isFinite(Number(embeddedLimit)) && Number(embeddedLimit) > 0) {
+        setLimiteCursos(Number(embeddedLimit));
+        setPlanNombre(idPlanRaw?.nombre || null);
+        return;
       }
-    };
 
-    fetchCursos().then(fetchReservas);
-  }, []);
+      if (planId) {
+        const plan = await fetchPlanById(planId);
+        const lim = Number(plan?.cantidadCursos || plan?.cantidad_cursos);
+        setLimiteCursos(Number.isFinite(lim) && lim > 0 ? lim : 3);
+        setPlanNombre(plan?.nombre || null);
+        return;
+      }
+
+      setLimiteCursos(3);
+      setPlanNombre(null);
+    } catch (e) {
+      setSuscripcionActiva(null);
+      setLimiteCursos(3);
+      setPlanNombre(null);
+    } finally {
+      setLoadingSuscripcion(false);
+    }
+  };
+
+  // ✅ Ejecutar
+  fetchCursos().then(fetchReservas);
+  fetchSuscripcion();
+}, []);
+
 
   // ✅ Confirmadas SOLO de cursos del tutor (fallback si conf viene global)
   const reservasConfirmadasTutor = useMemo(() => {
@@ -585,6 +674,17 @@ const PanelTutor = () => {
   const handleProfile = () => navigate("/tutor/perfil");
 
   const createNewCourse = () => {
+
+    if (loadingSuscripcion) {
+      showNotification({
+        type: "info",
+        title: "Verificando plan",
+        message: "Espera un momento…",
+        duration: 2000,
+      });
+      return;
+    }
+
     const cursosActivos = cursos.length;
 
     if (!suscripcionActiva && cursosActivos >= 3) {
@@ -606,9 +706,8 @@ const PanelTutor = () => {
       showNotification({
         type: "warning",
         title: "Límite de cursos alcanzado",
-        message: `Has alcanzado el límite de ${limiteCursos} cursos de tu plan${
-          planNombre ? ` "${planNombre}"` : ""
-        }.`,
+        message: `Has alcanzado el límite de ${limiteCursos} cursos de tu plan${planNombre ? ` "${planNombre}"` : ""
+          }.`,
         duration: 6000,
       });
       return;
@@ -790,16 +889,16 @@ const PanelTutor = () => {
                       const fecha = reserva.fecha ? new Date(reserva.fecha) : null;
                       const fechaTexto = fecha
                         ? fecha.toLocaleDateString(undefined, {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })
                         : "";
                       const horaTexto = fecha
                         ? fecha.toLocaleTimeString(undefined, {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
                         : "";
 
                       const cursoId = getCursoIdFromReserva(reserva);
@@ -897,23 +996,23 @@ const PanelTutor = () => {
 
                       const tooltip = tieneReserva
                         ? reservasDia
-                            .map((r) => {
-                              const cId = getCursoIdFromReserva(r);
-                              const c = cursosMap.get(String(cId));
-                              const cursoNombre =
-                                c?.titulo || c?.nombre || r?.id_curso?.nombre || "Curso";
+                          .map((r) => {
+                            const cId = getCursoIdFromReserva(r);
+                            const c = cursosMap.get(String(cId));
+                            const cursoNombre =
+                              c?.titulo || c?.nombre || r?.id_curso?.nombre || "Curso";
 
-                              const rawU = r?.id_usuario;
-                              const estId = getEstudianteIdFromReserva(r);
-                              const nombreEstudiante =
-                                rawU && typeof rawU === "object"
-                                  ? getNombreFromUsuario(rawU)
-                                  : (estId ? nombresUsuariosConfirmadas?.[estId] : null) ||
-                                    "Estudiante";
+                            const rawU = r?.id_usuario;
+                            const estId = getEstudianteIdFromReserva(r);
+                            const nombreEstudiante =
+                              rawU && typeof rawU === "object"
+                                ? getNombreFromUsuario(rawU)
+                                : (estId ? nombresUsuariosConfirmadas?.[estId] : null) ||
+                                "Estudiante";
 
-                              return `${cursoNombre} - Estudiante: ${nombreEstudiante}`;
-                            })
-                            .join("\n")
+                            return `${cursoNombre} - Estudiante: ${nombreEstudiante}`;
+                          })
+                          .join("\n")
                         : "";
 
                       return (
